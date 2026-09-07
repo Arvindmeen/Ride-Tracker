@@ -20,6 +20,14 @@ const STATUS_STEPS = [
   { key: 'RIDE_COMPLETED', label: 'Ride Completed' },
 ];
 
+function getFareDisplay(fare) {
+  if (!fare) return '28';
+  if (typeof fare === 'object') {
+    return Math.round(fare.total ?? fare.base ?? 28);
+  }
+  return typeof fare === 'number' ? Math.round(fare) : fare;
+}
+
 export default function LiveRidePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -258,7 +266,7 @@ export default function LiveRidePage() {
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex items-center justify-between">
               <div>
                 <span className="text-slate-500 font-medium">Upfront Fare:</span>
-                <p className="text-base font-black text-slate-900">₹{ride.fare || 28}.00</p>
+                <p className="text-base font-black text-slate-900">₹{getFareDisplay(ride.fare)}.00</p>
               </div>
               <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-lg">
                 Paid via UPI AutoPay
@@ -388,7 +396,7 @@ export default function LiveRidePage() {
 
             <div>
               <h3 className="text-xl font-black text-slate-900">You have arrived!</h3>
-              <p className="text-xs text-slate-500">Trip completed safely · ₹{ride.fare}.00 paid via UPI</p>
+              <p className="text-xs text-slate-500">Trip completed safely · ₹{getFareDisplay(ride.fare)}.00 paid via UPI</p>
             </div>
 
             <div className="space-y-1">
