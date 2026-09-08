@@ -18,6 +18,7 @@ import ContactPage from '@/pages/public/ContactPage';
 import UserHome from '@/pages/user/UserHome';
 import LiveRidePage from '@/pages/user/LiveRidePage';
 import TripsPage from '@/pages/user/TripsPage';
+import TripDetailPage from '@/pages/user/TripDetailPage';
 import UserProfile from '@/pages/user/UserProfile';
 
 // Driver pages
@@ -40,11 +41,16 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
 });
 
-// Role-based route guard
+// Role-based route guard — strict: each role stays in its own section
 function RequireRole({ role, children }) {
   const { isAuthenticated, role: userRole } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (role && userRole !== role && userRole !== 'ADMIN') return <Navigate to="/" replace />;
+  // Admin can only access admin routes; user can only access user routes; driver — driver routes
+  if (role && userRole !== role) {
+    if (userRole === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
+    if (userRole === 'DRIVER') return <Navigate to="/driver/dashboard" replace />;
+    return <Navigate to="/app/home" replace />;
+  }
   return children;
 }
 
@@ -64,35 +70,33 @@ function SettingsPage() {
   );
 }
 
-function TripDetailPage() {
-  return <div className="p-6 text-center text-slate-500 py-16">Trip detail coming soon</div>;
-}
 
 function DriverProfilePage() {
   const { user } = useAuthStore();
   return (
     <div className="p-4 max-w-md mx-auto space-y-4 pb-20">
-      <h1 className="text-lg font-bold text-slate-900">Driver Profile</h1>
-      <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
-        <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
+      <h1 className="text-lg font-bold text-white">Driver Profile</h1>
+      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-4">
+        <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
           {user?.name?.charAt(0)}
         </div>
         <div>
-          <p className="font-semibold text-slate-900 text-lg">{user?.name}</p>
-          <p className="text-slate-500 text-sm">{user?.email}</p>
-          <p className="text-amber-500 text-sm font-medium">★ 4.82 · 3,842 rides</p>
+          <p className="font-semibold text-white text-lg">{user?.name}</p>
+          <p className="text-slate-400 text-sm">{user?.email}</p>
+          <p className="text-amber-400 text-sm font-medium">★ 4.82 · 3,842 rides</p>
         </div>
       </div>
-      <div className="bg-white border border-slate-200 rounded-xl divide-y divide-slate-100">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl divide-y divide-slate-800">
         {['Vehicle details', 'Documents', 'Bank account', 'Earnings history', 'Support'].map(s => (
-          <div key={s} className="flex justify-between items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
-            <span>{s}</span><span className="text-slate-400">→</span>
+          <div key={s} className="flex justify-between items-center px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 cursor-pointer transition-colors">
+            <span>{s}</span><span className="text-slate-500">→</span>
           </div>
         ))}
       </div>
     </div>
   );
 }
+
 
 function ForgotPasswordPage() {
   return (

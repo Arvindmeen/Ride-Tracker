@@ -1,13 +1,13 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  CheckCircle, XCircle, MapPin, Navigation, DollarSign, Clock, Star,
-  Shield, Volume2, VolumeX, AlertCircle, ArrowRight, Smartphone,
-  Radio, Compass, Layers, QrCode, Sparkles, Filter, CheckCircle2, Zap
+  CheckCircle, MapPin, DollarSign, Clock,
+  Volume2, VolumeX, ArrowRight, CheckCircle2, Zap,
+  FlaskConical, X, ChevronDown
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useDriverStore, useMapStore } from '@/stores';
-import { Spinner, Badge } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { REGIONS } from '@/constants';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
@@ -122,6 +122,7 @@ export default function DriverDashboard() {
   const navigate = useNavigate();
 
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [driverGps, setDriverGps] = useState({
     lat: 22.3150,
     lng: 87.3050,
@@ -195,130 +196,124 @@ export default function DriverDashboard() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] relative overflow-hidden bg-slate-950 text-slate-100 font-sans">
-      {/* ── Top Floating Driver Toolbar ───────────────────────────────────────── */}
-      <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
-        {/* Vehicle Mode Switcher (Bike vs Car vs Auto) */}
-        <div className="bg-slate-900/95 backdrop-blur-md p-1 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-1">
-          <button
-            onClick={() => setVehicleType('BIKE')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              vehicleType === 'BIKE'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>🏍️ Bike</span>
-          </button>
-          <button
-            onClick={() => setVehicleType('CAR')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              vehicleType === 'CAR'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>🚗 Cab (100km Outstation Ready)</span>
-          </button>
-          <button
-            onClick={() => setVehicleType('AUTO')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              vehicleType === 'AUTO'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>🛺 Auto/Toto</span>
-          </button>
+      {/* ── Unified Floating Driver Toolbar (single row) ───────────────────────── */}
+      <div className="absolute top-3 left-3 right-3 z-30 flex items-center gap-2 pointer-events-auto flex-wrap">
+        {/* Vehicle Mode Switcher */}
+        <div className="bg-slate-900/95 backdrop-blur-md p-1 rounded-xl border border-slate-700 shadow-xl flex items-center gap-0.5">
+          {[['BIKE','🏍️','Bike'],['CAR','🚗','Cab'],['AUTO','🛺','Auto']].map(([type, emoji, label]) => (
+            <button
+              key={type}
+              onClick={() => setVehicleType(type)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                vehicleType === type
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              {emoji} {label}
+            </button>
+          ))}
         </div>
 
-        {/* Operating Scope (IIT KGP vs Pan-India) */}
-        <div className="bg-slate-900/95 backdrop-blur-md p-1 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-1">
+        {/* Operating Scope */}
+        <div className="bg-slate-900/95 backdrop-blur-md p-1 rounded-xl border border-slate-700 shadow-xl flex items-center gap-0.5">
           <button
             onClick={() => handleScopeChange('IIT_KGP')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              operatingScope === 'IIT_KGP'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              operatingScope === 'IIT_KGP' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>🎓 IIT Kharagpur Hub</span>
+            🎓 IIT KGP
           </button>
           <button
             onClick={() => handleScopeChange('PAN_INDIA')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              operatingScope === 'PAN_INDIA'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              operatingScope === 'PAN_INDIA' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>🇮🇳 Whole India (Any Town/City)</span>
+            🇮🇳 Pan-India
           </button>
         </div>
 
-        {/* Real Live GPS Center Button */}
-        <button
-          onClick={detectDriverGps}
-          className="bg-slate-900/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold text-emerald-400 hover:text-white flex items-center gap-1.5 shadow-xl transition-all"
-          title="Track and center my real vehicle GPS location"
-        >
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>{driverGps.isLive ? '📍 Live GPS Tracking' : 'Detect GPS'}</span>
-        </button>
-
-        {/* Sound Toggle */}
-        <button
-          onClick={() => setSoundEnabled(!soundEnabled)}
-          className="bg-slate-900/95 backdrop-blur-md p-2 rounded-xl border border-slate-700 text-slate-300 hover:text-white"
-          title={soundEnabled ? 'Alert Sound Active' : 'Muted'}
-        >
-          {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-        </button>
-      </div>
-
-      {/* ── Sub-Bar: Proximity Dispatch Engine Controller ─────────────────────── */}
-      <div className="absolute top-16 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
-        {/* Proximity Radius Indicator */}
-        <div className="bg-slate-950/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2 text-xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-slate-300 font-bold">Proximity Dispatch:</span>
-          <span className="text-emerald-400 font-semibold">Closest Driver Priority</span>
-          <span className="text-slate-600">|</span>
-          <span className="text-slate-400">Max Pickup Radius:</span>
-          <div className="flex gap-1">
+        {/* Proximity Radius */}
+        <div className="bg-slate-950/90 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-800 flex items-center gap-1.5 text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-400 hidden sm:inline">Radius:</span>
+          <div className="flex gap-0.5">
             {[3, 5, 10, 15].map((rad) => (
               <button
                 key={rad}
                 onClick={() => setPickupRadiusKm(rad)}
                 className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
-                  pickupRadiusKm === rad
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                  pickupRadiusKm === rad ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
                 }`}
               >
-                {rad} km
+                {rad}km
               </button>
             ))}
           </div>
         </div>
 
-        {/* 1-Click Request Simulation Test Buttons */}
-        <div className="flex items-center gap-1.5">
+        {/* GPS + Sound + Debug panel toggle */}
+        <div className="ml-auto flex items-center gap-1">
           <button
-            onClick={() => handleTriggerSpecificRequest('100KM_OUTSTATION')}
-            className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-extrabold transition-all flex items-center gap-1"
-            title="Simulate a 100+ km Outstation Request where user pickup is 0.7 km away from you"
+            onClick={detectDriverGps}
+            className="bg-slate-900/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs font-bold text-emerald-400 hover:text-white flex items-center gap-1 shadow-xl transition-all"
+            title="Center GPS"
           >
-            <span>🚀 Test 100+ km Outstation (User 0.7 km away)</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="hidden sm:inline">{driverGps.isLive ? 'GPS Live' : 'GPS'}</span>
+            <span className="sm:hidden">📍</span>
           </button>
           <button
-            onClick={() => handleTriggerSpecificRequest('LOCAL')}
-            className="px-2.5 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-extrabold transition-all flex items-center gap-1"
-            title="Simulate a local ride where user pickup is 0.3 km away"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="bg-slate-900/95 backdrop-blur-md p-2 rounded-xl border border-slate-700 text-slate-300 hover:text-white transition-all"
+            title={soundEnabled ? 'Sound On' : 'Muted'}
           >
-            <span>⚡ Test Local Ride (User 0.3 km away)</span>
+            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          </button>
+          {/* Collapsible debug panel toggle */}
+          <button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className={`p-2 rounded-xl border text-xs font-bold transition-all ${
+              showDebugPanel
+                ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                : 'bg-slate-900/95 border-slate-700 text-slate-500 hover:text-slate-300'
+            }`}
+            title="Simulation Debug Panel"
+          >
+            <FlaskConical size={14} />
           </button>
         </div>
       </div>
+
+      {/* ── Debug / Simulation Panel (collapsible) ────────────────────────────── */}
+      {showDebugPanel && (
+        <div className="absolute top-16 right-3 z-30 bg-slate-900/98 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-3 shadow-2xl pointer-events-auto min-w-[260px]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black text-amber-300 flex items-center gap-1">
+              <FlaskConical size={12} /> Simulation Panel
+            </span>
+            <button onClick={() => setShowDebugPanel(false)} className="text-slate-500 hover:text-white">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <button
+              onClick={() => handleTriggerSpecificRequest('100KM_OUTSTATION')}
+              className="w-full text-left px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all"
+            >
+              🚀 Test 100+ km Outstation (₹2,680)
+            </button>
+            <button
+              onClick={() => handleTriggerSpecificRequest('LOCAL')}
+              className="w-full text-left px-3 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition-all"
+            >
+              ⚡ Test Local Ride (₹28)
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Main Live Map Canvas ─────────────────────────────────────────────── */}
       <div className="absolute inset-0 z-0">

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDriverStore, useMapStore } from '@/stores';
-import { Card, Spinner } from '@/components/ui';
+import { Card, Spinner, VehicleIcon } from '@/components/ui';
 import { CheckCircle, XCircle, MapPin, CheckCircle2, Shield, ArrowRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -48,12 +48,15 @@ export default function DriverRequests() {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState({});
 
-  // Load demo requests
+  // Load demo requests when driver is available and queue is empty
   useEffect(() => {
-    if (pendingRequests.length === 0 && status === 'AVAILABLE') {
-      DEMO_REQUESTS.forEach((r, i) => setTimeout(() => addRequest(r), i * 1500));
+    if (pendingRequests.length === 0 && status !== 'OFFLINE') {
+      const timer = setTimeout(() => {
+        DEMO_REQUESTS.forEach((r, i) => setTimeout(() => addRequest(r), i * 1200));
+      }, 800);
+      return () => clearTimeout(timer);
     }
-  }, [status]);
+  }, []); // run once on mount — requests auto-appear after driver goes online
 
   // Countdown timers
   useEffect(() => {
@@ -77,33 +80,47 @@ export default function DriverRequests() {
 
   if (status === 'OFFLINE') {
     return (
-      <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-        <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-3xl">🚗</div>
-        <h2 className="text-lg font-bold text-white">You're offline</h2>
-        <p className="text-sm text-slate-400 mt-1">Go online from the dashboard to receive proximity ride requests</p>
+      <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+        <div className="w-20 h-20 bg-slate-800/80 rounded-full flex items-center justify-center mb-5 text-4xl border border-slate-700">
+          🚗
+        </div>
+        <h2 className="text-xl font-black text-white">You're Offline</h2>
+        <p className="text-sm text-slate-400 mt-2 max-w-xs">
+          Go online from your cockpit to start receiving proximity ride requests.
+        </p>
+        <button
+          onClick={() => navigate('/driver/dashboard')}
+          className="mt-5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-all shadow-lg shadow-emerald-600/20"
+        >
+          Open Cockpit → Go Online
+        </button>
       </div>
     );
   }
 
   if (pendingRequests.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-        <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
-          <div className="w-4 h-4 bg-emerald-400 rounded-full animate-ping" />
+      <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+        {/* Animated pulse radar */}
+        <div className="relative w-20 h-20 mb-6">
+          <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-ping" />
+          <div className="absolute inset-2 rounded-full bg-emerald-500/20 animate-ping delay-150" />
+          <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+            <div className="w-4 h-4 bg-emerald-400 rounded-full animate-pulse" />
+          </div>
         </div>
-        <h2 className="text-lg font-bold text-white">Scanning for Nearby Rides</h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Proximity engine active · Only receiving requests where user is within 5 km of you
+        <h2 className="text-xl font-black text-white">Scanning for Nearby Rides</h2>
+        <p className="text-sm text-slate-400 mt-2 max-w-xs">
+          Proximity engine active · Receiving requests where passenger is within {5} km of your GPS
         </p>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-5 flex gap-2">
           <button
             onClick={() => DEMO_REQUESTS.forEach((r) => addRequest(r))}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 text-xs text-slate-200 hover:text-white border border-slate-700"
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 hover:text-white border border-slate-700 font-bold transition-all"
           >
-            Reload Proximity Requests
+            Reload Queue
           </button>
         </div>
-        <Spinner size="md" className="mt-6 text-emerald-400" />
       </div>
     );
   }
@@ -133,8 +150,8 @@ export default function DriverRequests() {
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center text-lg">
-                  {req.category === 'MOTO' ? '🏍️' : '🚗'}
+                <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center p-1 border border-slate-700">
+                  <VehicleIcon category={req.category} size="sm" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

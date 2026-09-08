@@ -8,7 +8,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { analyticsService, incidentService } from '@/services';
 import { useAdminStore, useMapStore } from '@/stores';
-import { StatCard, Card, Spinner, SeverityBadge, SectionHeader, StatusDot, Badge } from '@/components/ui';
+import { StatCard, Card, Spinner, SeverityBadge, SectionHeader, StatusDot, Badge, VehicleIcon } from '@/components/ui';
 
 export default function AdminDashboard() {
   const { stats, hotspots } = useAdminStore();
@@ -216,8 +216,8 @@ export default function AdminDashboard() {
                   <tr key={driver.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-                          {isBike ? '🏍️' : isAuto ? '🛺' : '🚗'}
+                        <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center p-0.5">
+                          <VehicleIcon category={driver.vehicle.category} size="xs" />
                         </div>
                         <div>
                           <p className="font-bold text-slate-900">{driver.name}</p>

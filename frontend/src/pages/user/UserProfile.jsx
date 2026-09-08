@@ -1,95 +1,267 @@
+import React from 'react';
 import { useAuthStore } from '@/stores';
-import { Avatar, Card, Badge, Rating } from '@/components/ui';
-import { MapPin, Star, Clock, Shield, Phone, Mail, Home, Briefcase, ChevronRight } from 'lucide-react';
+import { Avatar } from '@/components/ui';
+import {
+  MapPin, Star, Clock, Shield, Phone, Mail, Home, Briefcase,
+  ChevronRight, CreditCard, Bell, Lock, HelpCircle, LogOut,
+  Navigation, Award, CheckCircle2, ArrowRight
+} from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { clsx } from 'clsx';
+
+const MENU_GROUPS = [
+  {
+    title: 'Preferences & Security',
+    items: [
+      { label: 'Payment methods & UPI', icon: CreditCard, color: 'text-indigo-600', bg: 'bg-indigo-50', desc: 'Manage UPI IDs & cards' },
+      { label: 'Push Notifications',   icon: Bell,       color: 'text-amber-600',  bg: 'bg-amber-50',  desc: 'Trip alerts & driver ETA' },
+      { label: 'Privacy & Safety',      icon: Lock,       color: 'text-emerald-600', bg: 'bg-emerald-50', desc: 'Number masking & location share' },
+      { label: 'Help & 24/7 Support',   icon: HelpCircle, color: 'text-blue-600',   bg: 'bg-blue-50',   desc: 'Ticket history & safety hotline' },
+    ],
+  },
+];
 
 export default function UserProfile() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
   if (!user) return null;
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <div className="max-w-xl mx-auto px-4 py-5 space-y-4">
-      {/* Header */}
-      <Card className="flex items-center gap-4">
-        <Avatar name={user.name} size="xl" />
-        <div className="flex-1">
-          <h1 className="text-lg font-bold text-slate-900">{user.name}</h1>
-          <p className="text-sm text-slate-500">{user.email}</p>
-          <div className="flex items-center gap-3 mt-1.5">
-            <Rating value={user.rating} size="md" />
-            <span className="text-sm text-slate-500">{user.totalRides} rides</span>
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-28 sm:pb-20 space-y-6 animate-fade-up">
+      
+      {/* ── Profile Hero Header Card ────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+        {/* Banner with modern mesh gradient */}
+        <div className="h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 relative">
+          <div
+            className="absolute inset-0 opacity-25"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 80% 30%, white 0%, transparent 60%)',
+            }}
+          />
+        </div>
+
+        {/* User Identity Details */}
+        <div className="px-5 sm:px-6 pb-6 pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between -mt-12 mb-4 gap-3">
+            <div className="ring-4 ring-white rounded-full inline-block shadow-md bg-white">
+              <Avatar name={user.name} size="xl" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full shadow-xs">
+                <CheckCircle2 size={13} className="text-blue-600" />
+                <span>Verified Passenger</span>
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              {user.name}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{user.email}</p>
+          </div>
+
+          {/* Stats Bar (Spacious and cleanly responsive) */}
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-5 pt-5 border-t border-slate-100 text-center">
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <p className="text-lg sm:text-xl font-black text-slate-900">
+                {user.totalRides || 38}
+              </p>
+              <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase mt-0.5">
+                Total Rides
+              </p>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <p className="text-lg sm:text-xl font-black text-amber-500">
+                ★ {user.rating ? user.rating.toFixed(1) : '4.9'}
+              </p>
+              <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase mt-0.5">
+                Rating
+              </p>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <p className="text-lg sm:text-xl font-black text-emerald-600">UPI</p>
+              <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase mt-0.5">
+                Primary Pay
+              </p>
+            </div>
           </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Contact */}
-      <Card>
-        <h2 className="text-sm font-semibold text-slate-900 mb-3">Contact info</h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 text-sm">
-            <Phone size={15} className="text-slate-400" />
-            <span className="text-slate-700">{user.phone}</span>
+      {/* ── Contact Information Card ────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-3">
+        <h2 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
+          Contact Details
+        </h2>
+        <div className="grid sm:grid-cols-2 gap-3 pt-1">
+          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-xs">
+              <Phone size={16} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Mobile Phone</span>
+              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                {user.phone || '+91 98302 11928'}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3 text-sm">
-            <Mail size={15} className="text-slate-400" />
-            <span className="text-slate-700">{user.email}</span>
+
+          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-xs">
+              <Mail size={16} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Email Address</span>
+              <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                {user.email || 'passenger@veloq.in'}
+              </p>
+            </div>
           </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Saved places */}
-      {user.savedPlaces?.length > 0 && (
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">Saved places</h2>
-          <div className="space-y-2">
-            {user.savedPlaces.map(p => (
-              <div key={p.id} className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${p.icon === 'HOME' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
-                  {p.icon === 'HOME' ? <Home size={14} /> : <Briefcase size={14} />}
+      {/* ── Saved Places ────────────────────────────────────────────────────── */}
+      {user.savedPlaces && user.savedPlaces.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
+              Saved Places
+            </h2>
+            <span className="text-[11px] font-bold text-blue-600">Quick Select</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {user.savedPlaces.map((p) => (
+              <Link
+                key={p.id}
+                to="/app/home"
+                className="flex items-center gap-3 p-3 rounded-2xl hover:bg-blue-50/50 border border-slate-100 hover:border-blue-200 transition-all group"
+              >
+                <div
+                  className={clsx(
+                    'w-10 h-10 rounded-2xl flex items-center justify-center shrink-0',
+                    p.icon === 'HOME' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                  )}
+                >
+                  {p.icon === 'HOME' ? <Home size={18} /> : <Briefcase size={18} />}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">{p.label}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    {p.label}
+                  </p>
                   <p className="text-xs text-slate-500 truncate">{p.address}</p>
                 </div>
+                <ChevronRight
+                  size={16}
+                  className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0"
+                />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Emergency Safety Contacts ────────────────────────────────────────── */}
+      {user.emergencyContacts && user.emergencyContacts.length > 0 && (
+        <div className="bg-gradient-to-br from-rose-50/70 to-pink-50/70 border border-rose-200 rounded-3xl p-5 sm:p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-rose-600 rounded-xl flex items-center justify-center text-white shadow-xs">
+                <Shield size={14} />
+              </div>
+              <h2 className="text-sm font-black text-rose-900">Safety & SOS Contacts</h2>
+            </div>
+            <span className="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">
+              Live Broadcast Active
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {user.emergencyContacts.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between p-3 bg-white/90 rounded-2xl border border-rose-100 shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar name={c.name} size="sm" />
+                  <div>
+                    <p className="text-xs sm:text-sm font-black text-slate-900">{c.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {c.relation} · {c.phone}
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={`tel:${c.phone}`}
+                  className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-colors flex items-center gap-1"
+                >
+                  <Phone size={12} />
+                  <span>Call</span>
+                </a>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* Emergency contacts */}
-      {user.emergencyContacts?.length > 0 && (
-        <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <Shield size={15} className="text-red-500" />
-            <h2 className="text-sm font-semibold text-slate-900">Emergency contacts</h2>
-          </div>
-          {user.emergencyContacts.map(c => (
-            <div key={c.id} className="flex items-center gap-3 py-2">
-              <Avatar name={c.name} size="sm" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-slate-900">{c.name}</p>
-                <p className="text-xs text-slate-500">{c.relation} · {c.phone}</p>
+      {/* ── Account Preferences Menu ────────────────────────────────────────── */}
+      {MENU_GROUPS.map((group) => (
+        <div
+          key={group.title}
+          className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs divide-y divide-slate-100"
+        >
+          {group.items.map((item) => (
+            <button
+              key={item.label}
+              className="w-full flex items-center gap-3.5 px-5 py-4 hover:bg-slate-50 transition-colors text-left group"
+            >
+              <div
+                className={clsx(
+                  'w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-xs',
+                  item.bg
+                )}
+              >
+                <item.icon size={18} className={item.color} />
               </div>
-            </div>
+              <div className="flex-1 min-w-0">
+                <span className="block text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  {item.label}
+                </span>
+                <span className="block text-xs text-slate-400 truncate">{item.desc}</span>
+              </div>
+              <ChevronRight
+                size={16}
+                className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0"
+              />
+            </button>
           ))}
-        </Card>
-      )}
+        </div>
+      ))}
 
-      {/* Account actions */}
-      <Card padding={false}>
-        {[
-          { label: 'Payment methods', icon: '💳' },
-          { label: 'Notifications', icon: '🔔' },
-          { label: 'Privacy & safety', icon: '🔒' },
-          { label: 'Help & support', icon: '❓' },
-        ].map(({ label, icon }) => (
-          <button key={label} className="w-full flex items-center gap-3 px-4 py-3.5 border-b last:border-0 border-slate-100 hover:bg-slate-50 text-left transition-colors">
-            <span className="text-lg">{icon}</span>
-            <span className="flex-1 text-sm font-medium text-slate-700">{label}</span>
-            <ChevronRight size={14} className="text-slate-400" />
-          </button>
-        ))}
-      </Card>
+      {/* ── Sign Out ──────────────────────────────────────────────────────────── */}
+      <button
+        onClick={handleLogout}
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black text-sm transition-colors shadow-xs"
+      >
+        <LogOut size={16} />
+        <span>Sign Out of Account</span>
+      </button>
+
+      <p className="text-center text-xs text-slate-400">
+        Veloq Passenger Portal · Version 3.4.0 · IIT Kharagpur Edition
+      </p>
     </div>
   );
 }

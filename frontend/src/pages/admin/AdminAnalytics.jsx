@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react';
 import { analyticsService } from '@/services';
-import { Card, Spinner, SectionHeader, Badge } from '@/components/ui';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { StatCard, Spinner } from '@/components/ui';
+import { TrendingUp, DollarSign, Users, Clock, XCircle, Activity } from 'lucide-react';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { clsx } from 'clsx';
 
-const COLORS = ['#1a56db', '#16a34a', '#d97706', '#dc2626', '#8b5cf6', '#0891b2'];
+const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#0891b2'];
+
+const STAT_CONFIGS = [
+  { key: 'totalRides',       label: 'Total Rides',    icon: Activity,   gradient: 'indigo', format: v => v.toLocaleString() },
+  { key: 'revenue',          label: 'GMV Revenue',    icon: DollarSign, gradient: 'emerald', format: v => `₹${(v/100000).toFixed(1)}L` },
+  { key: 'activeUsers',      label: 'Active Users',   icon: Users,      gradient: 'blue',   format: v => v.toLocaleString() },
+  { key: 'avgETA',           label: 'Avg ETA',        icon: Clock,      gradient: 'amber',  format: v => `${v} min` },
+  { key: 'cancellationRate', label: 'Cancel Rate',    icon: XCircle,    gradient: 'rose',   format: v => `${v}%` },
+];
 
 export default function AdminAnalytics() {
   const [data, setData] = useState(null);
@@ -14,7 +24,11 @@ export default function AdminAnalytics() {
     analyticsService.getSummary().then(d => { setData(d); setLoading(false); });
   }, []);
 
-  if (loading) return <div className="flex justify-center py-20"><Spinner size="xl" /></div>;
+  if (loading) return (
+    <div className="flex justify-center items-center py-32">
+      <Spinner size="xl" className="text-indigo-500" />
+    </div>
+  );
 
   const rideData = data.rideVolume.slice(-period);
   const revenueData = data.revenue.slice(-period);
@@ -22,134 +36,156 @@ export default function AdminAnalytics() {
   const etaData = data.avgETA.slice(-period);
 
   return (
-    <div className="p-5 space-y-6">
-      <div className="flex items-center justify-between">
-        <SectionHeader title="Platform Analytics" subtitle="Historical performance metrics" />
+    <div className="p-6 space-y-6 max-w-full">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">Platform Analytics</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Financial & operational performance metrics</p>
+        </div>
         <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
           {[7, 14, 30].map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${period === p ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={clsx(
+                'px-4 py-1.5 text-xs font-bold rounded-lg transition-all',
+                period === p ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+              )}
+            >
               {p}d
             </button>
           ))}
         </div>
       </div>
 
-      {/* Today summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          { label: 'Total Rides', value: data.todayStats.totalRides.toLocaleString() },
-          { label: 'Revenue', value: `₹${(data.todayStats.revenue / 100000).toFixed(1)}L` },
-          { label: 'Active Users', value: data.todayStats.activeUsers.toLocaleString() },
-          { label: 'Avg ETA', value: `${data.todayStats.avgETA} min` },
-          { label: 'Cancel Rate', value: `${data.todayStats.cancellationRate}%` },
-        ].map(({ label, value }) => (
-          <Card key={label} className="text-center">
-            <p className="text-xl font-bold text-slate-900">{value}</p>
-            <p className="text-xs text-slate-500 mt-1">{label}</p>
-          </Card>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {STAT_CONFIGS.map(({ key, label, icon, gradient, format }) => (
+          <StatCard
+            key={key}
+            label={label}
+            value={format(data.todayStats[key])}
+            icon={icon}
+            gradient={gradient}
+          />
         ))}
       </div>
 
-      {/* Charts grid */}
+      {/* Charts Grid */}
       <div className="grid lg:grid-cols-2 gap-5">
-        {/* Ride volume */}
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 mb-4">Ride Volume</p>
+        {/* Ride Volume */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-sm font-bold text-slate-900 mb-1">Ride Volume</p>
+          <p className="text-xs text-slate-400 mb-4">Trips dispatched per day</p>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={rideData}>
-              <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1a56db" stopOpacity={0.15}/><stop offset="95%" stopColor="#1a56db" stopOpacity={0}/></linearGradient></defs>
+              <defs>
+                <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#4f46e5" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(rideData.length / 6)} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(rideData.length / 5)} />
               <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Area type="monotone" dataKey="value" name="Rides" stroke="#1a56db" strokeWidth={2} fill="url(#g1)" />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }} />
+              <Area type="monotone" dataKey="value" name="Rides" stroke="#4f46e5" strokeWidth={2.5} fill="url(#g1)" />
             </AreaChart>
           </ResponsiveContainer>
-        </Card>
+        </div>
 
         {/* Revenue */}
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 mb-4">Revenue (₹)</p>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-sm font-bold text-slate-900 mb-1">Revenue (₹)</p>
+          <p className="text-xs text-slate-400 mb-4">Gross merchandise value per day</p>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={revenueData}>
-              <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#16a34a" stopOpacity={0.15}/><stop offset="95%" stopColor="#16a34a" stopOpacity={0}/></linearGradient></defs>
+              <defs>
+                <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(revenueData.length / 6)} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(revenueData.length / 5)} />
               <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
-              <Tooltip formatter={v => [`₹${v.toLocaleString()}`, 'Revenue']} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Area type="monotone" dataKey="value" name="Revenue" stroke="#16a34a" strokeWidth={2} fill="url(#g2)" />
+              <Tooltip formatter={v => [`₹${v.toLocaleString()}`, 'Revenue']} contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }} />
+              <Area type="monotone" dataKey="value" name="Revenue" stroke="#10b981" strokeWidth={2.5} fill="url(#g2)" />
             </AreaChart>
           </ResponsiveContainer>
-        </Card>
+        </div>
 
-        {/* Cancellation rate */}
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 mb-4">Cancellation Rate (%)</p>
+        {/* Cancellation Rate */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-sm font-bold text-slate-900 mb-1">Cancellation Rate</p>
+          <p className="text-xs text-slate-400 mb-4">% of rides cancelled by users or drivers</p>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={cancelData}>
+            <AreaChart data={cancelData}>
+              <defs>
+                <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#f43f5e" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(cancelData.length / 6)} />
-              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 15]} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Line type="monotone" dataKey="value" name="Cancel %" stroke="#dc2626" strokeWidth={2} dot={false} />
-            </LineChart>
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(cancelData.length / 5)} />
+              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
+              <Tooltip formatter={v => [`${v}%`, 'Cancel Rate']} contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0' }} />
+              <Area type="monotone" dataKey="value" name="Cancel Rate" stroke="#f43f5e" strokeWidth={2.5} fill="url(#g3)" />
+            </AreaChart>
           </ResponsiveContainer>
-        </Card>
+        </div>
 
-        {/* Peak hours */}
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 mb-4">Demand by Hour (Today)</p>
+        {/* Avg ETA */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-sm font-bold text-slate-900 mb-1">Average ETA</p>
+          <p className="text-xs text-slate-400 mb-4">Minutes from request to driver arrival</p>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={data.peakHours}>
+            <BarChart data={etaData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={3} />
-              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Bar dataKey="value" name="Rides" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(etaData.length / 5)} />
+              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}m`} />
+              <Tooltip formatter={v => [`${v} min`, 'Avg ETA']} contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0' }} />
+              <Bar dataKey="value" name="ETA" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </Card>
+        </div>
       </div>
 
-      {/* Category breakdown */}
-      <div className="grid lg:grid-cols-2 gap-5">
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 mb-4">Rides by Category</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={data.categoryBreakdown} dataKey="rides" nameKey="category" cx="50%" cy="50%" outerRadius={80} label={({ category, share }) => `${category} ${share}%`} labelLine={false}>
-                {data.categoryBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip formatter={(v, n) => [v.toLocaleString(), n]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Region table */}
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 mb-4">Revenue by Region</p>
-          <div className="space-y-2">
-            {data.demandByRegion.map((r, i) => {
-              const maxRev = Math.max(...data.demandByRegion.map(x => x.revenue));
-              return (
-                <div key={r.region} className="flex items-center gap-3">
-                  <span className="text-xs text-slate-500 w-4 font-mono">{i + 1}</span>
-                  <div className="flex-1">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="font-medium text-slate-800">{r.region}</span>
-                      <span className="text-slate-600">₹{r.revenue.toLocaleString()}</span>
+      {/* Category Breakdown */}
+      {data.categoryBreakdown && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-sm font-bold text-slate-900 mb-1">Ride Category Mix</p>
+          <p className="text-xs text-slate-400 mb-5">Share of rides by vehicle category</p>
+          <div className="grid md:grid-cols-2 gap-6 items-center">
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie data={data.categoryBreakdown} dataKey="value" nameKey="category" cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3}>
+                  {data.categoryBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="space-y-2.5">
+              {data.categoryBreakdown.map((item, i) => (
+                <div key={item.category} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                    <span className="text-sm font-medium text-slate-700">{item.category}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${item.percentage}%`, background: COLORS[i % COLORS.length] }} />
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full">
-                      <div className="h-1.5 rounded-full" style={{ width: `${(r.revenue / maxRev) * 100}%`, background: COLORS[i % COLORS.length] }} />
-                    </div>
+                    <span className="text-xs font-bold text-slate-600 w-8 text-right">{item.percentage}%</span>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </Card>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
