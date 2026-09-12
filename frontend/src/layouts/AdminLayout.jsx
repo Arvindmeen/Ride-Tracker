@@ -70,12 +70,12 @@ export default function AdminLayout() {
           <Link to="/admin/dashboard" className="flex items-center gap-2.5" onClick={() => setSidebarOpen(false)}>
             <img
               src="/logo.png"
-              alt="Veloq Logo"
+              alt="Ride Tracker Logo"
               className="w-7 h-7 rounded-lg object-cover shadow-sm border border-indigo-400/40"
             />
             <div>
               <div className="flex items-center gap-1">
-                <span className="font-extrabold text-white text-sm leading-none">Veloq</span>
+                <span className="font-extrabold text-white text-sm leading-none">Ride Tracker</span>
                 <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-900 text-blue-300 border border-blue-700">
                   Ops
                 </span>
@@ -235,9 +235,9 @@ export default function AdminLayout() {
           <footer className="bg-white border-t border-slate-200 py-4 px-6 text-xs text-slate-500 mt-8">
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <img src="/logo.png" alt="Veloq" className="w-5 h-5 rounded-md object-cover" />
+                <img src="/logo.png" alt="Ride Tracker" className="w-5 h-5 rounded-md object-cover" />
                 <div>
-                  <p className="font-bold text-slate-900 text-xs">Veloq Telemetry & Dispatch</p>
+                  <p className="font-bold text-slate-900 text-xs">Ride Tracker Telemetry & Dispatch</p>
                   <p className="text-[10px] text-slate-400">SLA 99.98% · Redis GEO · Apache Kafka</p>
                 </div>
               </div>

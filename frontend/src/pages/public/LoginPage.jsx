@@ -43,7 +43,7 @@ const FEATURES = [
 ];
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('rahul@veloq.com');
+  const [email, setEmail] = useState('rahul@ridetracker.in');
   const [password, setPassword] = useState('password123');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,13 +56,13 @@ export default function LoginPage() {
     setRole(selectedRole);
     setErrorMsg('');
     if (selectedRole === 'ADMIN') {
-      setEmail('admin@veloq.com');
+      setEmail('admin@ridetracker.in');
       setPassword('admin123');
     } else if (selectedRole === 'DRIVER') {
-      setEmail('rajesh@veloq.com');
+      setEmail('rajesh@ridetracker.in');
       setPassword('password123');
     } else {
-      setEmail('rahul@veloq.com');
+      setEmail('rahul@ridetracker.in');
       setPassword('password123');
     }
   };
@@ -72,7 +72,7 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
-    const targetEmail = email.trim() || (role === 'ADMIN' ? 'admin@veloq.com' : role === 'DRIVER' ? 'rajesh@veloq.com' : 'rahul@veloq.com');
+    const targetEmail = email.trim() || (role === 'ADMIN' ? 'admin@ridetracker.in' : role === 'DRIVER' ? 'rajesh@ridetracker.in' : 'rahul@ridetracker.in');
     const targetPassword = password || (role === 'ADMIN' ? 'admin123' : 'password123');
 
     const result = await loginWithCredentials({
@@ -105,9 +105,9 @@ export default function LoginPage() {
         <div className="relative z-10 max-w-sm">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
-            <img src="/logo.png" alt="Veloq" className="w-10 h-10 rounded-xl object-cover shadow-lg border border-white/20" />
+            <img src="/logo.png" alt="Ride Tracker" className="w-10 h-10 rounded-xl object-cover shadow-lg border border-white/20" />
             <div>
-              <span className="text-2xl font-black text-white tracking-tight">Veloq</span>
+              <span className="text-2xl font-black text-white tracking-tight">Ride Tracker</span>
               <p className="text-indigo-300 text-xs font-semibold">Mobility Platform</p>
             </div>
           </div>
@@ -158,13 +158,13 @@ export default function LoginPage() {
         <div className="w-full max-w-sm animate-fade-up">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
-            <img src="/logo.png" alt="Veloq" className="w-9 h-9 rounded-xl object-cover border border-indigo-200 shadow" />
-            <span className="text-xl font-black text-slate-900">Veloq</span>
+            <img src="/logo.png" alt="Ride Tracker" className="w-9 h-9 rounded-xl object-cover border border-indigo-200 shadow" />
+            <span className="text-xl font-black text-slate-900">Ride Tracker</span>
           </div>
 
           <div className="mb-7">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Welcome back</h1>
-            <p className="text-slate-500 text-sm mt-1">Sign in to your Veloq account</p>
+            <p className="text-slate-500 text-sm mt-1">Sign in to your Ride Tracker account</p>
           </div>
 
           {/* Role Selector */}
@@ -189,7 +189,7 @@ export default function LoginPage() {
           <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-slate-600">
             <span className="font-semibold text-slate-700">Pre-filled Account:</span>
             <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-800 font-bold">
-              {role === 'ADMIN' ? 'admin@veloq.com' : role === 'DRIVER' ? 'rajesh@veloq.com' : 'rahul@veloq.com'}
+              {role === 'ADMIN' ? 'admin@ridetracker.in' : role === 'DRIVER' ? 'rajesh@ridetracker.in' : 'rahul@ridetracker.in'}
             </span>
           </div>
 

@@ -87,7 +87,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-slate-500">Official Electronic Inquiries</p>
-                  <p className="text-base font-black text-slate-900 mt-0.5">support@veloq.in</p>
+                  <p className="text-base font-black text-slate-900 mt-0.5">support@ridetracker.in</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">Partnership, driver compliance, and corporate billing</p>
                 </div>
               </div>

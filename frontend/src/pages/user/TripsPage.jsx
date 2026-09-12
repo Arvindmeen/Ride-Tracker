@@ -117,7 +117,7 @@ export default function TripsPage() {
         <EmptyState
           icon={Clock}
           title="No trips found"
-          description="You haven't taken any trips under this category yet. Book your first ride with Veloq!"
+          description="You haven't taken any trips under this category yet. Book your first ride with Ride Tracker!"
           action={
             <Link to="/app/home">
               <Button className="bg-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl">

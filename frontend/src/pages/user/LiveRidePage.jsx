@@ -786,7 +786,7 @@ export default function LiveRidePage() {
             <div>
               <h3 className="text-lg font-black text-slate-900">Emergency Rapid SOS Beacon</h3>
               <p className="text-xs text-slate-600 mt-1">
-                Your live GPS coordinates will be transmitted instantly to local police authorities and the 24/7 Veloq Safety Desk.
+                Your live GPS coordinates will be transmitted instantly to local police authorities and the 24/7 Ride Tracker Safety Desk.
               </p>
             </div>
 

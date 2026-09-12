@@ -59,13 +59,13 @@ export default function RegisterPage() {
           <Link to="/" className="group flex flex-col items-center">
             <img
               src="/logo.png"
-              alt="Veloq Logo"
+              alt="Ride Tracker Logo"
               className="w-14 h-14 rounded-2xl object-cover shadow-lg border border-indigo-200 mb-3 transition-transform group-hover:scale-105"
             />
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Create your account</h1>
           </Link>
           <p className="text-slate-500 text-xs mt-1 text-center">
-            Join Veloq — transparent 12% fee, zero hidden charges
+            Join Ride Tracker — transparent 12% fee, zero hidden charges
           </p>
         </div>
 

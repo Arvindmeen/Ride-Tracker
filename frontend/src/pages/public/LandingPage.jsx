@@ -1454,9 +1454,9 @@ export default function LandingPage() {
               <div className="grid sm:grid-cols-2 gap-3">
                 {[
                   { label: 'Bharat ERSS Emergency', number: '112', sub: 'National Police & Ambulance', cls: 'border-rose-200 bg-rose-50/50 text-rose-700' },
-                  { label: 'Pan-India Toll-Free', number: '1800-VELOQ-IN', sub: '24/7 Mobility Support', cls: 'border-blue-200 bg-blue-50/50 text-blue-700' },
+                  { label: 'Pan-India Toll-Free', number: '1800-RIDE-IN', sub: '24/7 Mobility Support', cls: 'border-blue-200 bg-blue-50/50 text-blue-700' },
                   { label: 'IIT KGP Campus SOS', number: '+91 94340-KGP-SOS', sub: 'Campus Security Stand', cls: 'border-emerald-200 bg-emerald-50/50 text-emerald-700' },
-                  { label: 'ONDC Dispute Desk', number: 'ondc@veloq.gov.in', sub: 'Open Network Grievance', cls: 'border-indigo-200 bg-indigo-50/50 text-indigo-700' },
+                  { label: 'ONDC Dispute Desk', number: 'ondc@ridetracker.gov.in', sub: 'Open Network Grievance', cls: 'border-indigo-200 bg-indigo-50/50 text-indigo-700' },
                 ].map(({ label, number, sub, cls }) => (
                   <div key={label} className={`p-4 rounded-2xl border ${cls}`}>
                     <p className="text-[10px] font-bold uppercase tracking-wider">{label}</p>

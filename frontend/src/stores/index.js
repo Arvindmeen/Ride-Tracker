@@ -10,7 +10,7 @@ const savedRole = typeof window !== 'undefined' ? localStorage.getItem('veloq_ro
 let initialUser = {
   id: 'USR-PASSENGER-01',
   name: 'Rahul Mehra',
-  email: 'rahul@veloq.com',
+  email: 'rahul@ridetracker.in',
   phone: '+91 99887 76655',
   role: 'USER',
   rating: 4.88,
@@ -157,9 +157,9 @@ export const useAuthStore = create((set, get) => ({
 
   login: (role) => {
     const defaultUsers = {
-      ADMIN: { id: 'USR-ADMIN-01', name: 'Operations Command Admin', email: 'admin@veloq.com', role: 'ADMIN', phone: '+91 98111 22334', rating: 5.0 },
-      DRIVER: { id: 'USR-DRIVER-01', name: 'Rajesh Kumar', email: 'rajesh@veloq.com', role: 'DRIVER', phone: '+91 98765 43210', rating: 4.92, totalRides: 412 },
-      USER: { id: 'USR-PASSENGER-01', name: 'Rahul Mehra', email: 'rahul@veloq.com', role: 'USER', phone: '+91 99887 76655', rating: 4.88, totalRides: 87 },
+      ADMIN: { id: 'USR-ADMIN-01', name: 'Operations Command Admin', email: 'admin@ridetracker.in', role: 'ADMIN', phone: '+91 98111 22334', rating: 5.0 },
+      DRIVER: { id: 'USR-DRIVER-01', name: 'Rajesh Kumar', email: 'rajesh@ridetracker.in', role: 'DRIVER', phone: '+91 98765 43210', rating: 4.92, totalRides: 412 },
+      USER: { id: 'USR-PASSENGER-01', name: 'Rahul Mehra', email: 'rahul@ridetracker.in', role: 'USER', phone: '+91 99887 76655', rating: 4.88, totalRides: 87 },
     };
     const user = defaultUsers[role] || defaultUsers.USER;
     if (typeof window !== 'undefined') {

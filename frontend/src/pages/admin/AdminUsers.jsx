@@ -141,7 +141,7 @@ export default function AdminUsers() {
                   : '+91 98*****128';
                 const maskedEmail = user.email
                   ? user.email.replace(/^(.{2})(.*)(@.*)$/, (m, a, b, c) => a + '***' + c)
-                  : 'p***r@veloq.in';
+                  : 'p***r@ridetracker.in';
 
                 return (
                   <tr key={user.id}>

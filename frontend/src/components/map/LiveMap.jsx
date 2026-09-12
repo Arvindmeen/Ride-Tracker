@@ -368,6 +368,16 @@ function createDestIcon(label = 'DESTINATION') {
   return L.divIcon({ html, className: '', iconSize: [90, 60], iconAnchor: [45, 54], popupAnchor: [0, -50] });
 }
 
+function isValidCoordinate(point) {
+  return Boolean(
+    point &&
+    Number.isFinite(Number(point.lat)) &&
+    Number.isFinite(Number(point.lng)) &&
+    Number(point.lat) >= -90 && Number(point.lat) <= 90 &&
+    Number(point.lng) >= -180 && Number(point.lng) <= 180
+  );
+}
+
 // Map Controller for smooth transitions without overriding manual user exploration
 function MapController({ center, zoom, bounds, isExploring, setIsExploring, recenterTrigger }) {
   const map = useMap();
@@ -375,6 +385,12 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
   const lastBoundsKey = useRef('');
   const lastCenterKey = useRef('');
   const isInitialMount = useRef(true);
+  const validCenter = isValidCoordinate(center)
+    ? { lat: Number(center.lat), lng: Number(center.lng) }
+    : null;
+  const validBounds = Array.isArray(bounds) && bounds.length >= 2 && bounds.every(([lat, lng]) => (
+    Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+  )) ? bounds : null;
 
   useEffect(() => {
     // Invalidate size immediately and after 150ms to ensure no grey tiles
@@ -419,48 +435,48 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
     if (recenterTrigger) {
       isUserInteractingRef.current = false;
       setIsExploring?.(false);
-      if (bounds && bounds.length >= 2) {
+      if (validBounds) {
         try {
-          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15, animate: true });
+          map.fitBounds(validBounds, { padding: [60, 60], maxZoom: 15, animate: true });
         } catch (e) {
-          if (center?.lat && center?.lng) {
-            map.flyTo([center.lat, center.lng], zoom || 15, { duration: 0.8 });
+          if (validCenter) {
+            map.flyTo([validCenter.lat, validCenter.lng], zoom || 15, { duration: 0.8 });
           }
         }
-      } else if (center?.lat && center?.lng) {
-        map.flyTo([center.lat, center.lng], zoom || 15, { duration: 0.8 });
+      } else if (validCenter) {
+        map.flyTo([validCenter.lat, validCenter.lng], zoom || 15, { duration: 0.8 });
       }
     }
-  }, [recenterTrigger, bounds, center, zoom, map, setIsExploring]);
+  }, [recenterTrigger, validBounds, validCenter, zoom, map, setIsExploring]);
 
   // Handle explicit route destination/pickup changes and search location animations
   useEffect(() => {
-    if (bounds && bounds.length >= 2) {
-      const boundsKey = `${bounds[0][0].toFixed(3)},${bounds[0][1].toFixed(3)}-${bounds[1][0].toFixed(3)},${bounds[1][1].toFixed(3)}`;
+    if (validBounds) {
+      const boundsKey = `${validBounds[0][0].toFixed(3)},${validBounds[0][1].toFixed(3)}-${validBounds[1][0].toFixed(3)},${validBounds[1][1].toFixed(3)}`;
       if (boundsKey !== lastBoundsKey.current) {
         lastBoundsKey.current = boundsKey;
         isUserInteractingRef.current = false;
         setIsExploring?.(false);
         try {
-          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15, animate: true });
+          map.fitBounds(validBounds, { padding: [60, 60], maxZoom: 15, animate: true });
         } catch (e) {
-          if (center?.lat && center?.lng) {
-            map.flyTo([center.lat, center.lng], zoom || 14, { duration: 1.0 });
+          if (validCenter) {
+            map.flyTo([validCenter.lat, validCenter.lng], zoom || 14, { duration: 1.0 });
           }
         }
         isInitialMount.current = false;
       }
-    } else if (center?.lat && center?.lng) {
-      const centerKey = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`;
+    } else if (validCenter) {
+      const centerKey = `${validCenter.lat.toFixed(4)},${validCenter.lng.toFixed(4)}`;
       if (centerKey !== lastCenterKey.current) {
         lastCenterKey.current = centerKey;
         isUserInteractingRef.current = false;
         setIsExploring?.(false);
-        map.flyTo([center.lat, center.lng], zoom || 15, { duration: 1.0 });
+        map.flyTo([validCenter.lat, validCenter.lng], zoom || 15, { duration: 1.0 });
         isInitialMount.current = false;
       }
     }
-  }, [bounds, center, zoom, map, setIsExploring]);
+  }, [validBounds, validCenter, zoom, map, setIsExploring]);
 
   return null;
 }

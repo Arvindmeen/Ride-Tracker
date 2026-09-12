@@ -262,7 +262,7 @@ export default function UserProfile() {
             <div className="min-w-0">
               <span className="text-[10px] font-bold uppercase text-slate-400">Email Address</span>
               <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                {user.email || 'passenger@veloq.in'}
+                {user.email || 'passenger@ridetracker.in'}
               </p>
             </div>
           </div>
@@ -398,7 +398,7 @@ export default function UserProfile() {
       </button>
 
       <p className="text-center text-xs text-slate-400">
-        Veloq Passenger Portal · Version 3.4.0 · IIT Kharagpur Edition
+        Ride Tracker Passenger Portal · Version 3.4.0 · IIT Kharagpur Edition
       </p>
     </div>
   );

@@ -331,15 +331,15 @@ export default function UserHome() {
   const handleApplyPromo = (e) => {
     e?.preventDefault();
     const clean = promoInput.trim().toUpperCase();
-    if (clean === 'VELOQ50' || clean === 'FIRST50') {
+    if (clean === 'RIDE50' || clean === 'VELOQ50' || clean === 'FIRST50') {
       setAppliedDiscount(50);
-      setPromoMessage('🎉 Promo VELOQ50 applied! ₹50 OFF');
+      setPromoMessage('🎉 Promo RIDE50 applied! ₹50 OFF');
     } else if (clean === 'TOTO20' || clean === 'SAVE20') {
       setAppliedDiscount(20);
       setPromoMessage('🎉 Promo applied! ₹20 OFF');
     } else if (clean) {
       setAppliedDiscount(0);
-      setPromoMessage('❌ Invalid code. Use VELOQ50 or TOTO20');
+      setPromoMessage('❌ Invalid code. Use RIDE50 or TOTO20');
     }
   };
 
@@ -502,7 +502,7 @@ export default function UserHome() {
           <div className="flex items-center justify-between">
             <div>
               <span className="text-[10px] font-extrabold uppercase text-blue-600 tracking-wider">
-                Veloq Instant Booking
+                Ride Tracker Instant Booking
               </span>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
                 Where are you heading?
@@ -982,12 +982,12 @@ export default function UserHome() {
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-slate-700">Have a coupon code?</span>
-                <span className="text-[10px] text-blue-600 font-bold">Use VELOQ50</span>
+                <span className="text-[10px] text-blue-600 font-bold">Use RIDE50</span>
               </div>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Enter code (e.g. VELOQ50)"
+                  placeholder="Enter code (e.g. RIDE50)"
                   value={promoInput}
                   onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
                   className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-mono font-bold uppercase focus:outline-none focus:border-blue-500"

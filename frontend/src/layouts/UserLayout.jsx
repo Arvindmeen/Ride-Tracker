@@ -34,11 +34,11 @@ export default function UserLayout() {
           <Link to="/app/home" className="flex items-center gap-2.5 group shrink-0">
             <img
               src="/logo.png"
-              alt="Veloq Logo"
+              alt="Ride Tracker Logo"
               className="w-8 h-8 rounded-xl object-cover shadow-xs border border-blue-200 transition-transform group-hover:scale-105"
             />
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-lg text-slate-900 leading-none">Veloq</span>
+              <span className="font-extrabold text-lg text-slate-900 leading-none">Ride Tracker</span>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                 Rider
               </span>
@@ -110,9 +110,9 @@ export default function UserLayout() {
       <footer className="bg-slate-900 text-slate-400 text-xs border-t border-slate-800 hidden md:block">
         <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Veloq" className="w-6 h-6 rounded-lg object-cover" />
+            <img src="/logo.png" alt="Ride Tracker" className="w-6 h-6 rounded-lg object-cover" />
             <div>
-              <span className="font-bold text-white text-xs">Veloq Passenger Portal</span>
+              <span className="font-bold text-white text-xs">Ride Tracker Passenger Portal</span>
               <p className="text-[11px] text-slate-500">Live GPS Monitored · Number Masked · 24/7 Security</p>
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function UserLayout() {
             <Link to="/contact" className="text-blue-400 hover:text-blue-300 transition-colors">Safety Support</Link>
           </div>
 
-          <p className="text-[10px] text-slate-500">© 2026 Veloq Technologies Pvt. Ltd.</p>
+          <p className="text-[10px] text-slate-500">© 2026 Ride Tracker Technologies Pvt. Ltd.</p>
         </div>
       </footer>
 

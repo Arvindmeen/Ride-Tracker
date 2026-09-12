@@ -77,11 +77,11 @@ export default function DriverLayout() {
             <Link to="/driver/dashboard" className="flex items-center gap-2.5 group shrink-0">
               <img
                 src="/logo.png"
-                alt="Veloq Logo"
+                alt="Ride Tracker Logo"
                 className="w-8 h-8 rounded-xl object-cover shadow-sm border border-emerald-500/40 transition-transform group-hover:scale-105"
               />
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-lg text-white leading-none">Veloq</span>
+                <span className="font-extrabold text-lg text-white leading-none">Ride Tracker</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 border border-emerald-700 hidden sm:inline">
                   Partner
                 </span>
@@ -225,7 +225,7 @@ export default function DriverLayout() {
                 <CheckCircle2 size={14} className="text-white" />
               </div>
               <div>
-                <span className="font-bold text-white text-xs">Veloq Driver Partner</span>
+                <span className="font-bold text-white text-xs">Ride Tracker Driver Partner</span>
                 <p className="text-[10px] text-slate-600">12% lowest fee · Instant UPI · Zero penalties</p>
               </div>
             </div>
@@ -234,7 +234,7 @@ export default function DriverLayout() {
               <Link to="/driver/earnings" className="hover:text-slate-300 transition-colors">Earnings</Link>
               <Link to="/contact" className="text-emerald-400 hover:text-emerald-300 transition-colors">Partner Helpdesk</Link>
             </div>
-            <p className="text-[10px] text-slate-700">© 2026 Veloq Technologies India Pvt. Ltd.</p>
+            <p className="text-[10px] text-slate-700">© 2026 Ride Tracker Technologies India Pvt. Ltd.</p>
           </div>
         </footer>
       )}

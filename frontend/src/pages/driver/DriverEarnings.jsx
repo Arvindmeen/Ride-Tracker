@@ -116,7 +116,7 @@ export default function DriverEarnings() {
         <div className="space-y-1">
           <p className="font-bold text-white text-sm">Transparent 12% Commission Guarantee</p>
           <p className="text-slate-400 max-w-md leading-relaxed">
-            Other aggregators take up to 25–30%. Veloq caps platform fees at 12% to ensure driver partners keep 88% of all gross fares.
+            Other aggregators take up to 25–30%. Ride Tracker caps platform fees at 12% to ensure driver partners keep 88% of all gross fares.
           </p>
         </div>
         <div className="flex items-center gap-2 bg-emerald-950/50 px-3 py-2 rounded-2xl border border-emerald-800">
