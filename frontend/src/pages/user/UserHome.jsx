@@ -15,6 +15,12 @@ import { dispatchSimulation } from '@/services/dispatchSimulation';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
 
+function isValidPoint(point) {
+  const lat = Number(point?.lat);
+  const lng = Number(point?.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
 // Preset Popular Destinations for Quick 1-Tap Selection
 const POPULAR_DESTINATIONS = [
   {
@@ -225,7 +231,7 @@ export default function UserHome() {
     if (pickup?.lat && pickup?.lng) {
       locationService.getNearbyPlaces(pickup.lat, pickup.lng, 100).then((res) => {
         if (res && res.length > 0) {
-          setNearbyHotspots(res);
+          setNearbyHotspots(res.filter(isValidPoint));
         }
       });
     }
@@ -266,9 +272,16 @@ export default function UserHome() {
   }, [searchQuery, pickup, userLocation]);
 
   const selectPlace = (place) => {
+    const lat = Number(place.location?.lat ?? place.lat);
+    const lng = Number(place.location?.lng ?? place.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setSearchResults([]);
+      setActiveField(null);
+      return;
+    }
     const formatted = {
-      lat: place.location?.lat || place.lat,
-      lng: place.location?.lng || place.lng,
+      lat,
+      lng,
       name: place.name,
       address: place.address || place.name,
       distanceKm: place.distanceKm,
@@ -305,9 +318,10 @@ export default function UserHome() {
   };
 
   const handleSelectPresetDestination = (preset) => {
+    if (!isValidPoint(preset)) return;
     const formatted = {
-      lat: preset.lat,
-      lng: preset.lng,
+      lat: Number(preset.lat),
+      lng: Number(preset.lng),
       name: preset.name,
       address: preset.address || preset.desc,
       distanceKm: preset.distanceKm || 3.5,

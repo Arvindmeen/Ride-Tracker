@@ -389,8 +389,19 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
     ? { lat: Number(center.lat), lng: Number(center.lng) }
     : null;
   const validBounds = Array.isArray(bounds) && bounds.length >= 2 && bounds.every(([lat, lng]) => (
-    Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+    Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) &&
+    Number(lat) >= -90 && Number(lat) <= 90 && Number(lng) >= -180 && Number(lng) <= 180
   )) ? bounds : null;
+
+  const flyToSafe = (point, targetZoom) => {
+    if (!isValidCoordinate(point)) return;
+    const safeZoom = Number.isFinite(Number(targetZoom)) ? Number(targetZoom) : 15;
+    try {
+      map.flyTo([Number(point.lat), Number(point.lng)], safeZoom, { duration: 0.8 });
+    } catch (error) {
+      console.warn('Skipped invalid map camera update:', error);
+    }
+  };
 
   useEffect(() => {
     // Invalidate size immediately and after 150ms to ensure no grey tiles
@@ -440,11 +451,11 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
           map.fitBounds(validBounds, { padding: [60, 60], maxZoom: 15, animate: true });
         } catch (e) {
           if (validCenter) {
-            map.flyTo([validCenter.lat, validCenter.lng], zoom || 15, { duration: 0.8 });
+            flyToSafe(validCenter, zoom);
           }
         }
       } else if (validCenter) {
-        map.flyTo([validCenter.lat, validCenter.lng], zoom || 15, { duration: 0.8 });
+        flyToSafe(validCenter, zoom);
       }
     }
   }, [recenterTrigger, validBounds, validCenter, zoom, map, setIsExploring]);
@@ -461,7 +472,7 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
           map.fitBounds(validBounds, { padding: [60, 60], maxZoom: 15, animate: true });
         } catch (e) {
           if (validCenter) {
-            map.flyTo([validCenter.lat, validCenter.lng], zoom || 14, { duration: 1.0 });
+            flyToSafe(validCenter, zoom);
           }
         }
         isInitialMount.current = false;
@@ -472,7 +483,7 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
         lastCenterKey.current = centerKey;
         isUserInteractingRef.current = false;
         setIsExploring?.(false);
-        map.flyTo([validCenter.lat, validCenter.lng], zoom || 15, { duration: 1.0 });
+        flyToSafe(validCenter, zoom);
         isInitialMount.current = false;
       }
     }
@@ -615,7 +626,10 @@ export default function LiveMap({
 }) {
   const { drivers: storeDrivers, center: storeCenter, zoom: storeZoom, selectDriver } = useMapStore();
   const drivers = externalDrivers || storeDrivers;
-  const mapCenter = center || (pickup?.lat ? { lat: pickup.lat, lng: pickup.lng } : destination?.lat ? { lat: destination.lat, lng: destination.lng } : storeCenter || { lat: 22.3149, lng: 87.3105 });
+  const requestedCenter = center || (pickup?.lat ? { lat: pickup.lat, lng: pickup.lng } : destination?.lat ? { lat: destination.lat, lng: destination.lng } : storeCenter);
+  const mapCenter = isValidCoordinate(requestedCenter)
+    ? { lat: Number(requestedCenter.lat), lng: Number(requestedCenter.lng) }
+    : { lat: 22.3149, lng: 87.3105 };
   const currentZoom = zoom || storeZoom || 14;
 
   const [activeTheme, setActiveTheme] = useState(tileTheme);
@@ -632,25 +646,29 @@ export default function LiveMap({
   // Moving driver coordinates MUST NEVER force fitBounds or jerk the user's camera view!
   const bounds = useMemo(() => {
     const points = [];
-    if (activeDriverLocation?.lat && activeDriverLocation?.lng && !destination?.lat) {
-      points.push([activeDriverLocation.lat, activeDriverLocation.lng]);
+    if (isValidCoordinate(activeDriverLocation) && !isValidCoordinate(destination)) {
+      points.push([Number(activeDriverLocation.lat), Number(activeDriverLocation.lng)]);
     }
-    if (pickup?.lat && pickup?.lng) points.push([pickup.lat, pickup.lng]);
-    if (destination?.lat && destination?.lng) points.push([destination.lat, destination.lng]);
+    if (isValidCoordinate(pickup)) points.push([Number(pickup.lat), Number(pickup.lng)]);
+    if (isValidCoordinate(destination)) points.push([Number(destination.lat), Number(destination.lng)]);
     return points.length >= 2 ? points : null;
   }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, activeDriverLocation?.lat, activeDriverLocation?.lng]);
 
   // Route polyline points
   const polylinePositions = useMemo(() => {
-    if (routeCoordinates && routeCoordinates.length > 1) return routeCoordinates;
-    if (pickup?.lat && destination?.lat) {
+    if (routeCoordinates?.length > 1 && routeCoordinates.every(([lat, lng]) => (
+      Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+    ))) {
+      return routeCoordinates.map(([lat, lng]) => [Number(lat), Number(lng)]);
+    }
+    if (isValidCoordinate(pickup) && isValidCoordinate(destination)) {
       // Create a smooth mid-point arc line between pickup & destination
       const midLat = (pickup.lat + destination.lat) / 2 + (pickup.lng - destination.lng) * 0.08;
       const midLng = (pickup.lng + destination.lng) / 2 - (pickup.lat - destination.lat) * 0.08;
       return [
-        [pickup.lat, pickup.lng],
+        [Number(pickup.lat), Number(pickup.lng)],
         [midLat, midLng],
-        [destination.lat, destination.lng],
+        [Number(destination.lat), Number(destination.lng)],
       ];
     }
     return null;
