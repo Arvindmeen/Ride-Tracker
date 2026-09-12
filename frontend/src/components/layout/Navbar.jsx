@@ -300,19 +300,59 @@ export default function Navbar() {
 
           {/* ── Center: Clean Navigation (Never wraps, hides gracefully on narrow laptops) ── */}
           <nav className="hidden xl:flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap shrink-0">
-            <a
-              href="/#booking"
-              className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
-            >
-              Book Ride
-            </a>
-            <a
-              href="/#booking"
-              className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              Live Radar
-            </a>
+            {isAuthenticated && role === 'USER' ? (
+              <Link
+                to="/app/home"
+                className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
+              >
+                Book Ride
+              </Link>
+            ) : (
+              <a
+                href="/#booking"
+                className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
+              >
+                Book Ride
+              </a>
+            )}
+
+            {/* Dynamic Radar / My Bookings / My Rides based on auth & role */}
+            {isAuthenticated ? (
+              role === 'DRIVER' ? (
+                <Link
+                  to="/driver/dashboard"
+                  className="px-3 py-2 rounded-xl transition-colors text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 hover:text-emerald-800 flex items-center gap-1.5 whitespace-nowrap border border-emerald-200/60 shadow-xs"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  My Rides
+                </Link>
+              ) : role === 'ADMIN' ? (
+                <Link
+                  to="/admin/rides"
+                  className="px-3 py-2 rounded-xl transition-colors text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 hover:text-indigo-800 flex items-center gap-1.5 whitespace-nowrap border border-indigo-200/60 shadow-xs"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shrink-0" />
+                  Fleet Radar
+                </Link>
+              ) : (
+                <Link
+                  to="/app/trips"
+                  className="px-3 py-2 rounded-xl transition-colors text-blue-700 bg-blue-50/80 hover:bg-blue-100 hover:text-blue-800 flex items-center gap-1.5 whitespace-nowrap border border-blue-200/60 shadow-xs"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                  My Bookings
+                </Link>
+              )
+            ) : (
+              <a
+                href="/#booking"
+                className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                Live Radar
+              </a>
+            )}
+
             <a
               href="/#places-to-go"
               className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
@@ -516,14 +556,65 @@ export default function Navbar() {
 
             {/* Navigation links */}
             <div className="space-y-1 pt-2 border-t border-slate-100 font-semibold text-sm">
-              <a
-                href="/#booking"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
-              >
-                <span>Book a Ride</span>
-                <ChevronRight size={15} className="text-slate-400" />
-              </a>
+              {isAuthenticated ? (
+                role === 'DRIVER' ? (
+                  <Link
+                    to="/driver/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-emerald-700 bg-emerald-50 font-bold"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>My Rides</span>
+                    </div>
+                    <ChevronRight size={15} className="text-emerald-500" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/app/trips"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-blue-700 bg-blue-50 font-bold"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      <span>My Bookings</span>
+                    </div>
+                    <ChevronRight size={15} className="text-blue-500" />
+                  </Link>
+                )
+              ) : (
+                <a
+                  href="/#booking"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Live Radar</span>
+                  </div>
+                  <ChevronRight size={15} className="text-slate-400" />
+                </a>
+              )}
+
+              {isAuthenticated && role === 'USER' ? (
+                <Link
+                  to="/app/home"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
+                >
+                  <span>Book a Ride</span>
+                  <ChevronRight size={15} className="text-slate-400" />
+                </Link>
+              ) : (
+                <a
+                  href="/#booking"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
+                >
+                  <span>Book a Ride</span>
+                  <ChevronRight size={15} className="text-slate-400" />
+                </a>
+              )}
               <a
                 href="/#places-to-go"
                 onClick={() => setMobileMenuOpen(false)}

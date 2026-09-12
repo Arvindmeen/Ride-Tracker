@@ -120,7 +120,9 @@ export default function AdminRides() {
                       </span>
                     </td>
                     <td>
-                      <span className="text-sm font-black text-slate-900">₹{ride.fare.total.toFixed(0)}</span>
+                      <span className="text-sm font-black text-slate-900">
+                        ₹{typeof ride.fare === 'object' ? Math.round(ride.fare.total ?? ride.fare.base ?? 0) : Math.round(ride.fare || 0)}
+                      </span>
                     </td>
                     <td>
                       <span className={clsx('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border', cfg.cls)}>

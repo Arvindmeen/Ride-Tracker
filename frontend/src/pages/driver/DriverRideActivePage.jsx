@@ -6,6 +6,7 @@ import {
   Sparkles, Volume2, User, KeyRound, Compass, Car, Send, Zap
 } from 'lucide-react';
 import { useDriverStore, useMapStore } from '@/stores';
+import { rideService, locationService } from '@/services';
 import { Spinner } from '@/components/ui';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
@@ -32,6 +33,52 @@ function playTone(freq = 600, duration = 0.25) {
   }
 }
 
+function calculateBearing(startLat, startLng, destLat, destLng) {
+  const startLatRad = (startLat * Math.PI) / 180;
+  const startLngRad = (startLng * Math.PI) / 180;
+  const destLatRad = (destLat * Math.PI) / 180;
+  const destLngRad = (destLng * Math.PI) / 180;
+
+  const y = Math.sin(destLngRad - startLngRad) * Math.cos(destLatRad);
+  const x =
+    Math.cos(startLatRad) * Math.sin(destLatRad) -
+    Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(destLngRad - startLngRad);
+  let brng = (Math.atan2(y, x) * 180) / Math.PI;
+  return (brng + 360) % 360;
+}
+
+function interpolatePath(points, targetSteps = 30) {
+  if (!points || points.length === 0) return [];
+  if (points.length === 1) return points;
+
+  const cumDists = [0];
+  for (let i = 0; i < points.length - 1; i++) {
+    const d = Math.hypot(points[i + 1][0] - points[i][0], points[i + 1][1] - points[i][1]);
+    cumDists.push(cumDists[i] + d);
+  }
+  const totalDist = cumDists[cumDists.length - 1];
+  if (totalDist === 0) return points;
+
+  const result = [];
+  for (let s = 0; s < targetSteps; s++) {
+    const targetDist = (s / (targetSteps - 1)) * totalDist;
+    let segIdx = 0;
+    while (segIdx < cumDists.length - 2 && cumDists[segIdx + 1] < targetDist) {
+      segIdx++;
+    }
+    const segStart = cumDists[segIdx];
+    const segLen = cumDists[segIdx + 1] - segStart;
+    const t = segLen > 0 ? (targetDist - segStart) / segLen : 0;
+    const p1 = points[segIdx];
+    const p2 = points[segIdx + 1];
+    result.push([
+      p1[0] + (p2[0] - p1[0]) * t,
+      p1[1] + (p2[1] - p1[1]) * t,
+    ]);
+  }
+  return result;
+}
+
 export default function DriverRideActivePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,7 +90,9 @@ export default function DriverRideActivePage() {
     activeRideStage,
   } = useDriverStore();
 
-  const [stage, setStage] = useState(activeRideStage || 'HEADING_TO_PICKUP'); // 'HEADING_TO_PICKUP' | 'ARRIVED' | 'IN_TRANSIT' | 'PAYMENT'
+  const [currentRide, setCurrentRide] = useState(activeRide || null);
+  const [loading, setLoading] = useState(!activeRide);
+  const [stage, setStage] = useState(activeRideStage || 'HEADING_TO_PICKUP');
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
   const [showCallModal, setShowCallModal] = useState(false);
@@ -51,16 +100,117 @@ export default function DriverRideActivePage() {
   const [arrivedAlert, setArrivedAlert] = useState(false);
   const [quickPingToast, setQuickPingToast] = useState('');
   const [speed, setSpeed] = useState(0);
+  const [driverPos, setDriverPos] = useState(null);
+  const [routePolyline, setRoutePolyline] = useState(null);
+  const [remainingEta, setRemainingEta] = useState(2);
+  const [remainingDistance, setRemainingDistance] = useState(0.6);
 
-  // Driver simulated moving coordinate
-  const [driverPos, setDriverPos] = useState({
-    lat: activeRide?.pickup?.lat ? activeRide.pickup.lat - 0.003 : 22.3110,
-    lng: activeRide?.pickup?.lng ? activeRide.pickup.lng - 0.002 : 87.3020,
-    heading: 45,
-    category: vehicleType || 'MOTO',
-  });
+  // Waypoints for smooth simulation
+  const approachWaypoints = useRef([]);
+  const tripWaypoints = useRef([]);
+  const animIndexRef = useRef(0);
 
-  // Waiting stopwatch when driver arrives at pickup
+  // 1. Resolve Dynamic Ride Data
+  useEffect(() => {
+    if (activeRide) {
+      setCurrentRide(activeRide);
+      setLoading(false);
+      return;
+    }
+
+    const targetId = id || 'ACTIVE_RIDE';
+    rideService.getRideById(targetId).then((found) => {
+      if (found) {
+        setCurrentRide(found);
+      } else {
+        rideService.getRides().then((all) => {
+          if (all && all.length > 0) {
+            setCurrentRide(all[0]);
+          }
+        });
+      }
+      setLoading(false);
+    });
+  }, [id, activeRide]);
+
+  // 2. Initialize Telemetry & Street Routes (Place C ➔ Place A ➔ Place B)
+  useEffect(() => {
+    if (!currentRide) return;
+
+    const pickup = currentRide.pickup || {
+      lat: 28.8358,
+      lng: 78.7725,
+      name: 'Budh Bazaar Market, Moradabad',
+      address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
+    };
+
+    const destination = currentRide.destination || {
+      lat: 28.8314,
+      lng: 78.7654,
+      name: 'Moradabad Junction Railway Station',
+      address: 'Station Road (SH49), Moradabad Junction',
+    };
+
+    // Point C: Driver's starting position (~500m along road from Place A)
+    const driverStart = currentRide.driverStartLocation?.lat
+      ? currentRide.driverStartLocation
+      : {
+          lat: pickup.lat + (destination.lat >= pickup.lat ? -0.0045 : 0.0045),
+          lng: pickup.lng + (destination.lng >= pickup.lng ? -0.0038 : 0.0038),
+          name: 'Nearby Proximity Dispatch Hub',
+        };
+
+    setDriverPos({
+      lat: driverStart.lat,
+      lng: driverStart.lng,
+      category: currentRide.category || vehicleType || 'MOTO',
+      heading: calculateBearing(driverStart.lat, driverStart.lng, pickup.lat, pickup.lng),
+    });
+
+    // Instant fallback segments
+    const fallbackApproach = [
+      [driverStart.lat, driverStart.lng],
+      [driverStart.lat + (pickup.lat - driverStart.lat) * 0.5 + 0.0003, driverStart.lng + (pickup.lng - driverStart.lng) * 0.5 - 0.0003],
+      [pickup.lat, pickup.lng],
+    ];
+
+    const fallbackTrip = [
+      [pickup.lat, pickup.lng],
+      [pickup.lat + (destination.lat - pickup.lat) * 0.4 - 0.0004, pickup.lng + (destination.lng - pickup.lng) * 0.4 + 0.0004],
+      [pickup.lat + (destination.lat - pickup.lat) * 0.75 + 0.0002, pickup.lng + (destination.lng - pickup.lng) * 0.75 - 0.0002],
+      [destination.lat, destination.lng],
+    ];
+
+    approachWaypoints.current = interpolatePath(fallbackApproach, 24);
+    tripWaypoints.current = interpolatePath(fallbackTrip, 32);
+    setRoutePolyline(fallbackApproach);
+
+    // Fetch high-precision OSRM street route
+    Promise.all([
+      locationService.getRoute(driverStart, pickup),
+      locationService.getRoute(pickup, destination),
+    ]).then(([approachRes, tripRes]) => {
+      const approachPoints = approachRes?.coordinates?.length > 2
+        ? approachRes.coordinates
+        : fallbackApproach;
+      const tripPoints = tripRes?.coordinates?.length > 2
+        ? tripRes.coordinates
+        : fallbackTrip;
+
+      approachWaypoints.current = interpolatePath(approachPoints, 24);
+      tripWaypoints.current = interpolatePath(tripPoints, 32);
+
+      if (stage === 'HEADING_TO_PICKUP') {
+        setRoutePolyline(approachPoints);
+      } else {
+        setRoutePolyline(tripPoints);
+      }
+    }).catch((err) => {
+      console.warn('Driver route background fallback active:', err);
+    });
+  }, [currentRide]);
+
+  // 3. Waiting stopwatch when at pickup
   useEffect(() => {
     let timer;
     if (stage === 'ARRIVED') {
@@ -71,36 +221,97 @@ export default function DriverRideActivePage() {
     return () => clearInterval(timer);
   }, [stage]);
 
-  // Simulated GPS progression & speed
+  // 4. Smooth Real-Time Progression along Street Routes
   useEffect(() => {
-    if (!activeRide) return;
+    if (!currentRide || stage === 'PAYMENT' || stage === 'COMPLETED') return;
+
     const interval = setInterval(() => {
-      setDriverPos((prev) => {
-        const target = stage === 'IN_TRANSIT' ? activeRide.destination : activeRide.pickup;
-        if (!target?.lat) return prev;
-        const dLat = (target.lat - prev.lat) * 0.12;
-        const dLng = (target.lng - prev.lng) * 0.12;
-        
-        if (stage === 'IN_TRANSIT') {
-          setSpeed(Math.round(28 + Math.random() * 20));
-        } else if (stage === 'HEADING_TO_PICKUP') {
-          setSpeed(Math.round(18 + Math.random() * 15));
-        } else {
+      if (stage === 'HEADING_TO_PICKUP') {
+        // Driver at C moves to Pickup Spot A
+        const waypoints = approachWaypoints.current;
+        if (!waypoints || waypoints.length === 0) return;
+
+        animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
+        const idx = animIndexRef.current;
+        const currentPt = waypoints[idx];
+        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
+
+        if (!currentPt) return;
+
+        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
+        const remainingDistKm = Math.max(0.1, Math.round((1 - progress) * 0.7 * 10) / 10);
+        const remainingEtaMins = Math.max(1, Math.round((1 - progress) * 2));
+        const currentSpeed = Math.round(26 + Math.random() * 12);
+
+        setDriverPos({
+          lat: currentPt[0],
+          lng: currentPt[1],
+          heading,
+          category: currentRide.category || vehicleType || 'MOTO',
+        });
+        setSpeed(currentSpeed);
+        setRemainingDistance(remainingDistKm);
+        setRemainingEta(remainingEtaMins);
+
+        // Reached pickup spot A
+        if (idx >= waypoints.length - 1) {
+          playTone(784, 0.35);
+          setStage('ARRIVED');
+          setRideStage('ARRIVED');
+          setArrivedAlert(true);
+          setTimeout(() => setArrivedAlert(false), 5000);
+          animIndexRef.current = 0;
+          setSpeed(0);
+          if (tripWaypoints.current?.length > 0) {
+            setRoutePolyline(tripWaypoints.current);
+          }
+        }
+      } else if (stage === 'IN_TRANSIT') {
+        // Driver & Passenger move TOGETHER from A to Destination B!
+        const waypoints = tripWaypoints.current;
+        if (!waypoints || waypoints.length === 0) return;
+
+        animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
+        const idx = animIndexRef.current;
+        const currentPt = waypoints[idx];
+        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
+
+        if (!currentPt) return;
+
+        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
+        const totalTripKm = currentRide.distance || 1.4;
+        const remainingDistKm = Math.max(0.1, Math.round((1 - progress) * totalTripKm * 10) / 10);
+        const remainingEtaMins = Math.max(1, Math.round((1 - progress) * Math.max(2, Math.round(totalTripKm * 2.2))));
+        const currentSpeed = Math.round(35 + Math.random() * 15);
+
+        setDriverPos({
+          lat: currentPt[0],
+          lng: currentPt[1],
+          heading,
+          category: currentRide.category || vehicleType || 'MOTO',
+        });
+        setSpeed(currentSpeed);
+        setRemainingDistance(remainingDistKm);
+        setRemainingEta(remainingEtaMins);
+
+        // Reached destination B
+        if (idx >= waypoints.length - 1) {
+          playTone(987, 0.3);
+          setStage('PAYMENT');
+          setRideStage('PAYMENT_PENDING');
           setSpeed(0);
         }
+      }
+    }, 850);
 
-        return {
-          lat: prev.lat + dLat,
-          lng: prev.lng + dLng,
-          heading: (prev.heading + 10) % 360,
-          category: vehicleType || 'MOTO',
-        };
-      });
-    }, 2000);
     return () => clearInterval(interval);
-  }, [activeRide, stage, vehicleType]);
+  }, [currentRide, stage, vehicleType, setRideStage]);
 
-  const fareAmount = activeRide?.estimatedFare || 85;
+  const fareAmount = typeof currentRide?.fare === 'object'
+    ? Math.round(currentRide.fare.total ?? currentRide.fare.base ?? 42)
+    : Math.round(currentRide?.fare || 42);
   const commission = Math.round(fareAmount * 0.12 * 10) / 10;
   const netEarnings = Math.round((fareAmount - commission) * 10) / 10;
 
@@ -112,38 +323,76 @@ export default function DriverRideActivePage() {
 
   // Driver action: "I Have Arrived at Pickup"
   const handleSayIArrived = () => {
-    playTone(784, 0.35); // G5 chime
+    playTone(784, 0.35);
     setStage('ARRIVED');
     setRideStage('ARRIVED');
     setArrivedAlert(true);
     setTimeout(() => setArrivedAlert(false), 5000);
+    animIndexRef.current = 0;
+    setSpeed(0);
+    if (tripWaypoints.current?.length > 0) {
+      setRoutePolyline(tripWaypoints.current);
+    }
   };
 
   // Driver action: Verify passenger OTP
   const handleVerifyOtp = () => {
-    if (otpInput.trim().length === 4 || otpInput === '4921') {
-      playTone(880, 0.4); // A5 chime
+    const validOtp = currentRide?.otp ? String(currentRide.otp).trim() : '4921';
+    if (otpInput.trim() === validOtp || otpInput.trim().length === 4) {
+      playTone(880, 0.4);
       setOtpError('');
       setStage('IN_TRANSIT');
       setRideStage('IN_TRANSIT');
+      animIndexRef.current = 0;
     } else {
-      setOtpError('Please enter the 4-digit ride OTP given by passenger (e.g. 4921)');
+      setOtpError(`Please enter passenger's 4-digit ride OTP (e.g. ${validOtp})`);
     }
   };
 
   const handleFinishRide = () => {
-    playTone(987, 0.3); // B5 chime
+    playTone(987, 0.3);
     setStage('PAYMENT');
     setRideStage('PAYMENT_PENDING');
   };
 
-  const handleCollectAndFinish = () => {
-    playTone(1046, 0.5); // C6 celebratory chime
+  const handleCollectAndFinish = async () => {
+    playTone(1046, 0.5);
+    const completedAt = new Date().toISOString();
+    const durationMins = Math.max(2, Math.round((currentRide?.distance || 1.4) * 2.2));
+
+    const completedRidePayload = {
+      ...currentRide,
+      status: 'RIDE_COMPLETED',
+      completedAt,
+      durationMinutes: durationMins,
+      payment: {
+        method: 'UPI',
+        status: 'COMPLETED',
+        amount: fareAmount,
+      },
+    };
+
+    // 1. Credit driver store
     completeRide(fareAmount);
+
+    // 2. Persist in database & API
+    try {
+      await rideService.updateRide(currentRide?.id, completedRidePayload);
+    } catch (e) {}
+
     navigate('/driver/dashboard');
   };
 
-  if (!activeRide) {
+  if (loading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center font-sans bg-slate-950 text-white gap-3">
+        <Spinner size="lg" className="text-emerald-500" />
+        <p className="text-xs font-bold text-slate-400">Loading Active Cockpit Navigation...</p>
+      </div>
+    );
+  }
+
+  if (!currentRide) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center font-sans bg-slate-950 text-white">
         <div className="w-16 h-16 bg-slate-800 rounded-3xl flex items-center justify-center text-3xl mb-3 shadow-lg">
@@ -153,7 +402,7 @@ export default function DriverRideActivePage() {
         <p className="text-xs text-slate-400 mb-4">Go to your cockpit to accept incoming proximity dispatches</p>
         <button
           onClick={() => navigate('/driver/dashboard')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-blue-600/30 transition-all"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-emerald-600/30 transition-all"
         >
           Open Driver Cockpit
         </button>
@@ -167,7 +416,7 @@ export default function DriverRideActivePage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const is100Km = activeRide.is100KmOutstation || (activeRide.estimatedDistance && activeRide.estimatedDistance >= 80);
+  const passengerName = currentRide.userName || currentRide.passengerName || 'Verified Passenger';
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] relative overflow-hidden bg-slate-950 text-slate-100 font-sans">
@@ -176,18 +425,18 @@ export default function DriverRideActivePage() {
       <div className="absolute top-3 left-3 right-3 z-30 pointer-events-auto">
         <div className="bg-slate-950/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-3xl border border-slate-800 shadow-2xl flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-xl shrink-0 shadow-md">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600 flex items-center justify-center text-white text-xl shrink-0 shadow-md">
               <Navigation size={22} className="animate-spin-slow" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-400">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
                   {stage === 'HEADING_TO_PICKUP'
-                    ? 'Heading to Pickup Spot'
+                    ? 'Heading to Pickup Spot A'
                     : stage === 'ARRIVED'
-                    ? '📍 At Pickup Location'
+                    ? '📍 At Pickup Location A'
                     : stage === 'IN_TRANSIT'
-                    ? 'Trip in Progress (Navigating)'
+                    ? 'Navigating to Destination B'
                     : 'Trip Completed'}
                 </span>
                 {stage === 'IN_TRANSIT' && (
@@ -197,7 +446,7 @@ export default function DriverRideActivePage() {
                 )}
               </div>
               <h3 className="text-xs sm:text-sm font-black text-white truncate max-w-xs sm:max-w-md mt-0.5">
-                {stage === 'IN_TRANSIT' ? activeRide.destination?.name : activeRide.pickup?.name}
+                {stage === 'IN_TRANSIT' ? (currentRide.destination?.name || 'Destination Dropoff') : (currentRide.pickup?.name || 'Pickup Point')}
               </h3>
             </div>
           </div>
@@ -205,11 +454,13 @@ export default function DriverRideActivePage() {
           <div className="text-right shrink-0">
             <span className="text-xs font-mono font-black text-emerald-400">
               {stage === 'IN_TRANSIT'
-                ? `${activeRide.estimatedDistance || 12} km · Active`
-                : '0.7 km · ~2 mins'}
+                ? `${remainingDistance} km · ~${remainingEta} mins`
+                : stage === 'HEADING_TO_PICKUP'
+                ? `${remainingDistance} km · ~${remainingEta} mins`
+                : 'Arrived at Pickup'}
             </span>
             <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-              {vehicleType === 'BIKE' ? '🏍️ Rapido Mode' : '🚗 Cab Mode'}
+              {currentRide.category || vehicleType === 'BIKE' ? '🏍️ Rapido Mode' : '🚗 Cab Mode'}
             </p>
           </div>
         </div>
@@ -226,7 +477,7 @@ export default function DriverRideActivePage() {
               <div>
                 <p className="font-black text-sm">Passenger Notified!</p>
                 <p className="text-emerald-100 text-[11px]">
-                  <strong>{activeRide.userName}</strong> was pinged: "Your driver has arrived at the pickup location."
+                  <strong>{passengerName}</strong> was pinged: "Your driver has arrived at the pickup location."
                 </p>
               </div>
             </div>
@@ -245,9 +496,11 @@ export default function DriverRideActivePage() {
           </div>
         }>
           <LiveMap
-            pickup={activeRide.pickup}
-            destination={activeRide.destination}
+            pickup={currentRide.pickup}
+            destination={currentRide.destination}
             activeDriverLocation={driverPos}
+            routePolyline={routePolyline}
+            rideStage={stage === 'IN_TRANSIT' ? 'RIDE_STARTED' : stage === 'HEADING_TO_PICKUP' ? 'DRIVER_APPROACHING' : stage}
             height="100%"
             tileTheme="light"
             showSurgeZones={false}
@@ -264,18 +517,18 @@ export default function DriverRideActivePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center font-black text-base shadow-sm">
-                    {activeRide.userName?.charAt(0) || 'P'}
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-base shadow-sm">
+                    {passengerName.charAt(0) || 'P'}
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h4 className="text-sm font-black text-slate-900">{activeRide.userName}</h4>
-                      <span className="text-[9px] bg-blue-50 text-blue-700 px-1.5 rounded font-bold border border-blue-200">
+                      <h4 className="text-sm font-black text-slate-900">{passengerName}</h4>
+                      <span className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 rounded font-bold border border-emerald-200">
                         Passenger
                       </span>
                     </div>
                     <p className="text-xs text-amber-500 font-bold mt-0.5">
-                      ★ {activeRide.userRating || 4.9} · Verified Account
+                      ★ {currentRide.userRating || 4.9} · Verified Account
                     </p>
                   </div>
                 </div>
@@ -298,173 +551,159 @@ export default function DriverRideActivePage() {
                 </div>
               </div>
 
-              {/* Pickup Spot Details */}
-              <div className="flex items-center justify-between text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                  <span className="font-semibold text-slate-500 shrink-0">Pickup Point:</span>
-                  <span className="font-bold text-slate-900 truncate">{activeRide.pickup?.name}</span>
+              {/* Pickup Address Card */}
+              <div className="flex items-start gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
+                  A
                 </div>
-                <span className="text-[11px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg shrink-0">
-                  0.7 km away
-                </span>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Pickup Spot (Place A)</span>
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {currentRide.pickup?.name || currentRide.pickup?.address}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {currentRide.pickup?.address}
+                  </p>
+                </div>
               </div>
 
-              {/* "Say I Arrived" Button */}
-              <div className="pt-1">
-                <button
-                  onClick={handleSayIArrived}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 text-xs transition-all active:scale-95"
-                >
-                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                  <CheckCircle2 size={16} />
-                  <span>I've Arrived at Pickup</span>
-                </button>
+              {/* Quick Communication Chips */}
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
+                {[
+                  "I've reached your lane",
+                  'Heavy traffic near chowk',
+                  'Please be ready at gate',
+                ].map((txt) => (
+                  <button
+                    key={txt}
+                    onClick={() => handleQuickPing(txt)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold whitespace-nowrap transition-colors"
+                  >
+                    💬 {txt}
+                  </button>
+                ))}
               </div>
+
+              {/* Action Button: Arrived at Pickup */}
+              <button
+                onClick={handleSayIArrived}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-blue-600/25 text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <MapPin size={15} />
+                <span>I've Arrived at Pickup Spot A</span>
+              </button>
             </div>
           )}
 
-          {/* ── STAGE 2: ARRIVED AT PICKUP (WAITING & OTP VERIFICATION) ───────── */}
+          {/* ── STAGE 2: AT PICKUP & OTP VERIFICATION ─────────────────────────── */}
           {stage === 'ARRIVED' && (
             <div className="space-y-4">
-              {/* Arrival Status & Waiting Timer */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
-                  <div>
-                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider block">
-                      📍 You Are At Pickup Point
-                    </span>
-                    <span className="text-[10px] text-emerald-600 font-bold">
-                      Passenger Alerted · Free Waiting (5:00 min)
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="text-xs font-black text-emerald-700 uppercase tracking-wider">
+                    Waiting for Passenger at Place A
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs font-mono font-bold bg-amber-50 text-amber-800 px-3 py-1.5 rounded-xl border border-amber-200 shadow-xs">
-                  <Clock size={13} className="text-amber-600 animate-pulse" />
-                  <span>Waiting: {formatWaiting(waitingSeconds)}</span>
+                <div className="flex items-center gap-1 text-xs font-mono font-bold bg-slate-100 px-2.5 py-1 rounded-lg">
+                  <Clock size={12} className="text-slate-500" />
+                  <span>{formatWaiting(waitingSeconds)}</span>
                 </div>
               </div>
 
-              {/* Quick Passenger Ping Chips */}
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                  Quick Arrival Pings to Passenger
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    "💬 I'm outside at the gate",
-                    "🚨 Flashed my headlights",
-                    "👋 Standing near pickup spot"
-                  ].map((ping, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleQuickPing(ping)}
-                      className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all border border-slate-200 hover:border-slate-300 active:scale-95"
-                    >
-                      {ping}
-                    </button>
-                  ))}
-                </div>
-                {quickPingToast && (
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
-                    <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
-                    <span>{quickPingToast}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* 4-Digit Passenger Ride OTP Input Card */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+              {/* OTP Input Form */}
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-black text-blue-950 text-sm flex items-center gap-1.5">
-                      <KeyRound size={16} className="text-blue-600" />
-                      <span>Ask Passenger For 4-Digit Ride OTP</span>
-                    </h4>
-                    <p className="text-blue-700 text-[11px] mt-0.5">
-                      Verify passenger boarding by entering the code shown on their booking screen
-                    </p>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                    <KeyRound size={15} className="text-emerald-600" />
+                    <span>Enter 4-Digit Passenger Start OTP:</span>
                   </div>
-                  <button
-                    onClick={() => {
-                      setOtpInput('4921');
-                      setOtpError('');
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-black text-xs hover:bg-blue-700 shadow-sm transition-all active:scale-95 flex items-center gap-1"
-                    title="Autofill passenger OTP for demo"
-                  >
-                    <Sparkles size={13} />
-                    <span>Fill OTP (4921)</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-center">
-                    <input
-                      type="text"
-                      maxLength={4}
-                      value={otpInput}
-                      onChange={(e) => {
-                        setOtpInput(e.target.value.replace(/\D/g, ''));
-                        if (otpError) setOtpError('');
-                      }}
-                      placeholder="• • • •"
-                      className="text-center font-mono font-black text-3xl tracking-[0.5em] w-64 bg-white border-2 border-blue-300 focus:border-emerald-500 rounded-2xl py-3 focus:outline-none shadow-sm transition-colors text-slate-900"
-                    />
-                  </div>
-                  {otpError && (
-                    <p className="text-center text-xs font-bold text-red-600 flex items-center justify-center gap-1">
-                      <AlertTriangle size={13} />
-                      <span>{otpError}</span>
-                    </p>
+                  {currentRide.otp && (
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                      OTP: {currentRide.otp}
+                    </span>
                   )}
                 </div>
 
-                <button
-                  onClick={handleVerifyOtp}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 text-xs transition-all active:scale-95"
-                >
-                  <KeyRound size={15} />
-                  <span>Verify OTP & Start Trip</span>
-                  <ArrowRight size={14} />
-                </button>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={otpInput}
+                    onChange={(e) => {
+                      setOtpInput(e.target.value.replace(/\D/g, ''));
+                      setOtpError('');
+                    }}
+                    placeholder="e.g. 4921"
+                    className="flex-1 bg-white border border-emerald-300 rounded-xl px-4 py-2.5 text-center font-mono font-black text-base tracking-widest text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={handleVerifyOtp}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1 active:scale-95"
+                  >
+                    <Check size={16} />
+                    <span>Start Ride</span>
+                  </button>
+                </div>
+                {otpError && <p className="text-[11px] font-bold text-rose-600">{otpError}</p>}
+              </div>
+
+              {/* Destination Dropoff Preview */}
+              <div className="flex items-start gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
+                  B
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Destination Dropoff (Place B)</span>
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {currentRide.destination?.name}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {currentRide.destination?.address}
+                  </p>
+                </div>
               </div>
             </div>
           )}
 
-          {/* ── STAGE 3: IN TRANSIT (DRIVING TO DESTINATION) ─────────────────── */}
+          {/* ── STAGE 3: IN TRANSIT TO DESTINATION B ─────────────────────────── */}
           {stage === 'IN_TRANSIT' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-extrabold text-blue-600 uppercase">Trip in Progress</span>
-                  </div>
-                  <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate mt-0.5">
-                    Heading To: {activeRide.destination?.name}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                    ● Moving Together Towards Destination B
+                  </span>
+                  <h4 className="text-sm font-black text-slate-900 truncate max-w-xs mt-0.5">
+                    {currentRide.destination?.name}
                   </h4>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-base font-black text-slate-900">₹{fareAmount}</span>
-                  <p className="text-[10px] text-emerald-600 font-bold">Net: ₹{netEarnings}</p>
+                <div className="text-right">
+                  <span className="text-base font-black text-slate-900 font-mono">
+                    {remainingDistance} km
+                  </span>
+                  <p className="text-[10px] text-slate-400 font-bold">~{remainingEta} mins ETA</p>
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs flex items-center justify-between">
-                <span className="text-slate-600 font-medium">Destination Distance:</span>
-                <span className="font-mono font-bold text-slate-900">
-                  {activeRide.estimatedDistance || 12} km ({activeRide.estimatedDuration || 25} mins)
+              {/* Live Route Tracker */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Compass size={16} className="text-blue-600 animate-spin-slow" />
+                  <span className="font-bold">Driving Speed:</span>
+                </div>
+                <span className="font-mono font-black text-emerald-700 text-sm">
+                  {speed} km/h
                 </span>
               </div>
 
+              {/* Complete Ride CTA */}
               <button
                 onClick={handleFinishRide}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 text-xs transition-all active:scale-95"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/25 text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <CheckCircle2 size={16} />
-                <span>Complete Trip (Arrived at Drop)</span>
+                <span>Complete Trip (Arrived at Destination B)</span>
               </button>
             </div>
           )}
@@ -526,7 +765,7 @@ export default function DriverRideActivePage() {
               </p>
             </div>
             <div className="bg-slate-50 p-3 rounded-2xl font-mono text-xs text-slate-800 font-bold border border-slate-200">
-              Dialing {activeRide.userName} via +91 80 6900-MASK
+              Dialing {passengerName} via +91 80 6900-MASK
             </div>
             <button
               onClick={() => setShowCallModal(false)}

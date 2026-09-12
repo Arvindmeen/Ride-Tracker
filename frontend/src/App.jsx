@@ -194,11 +194,11 @@ export default function App() {
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 
-            {/* Driver app */}
             <Route path="/driver" element={<RequireRole role="DRIVER"><DriverLayout /></RequireRole>}>
               <Route index element={<Navigate to="/driver/dashboard" replace />} />
               <Route path="dashboard" element={<DriverDashboard />} />
               <Route path="requests" element={<DriverRequests />} />
+              <Route path="ride" element={<DriverRideActivePage />} />
               <Route path="ride/:id" element={<DriverRideActivePage />} />
               <Route path="earnings" element={<DriverEarnings />} />
               <Route path="profile" element={<DriverProfilePage />} />

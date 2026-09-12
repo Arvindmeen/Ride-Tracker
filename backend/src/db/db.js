@@ -95,23 +95,7 @@ const memoryStore = {
       onlineMinutes: 280,
     },
   ],
-  rides: [
-    {
-      id: 'RIDE-MBD-RECENT',
-      userId: 'USR-PASSENGER-01',
-      driverId: 'DRV-RECORD-01',
-      passengerName: 'Rahul Mehra',
-      driverName: 'Subhash Mondal',
-      category: 'MOTO',
-      pickup: { name: 'Budh Bazaar Market, Moradabad', address: 'Budhbazar Road, Moradabad', lat: 28.8358, lng: 78.7725 },
-      destination: { name: 'Moradabad Junction Railway Station', address: 'Station Road (SH49), Moradabad Junction', lat: 28.8314, lng: 78.7654 },
-      distanceKm: 1.4,
-      fare: 42,
-      status: 'COMPLETED',
-      requestedAt: new Date(Date.now() - 25 * 60000).toISOString(),
-      completedAt: new Date(Date.now() - 5 * 60000).toISOString(),
-    },
-  ],
+  rides: [],
 };
 
 let pool = null;
@@ -414,6 +398,116 @@ export async function listDriversForAdmin({ limit = 50, offset = 0 } = {}) {
     total: list.length,
     piiNotice: '🔒 Driver PAN, Aadhaar, and bank account numbers are masked for staff privacy.',
   };
+}
+
+// ── Dynamic Ride CRUD Operations ─────────────────────────────────────────────
+
+export async function saveRide(rideData) {
+  const existingIdx = memoryStore.rides.findIndex((r) => r.id === rideData.id);
+  if (existingIdx !== -1) {
+    memoryStore.rides[existingIdx] = { ...memoryStore.rides[existingIdx], ...rideData };
+    return memoryStore.rides[existingIdx];
+  }
+  memoryStore.rides.unshift(rideData);
+
+  if (isPostgresConnected && pool) {
+    try {
+      const q = `
+        INSERT INTO rides (
+          id, user_id, driver_id, status, category,
+          pickup_lat, pickup_lng, pickup_address,
+          dest_lat, dest_lng, dest_address,
+          distance_km, total_fare, requested_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (id) DO NOTHING;
+      `;
+      await pool.query(q, [
+        rideData.id,
+        rideData.userId || 'USR-PASSENGER-01',
+        rideData.driverId || 'DRV-RECORD-01',
+        rideData.status || 'DRIVER_APPROACHING',
+        rideData.category || 'ECONOMY',
+        rideData.pickup?.lat || 0,
+        rideData.pickup?.lng || 0,
+        rideData.pickup?.name || rideData.pickup?.address || '',
+        rideData.destination?.lat || 0,
+        rideData.destination?.lng || 0,
+        rideData.destination?.name || rideData.destination?.address || '',
+        rideData.distance || 0,
+        typeof rideData.fare === 'object' ? rideData.fare.total : rideData.fare || 0,
+        rideData.requestedAt || new Date().toISOString(),
+      ]);
+    } catch (e) {
+      console.warn('[DB] PG saveRide fallback:', e.message);
+    }
+  }
+
+  return rideData;
+}
+
+export async function updateRide(id, updates) {
+  const idx = memoryStore.rides.findIndex((r) => r.id === id);
+  if (idx !== -1) {
+    memoryStore.rides[idx] = { ...memoryStore.rides[idx], ...updates };
+    const updated = memoryStore.rides[idx];
+
+    if (isPostgresConnected && pool) {
+      try {
+        const q = `
+          UPDATE rides SET
+            status = COALESCE($1, status),
+            completed_at = COALESCE($2, completed_at),
+            user_rating = COALESCE($3, user_rating),
+            total_fare = COALESCE($4, total_fare)
+          WHERE id = $5;
+        `;
+        await pool.query(q, [
+          updates.status || null,
+          updates.completedAt || null,
+          updates.userRating || null,
+          typeof updates.fare === 'object' ? updates.fare.total : updates.fare || null,
+          id,
+        ]);
+      } catch (e) {
+        console.warn('[DB] PG updateRide fallback:', e.message);
+      }
+    }
+
+    return updated;
+  }
+  // If not found in array yet, add as dynamic ride
+  const newRide = { id, ...updates };
+  memoryStore.rides.unshift(newRide);
+  return newRide;
+}
+
+export async function findRideById(id) {
+  if (isPostgresConnected && pool) {
+    try {
+      const res = await pool.query('SELECT * FROM rides WHERE id = $1', [id]);
+      if (res.rows.length > 0) return res.rows[0];
+    } catch (e) {}
+  }
+  return memoryStore.rides.find((r) => r.id === id) || null;
+}
+
+export async function getRidesByUserId(userId) {
+  if (isPostgresConnected && pool) {
+    try {
+      const res = await pool.query(
+        'SELECT * FROM rides WHERE user_id = $1 ORDER BY requested_at DESC',
+        [userId]
+      );
+      if (res.rows.length > 0) return res.rows;
+    } catch (e) {}
+  }
+  return memoryStore.rides.filter(
+    (r) => r.userId === userId || r.userId === 'USR-PASSENGER-01'
+  );
+}
+
+export async function getAllRides() {
+  return memoryStore.rides;
 }
 
 /**

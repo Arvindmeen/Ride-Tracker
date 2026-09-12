@@ -363,104 +363,8 @@ export const useMapStore = create((set, get) => ({
   },
 }));
 
-// Mock driver trips across India & IIT Kharagpur
-export const MOCK_DRIVER_PAST_TRIPS = [
-  {
-    id: 'TRIP-901',
-    customerName: 'Aarav Sharma',
-    customerPhone: '+91 98765 11029',
-    pickup: 'Scholars Avenue (RK Hall)',
-    drop: 'Technology Market (Tech Mkt)',
-    category: 'MOTO',
-    vehicleName: 'Hero Splendor Plus (Bike)',
-    plate: 'WB 29 AB 1042',
-    fare: 28,
-    commission: 3.36,
-    netEarning: 24.64,
-    distance: '2.4 km',
-    duration: '7 mins',
-    date: 'Today, 06:45 PM',
-    rating: 5,
-    paymentMethod: 'UPI',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'TRIP-902',
-    customerName: 'Sneha Roy',
-    customerPhone: '+91 94330 22910',
-    pickup: 'Vikramshila Classroom Complex',
-    drop: 'Kharagpur Jn Railway Station',
-    category: 'MOTO',
-    vehicleName: 'Hero Splendor Plus (Bike)',
-    plate: 'WB 29 AB 1042',
-    fare: 85,
-    commission: 10.2,
-    netEarning: 74.8,
-    distance: '6.8 km',
-    duration: '16 mins',
-    date: 'Today, 04:15 PM',
-    rating: 5,
-    paymentMethod: 'CASH',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'TRIP-903',
-    customerName: 'Prof. S. Mukherjee',
-    customerPhone: '+91 98311 44521',
-    pickup: 'Main Gate / Hijli Heritage',
-    drop: 'Kalidas Auditorium Gymkhana',
-    category: 'ECONOMY',
-    vehicleName: 'Maruti Swift Dzire (Car)',
-    plate: 'WB 29 EF 5821',
-    fare: 120,
-    commission: 14.4,
-    netEarning: 105.6,
-    distance: '3.5 km',
-    duration: '11 mins',
-    date: 'Today, 01:30 PM',
-    rating: 5,
-    paymentMethod: 'UPI',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'TRIP-904',
-    customerName: 'Rohan Gupta',
-    customerPhone: '+91 97110 88231',
-    pickup: 'Terminal 2 Airport (BOM)',
-    drop: 'Bandra-Kurla Complex (BKC)',
-    category: 'ECONOMY',
-    vehicleName: 'Maruti Swift Dzire (Car)',
-    plate: 'MH 01 AB 1234',
-    fare: 310,
-    commission: 37.2,
-    netEarning: 272.8,
-    distance: '12.8 km',
-    duration: '28 mins',
-    date: 'Yesterday, 09:20 PM',
-    rating: 4.8,
-    paymentMethod: 'UPI',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'TRIP-905',
-    customerName: 'Tanvi Joshi',
-    customerPhone: '+91 99002 77124',
-    pickup: 'Cyber City Hub Gurugram',
-    drop: 'Sector 62 Noida',
-    category: 'MOTO',
-    vehicleName: 'TVS Apache 160 (Bike)',
-    plate: 'DL 01 AB 4092',
-    fare: 220,
-    commission: 26.4,
-    netEarning: 193.6,
-    distance: '24.2 km',
-    duration: '42 mins',
-    date: 'Yesterday, 06:10 PM',
-    rating: 5,
-    paymentMethod: 'UPI',
-    status: 'COMPLETED',
-  },
-];
+// Real dynamic driver trips store (no hardcoded Mumbai mock trips)
+export const MOCK_DRIVER_PAST_TRIPS = [];
 
 // ── Driver App Store ──────────────────────────────────────────────────────────
 export const useDriverStore = create((set, get) => ({
@@ -504,26 +408,32 @@ export const useDriverStore = create((set, get) => ({
   setRideStage: (stage) => set({ activeRideStage: stage }),
 
   completeRide: (earnings) => set((s) => {
-    const gross = earnings || s.activeRide?.estimatedFare || 140;
-    const comm = gross * 0.12;
-    const net = gross - comm;
+    const active = s.activeRide;
+    const gross = earnings || (typeof active?.estimatedFare === 'number' ? active.estimatedFare : active?.fare?.total) || 42;
+    const comm = Math.round(gross * 0.12 * 10) / 10;
+    const net = Math.round((gross - comm) * 10) / 10;
+    const pickupName = active?.pickup?.name || active?.pickup?.address || 'Pickup Point';
+    const dropName = active?.destination?.name || active?.destination?.address || 'Destination Dropoff';
+    const dist = active?.distance || active?.estimatedDistance || 2.4;
+    const durationMins = active?.durationMinutes || active?.estimatedDuration || Math.max(2, Math.round(dist * 2.2));
+
     const newTrip = {
-      id: `TRIP-${Date.now().toString().slice(-4)}`,
-      customerName: s.activeRide?.userName || 'Passenger',
-      customerPhone: '+91 98765 99881',
-      pickup: s.activeRide?.pickup?.name || 'Pickup Point',
-      drop: s.activeRide?.destination?.name || 'Dropoff Point',
-      category: s.vehicleType,
-      vehicleName: s.vehicleType === 'BIKE' ? 'Hero Splendor Plus (Bike)' : 'Maruti Dzire (Car)',
-      plate: 'WB 29 AB 1042',
+      id: active?.id || `TRIP-${Date.now().toString().slice(-4)}`,
+      customerName: active?.userName || 'Verified Passenger',
+      customerPhone: active?.userPhone || '+91 98765 99881',
+      pickup: pickupName,
+      drop: dropName,
+      category: s.vehicleType || active?.category || 'MOTO',
+      vehicleName: s.vehicleType === 'BIKE' ? 'Hero Splendor Plus (Bike)' : s.vehicleType === 'AUTO' ? 'Bajaj Compact Auto' : 'Maruti Dzire (Car)',
+      plate: active?.driverInfo?.plate || (s.vehicleType === 'BIKE' ? 'UP 21 AB 4921' : 'UP 21 CD 9012'),
       fare: gross,
-      commission: Math.round(comm * 10) / 10,
-      netEarning: Math.round(net * 10) / 10,
-      distance: `${s.activeRide?.estimatedDistance || 4.2} km`,
-      duration: `${s.activeRide?.estimatedDuration || 12} mins`,
+      commission: comm,
+      netEarning: net,
+      distance: `${dist} km`,
+      duration: `${durationMins} mins`,
       date: 'Just now',
       rating: 5,
-      paymentMethod: 'UPI',
+      paymentMethod: active?.paymentMethod || 'UPI',
       status: 'COMPLETED',
     };
 
@@ -533,7 +443,7 @@ export const useDriverStore = create((set, get) => ({
       activeRideStage: 'COMPLETED',
       todayEarnings: s.todayEarnings + Math.round(net),
       todayRides: s.todayRides + 1,
-      pastTrips: [newTrip, ...s.pastTrips],
+      pastTrips: [newTrip, ...(s.pastTrips || [])],
     };
   }),
 

@@ -8,7 +8,6 @@ import { clsx } from 'clsx';
 import { rideService } from '@/services';
 import { VehicleIcon, Spinner, Badge, Button } from '@/components/ui';
 import { format } from 'date-fns';
-import { MOCK_RIDES } from '@/mock/rides.js';
 
 export default function TripDetailPage() {
   const { id } = useParams();
@@ -22,7 +21,7 @@ export default function TripDetailPage() {
       if (data) {
         setTrip({
           ...data,
-          durationMinutes: data.duration || 12,
+          durationMinutes: data.durationMinutes || data.duration || Math.max(2, Math.round((data.distance || 1.4) * 2.2)),
           paymentMethod: typeof data.payment === 'object'
             ? `${data.payment.method || 'UPI'} AutoPay`
             : (data.paymentMethod || 'UPI AutoPay'),
@@ -31,16 +30,28 @@ export default function TripDetailPage() {
         setLoading(false);
         return;
       }
-      // Rich default using first completed ride
-      const sample = MOCK_RIDES.find((r) => r.status === 'RIDE_COMPLETED') || MOCK_RIDES[0];
-      setTrip({
-        ...sample,
-        id: id || sample.id,
-        durationMinutes: sample.duration || 12,
-        paymentMethod: sample.payment?.method ? `${sample.payment.method} AutoPay` : 'UPI AutoPay',
-        paymentStatus: 'PAID',
+      
+      // If specific ID was not found, check user's real trips
+      rideService.getRides().then((userRides) => {
+        if (userRides && userRides.length > 0) {
+          const matched = userRides.find((r) => r.id === id);
+          if (matched) {
+            setTrip({
+              ...matched,
+              durationMinutes: matched.durationMinutes || matched.duration || Math.max(2, Math.round((matched.distance || 1.4) * 2.2)),
+              paymentMethod: typeof matched.payment === 'object'
+                ? `${matched.payment.method || 'UPI'} AutoPay`
+                : (matched.paymentMethod || 'UPI AutoPay'),
+              paymentStatus: 'PAID',
+            });
+          } else {
+            setTrip(null);
+          }
+        } else {
+          setTrip(null);
+        }
+        setLoading(false);
       });
-      setLoading(false);
     });
   }, [id]);
 
@@ -195,11 +206,11 @@ export default function TripDetailPage() {
         <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-100 text-center">
           <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
             <span className="text-[10px] font-bold text-slate-400 uppercase">Distance</span>
-            <p className="text-sm font-black text-slate-800 mt-0.5">{trip.distance || 2.4} km</p>
+            <p className="text-sm font-black text-slate-800 mt-0.5">{trip.distance || 1.4} km</p>
           </div>
           <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
             <span className="text-[10px] font-bold text-slate-400 uppercase">Trip Time</span>
-            <p className="text-sm font-black text-slate-800 mt-0.5">{trip.durationMinutes || 9} mins</p>
+            <p className="text-sm font-black text-slate-800 mt-0.5">{trip.durationMinutes || trip.duration || 6} mins</p>
           </div>
           <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
             <span className="text-[10px] font-bold text-slate-400 uppercase">Trip Rating</span>
@@ -217,18 +228,18 @@ export default function TripDetailPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-base flex items-center justify-center shadow-sm">
-                {trip.driverInfo.name.charAt(0)}
+                {trip.driverInfo.name ? trip.driverInfo.name.charAt(0) : 'D'}
               </div>
               <div>
                 <h3 className="text-sm sm:text-base font-black text-slate-900">
-                  {trip.driverInfo.name}
+                  {trip.driverInfo.name || 'Verified Driver'}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  {trip.driverInfo.vehicle} ·{' '}
-                  <span className="text-amber-500 font-bold">★ {trip.driverInfo.rating}</span>
+                  {trip.driverInfo.vehicle || 'Verified Vehicle'} ·{' '}
+                  <span className="text-amber-500 font-bold">★ {trip.driverInfo.rating || 4.9}</span>
                 </p>
                 <span className="font-mono text-[11px] font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-md inline-block mt-0.5">
-                  {trip.driverInfo.plate}
+                  {trip.driverInfo.plate || 'UP 21 AB 4921'}
                 </span>
               </div>
             </div>
@@ -240,54 +251,69 @@ export default function TripDetailPage() {
         </div>
       )}
 
-      {/* ── Fare Breakdown Receipt ───────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-        <h2 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
-          Fare & Tax Breakdown
-        </h2>
+      {/* ── Dynamic Fare Breakdown Receipt ───────────────────────────────────── */}
+      {(() => {
+        const totalFare = typeof trip.fare === 'object' ? Math.round(trip.fare.total ?? trip.fare.base ?? 42) : Math.round(trip.fare || 42);
+        const baseFare = typeof trip.fare === 'object' && trip.fare.base
+          ? Math.round(trip.fare.base)
+          : (trip.category === 'MOTO' ? 25 : trip.category === 'AUTO' ? 30 : 40);
+        const tax = typeof trip.fare === 'object' && trip.fare.tax
+          ? Math.round(trip.fare.tax * 10) / 10
+          : Math.round(totalFare * 0.05 * 10) / 10;
+        const distanceFare = typeof trip.fare === 'object' && (trip.fare.distance ?? trip.fare.distanceFare)
+          ? Math.round((trip.fare.distance ?? trip.fare.distanceFare) * 10) / 10
+          : Math.max(5, Math.round((totalFare - baseFare - tax) * 10) / 10);
 
-        <div className="space-y-2.5 text-xs text-slate-600">
-          <div className="flex justify-between">
-            <span>Base Fare ({trip.category})</span>
-            <span className="font-semibold text-slate-900">
-              ₹{trip.fare?.base || 40}.00
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Distance Rate ({trip.distance || 2.4} km)</span>
-            <span className="font-semibold text-slate-900">
-              ₹{trip.fare?.distanceFare || 28.80}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Surge / Dynamic Multiplier</span>
-            <span className="font-semibold text-slate-900">1.0x (Standard Rate)</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Applicable GST / Government Taxes (5%)</span>
-            <span className="font-semibold text-slate-900">
-              ₹{trip.fare?.tax || 3.44}
-            </span>
-          </div>
+        return (
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+            <h2 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
+              Fare & Tax Breakdown
+            </h2>
 
-          <div className="pt-3 border-t border-slate-200 flex justify-between items-baseline">
-            <span className="text-sm font-black text-slate-900">Total Billed</span>
-            <span className="text-xl font-black text-blue-600">
-              ₹{typeof trip.fare === 'object' ? Math.round(trip.fare.total) : trip.fare || 72}.00
-            </span>
-          </div>
-        </div>
+            <div className="space-y-2.5 text-xs text-slate-600">
+              <div className="flex justify-between">
+                <span>Base Fare ({trip.category || 'Ride'})</span>
+                <span className="font-semibold text-slate-900">
+                  ₹{baseFare}.00
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Distance Rate ({trip.distance || 1.4} km)</span>
+                <span className="font-semibold text-slate-900">
+                  ₹{distanceFare.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Surge / Dynamic Multiplier</span>
+                <span className="font-semibold text-slate-900">1.0x (Standard Rate)</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Applicable GST / Taxes (5%)</span>
+                <span className="font-semibold text-slate-900">
+                  ₹{tax.toFixed(2)}
+                </span>
+              </div>
 
-        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <CreditCard size={16} className="text-slate-500" />
-            <span className="font-bold text-slate-700">Payment: {trip.paymentMethod || 'UPI'}</span>
+              <div className="pt-3 border-t border-slate-200 flex justify-between items-baseline">
+                <span className="text-sm font-black text-slate-900">Total Billed</span>
+                <span className="text-xl font-black text-blue-600">
+                  ₹{totalFare}.00
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <CreditCard size={16} className="text-slate-500" />
+                <span className="font-bold text-slate-700">Payment: {trip.paymentMethod || 'UPI AutoPay'}</span>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                Settled Online
+              </span>
+            </div>
           </div>
-          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-            Settled Online
-          </span>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ── Re-book CTA ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3">

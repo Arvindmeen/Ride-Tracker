@@ -373,8 +373,63 @@ export default function UserHome() {
           setAssignedDriver(update.driver);
         }
         if (update.status === 'ACCEPTED') {
+          const dynamicRideId = `RIDE-${Date.now().toString().slice(-6)}`;
+          const currentPickup = pickup || userLocation || {
+            lat: 28.8358,
+            lng: 78.7725,
+            name: 'Budh Bazaar Market, Moradabad',
+            address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
+          };
+          const currentDest = destination || {
+            lat: 28.8314,
+            lng: 78.7654,
+            name: 'Moradabad Junction Railway Station',
+            address: 'Station Road (SH49), Moradabad Junction',
+          };
+          const totalFare = estimatedFare?.total || estimatedFare?.base || 42;
+          const totalDist = destination?.distanceKm || routeInfo?.distanceKm || estimatedFare?.distance || 1.4;
+
+          const dynamicOtp = String(Math.floor(1000 + Math.random() * 9000));
+          const driverLocationC = update.driver?.location || {
+            lat: currentPickup.lat + (currentDest.lat >= currentPickup.lat ? -0.0045 : 0.0045),
+            lng: currentPickup.lng + (currentDest.lng >= currentPickup.lng ? -0.0038 : 0.0038),
+            name: `${currentPickup.name} Proximity Hub`,
+          };
+
+          const bookedRide = {
+            id: dynamicRideId,
+            userId: user?.id || 'USR-PASSENGER-01',
+            userName: user?.name || 'Rahul Mehra',
+            userPhone: user?.phone || '+91 99887 76655',
+            status: 'DRIVER_APPROACHING',
+            stage: 'HEADING_TO_PICKUP',
+            category: category || 'MOTO',
+            pickup: currentPickup, // Place A
+            destination: currentDest, // Place B
+            driverStartLocation: driverLocationC, // Place C (Driver's current position)
+            fare: estimatedFare || { total: totalFare, base: 25, distance: 12, tax: 2, currency: 'INR' },
+            distance: totalDist,
+            payment: { method: paymentMode, status: 'PENDING', amount: totalFare },
+            requestedAt: new Date().toISOString(),
+            otp: dynamicOtp,
+            driverInfo: {
+              ...(update.driver || {}),
+              name: update.driver?.name || 'Subhash Mondal',
+              phone: update.driver?.phone || '+91 94340 12891',
+              rating: update.driver?.rating || 4.92,
+              vehicle: update.driver?.vehicleModel || (category === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Hero Splendor Plus (Bike)'),
+              plate: update.driver?.vehicleNumber || 'UP 21 AB 4921',
+              category: category || 'MOTO',
+              currentLocation: driverLocationC,
+            },
+          };
+          rideService.recordRide(bookedRide);
+          try {
+            useDriverStore.getState().acceptRide(bookedRide);
+          } catch (e) {}
+
           setTimeout(() => {
-            navigate('/app/ride/ACTIVE_RIDE');
+            navigate(`/app/ride/${dynamicRideId}`);
           }, 1400);
         }
       }

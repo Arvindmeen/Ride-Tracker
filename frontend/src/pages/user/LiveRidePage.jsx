@@ -119,29 +119,49 @@ export default function LiveRidePage() {
 
   // Initialize Ride Details
   useEffect(() => {
-    const defaultPickup = storePickup?.lat ? storePickup : (userLocation?.lat ? userLocation : {
-      lat: 28.8358,
-      lng: 78.7725,
-      name: 'Budh Bazaar Market, Moradabad',
-      address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
-    });
+    // Check if dynamic ride was pre-booked in store/localStorage
+    let dynamicTrip = null;
+    if (id) {
+      const storedTrips = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('veloq_user_trips') || '[]') : [];
+      dynamicTrip = storedTrips.find((r) => r.id === id) || null;
+    }
 
-    const defaultDestination = storeDestination?.lat ? storeDestination : {
-      lat: 28.8314,
-      lng: 78.7654,
-      name: 'Moradabad Junction Railway Station',
-      address: 'Station Road (SH49), Moradabad Junction',
-    };
+    const defaultPickup = dynamicTrip?.pickup?.lat
+      ? dynamicTrip.pickup
+      : storePickup?.lat
+      ? storePickup
+      : userLocation?.lat
+      ? userLocation
+      : {
+          lat: 28.8358,
+          lng: 78.7725,
+          name: 'Budh Bazaar Market, Moradabad',
+          address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
+        };
+
+    const defaultDestination = dynamicTrip?.destination?.lat
+      ? dynamicTrip.destination
+      : storeDestination?.lat
+      ? storeDestination
+      : {
+          lat: 28.8314,
+          lng: 78.7654,
+          name: 'Moradabad Junction Railway Station',
+          address: 'Station Road (SH49), Moradabad Junction',
+        };
 
     const isMoradabad = Math.abs(defaultPickup.lat - 28.835) < 0.08 && Math.abs(defaultPickup.lng - 78.77) < 0.08;
+    const dynamicCategory = dynamicTrip?.category || storeCategory || 'MOTO';
+    const dynamicFare = dynamicTrip?.fare || storeFare || { total: 42, base: 25, distance: 12, tax: 2, currency: 'INR' };
+    const dynamicDistance = dynamicTrip?.distance || storeFare?.distance || (isMoradabad ? 1.4 : 3.4);
 
     // Safely extract and normalize driver properties (guarantees strings/primitives, NO raw nested objects in JSX)
-    const rawDriver = assignedDriver || drivers?.[0] || {
+    const rawDriver = dynamicTrip?.driverInfo || assignedDriver || drivers?.[0] || {
       name: 'Subhash Mondal',
       phone: '+91 94340 12891',
       rating: 4.92,
-      category: storeCategory || 'MOTO',
-      vehicle: storeCategory === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Hero Splendor Plus (Bike)',
+      category: dynamicCategory,
+      vehicle: dynamicCategory === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Hero Splendor Plus (Bike)',
       plate: 'UP 21 AB 4921',
     };
 
@@ -154,8 +174,8 @@ export default function LiveRidePage() {
       : (rawDriver.vehicleNumber || rawDriver.plate || 'UP 21 AB 4921');
 
     const vehicleCategory = typeof rawDriver.vehicle === 'object'
-      ? (rawDriver.vehicle?.category || rawDriver.category || storeCategory || 'MOTO')
-      : (rawDriver.category || storeCategory || 'MOTO');
+      ? (rawDriver.vehicle?.category || rawDriver.category || dynamicCategory)
+      : (rawDriver.category || dynamicCategory);
 
     const matchedDriver = {
       name: rawDriver.name || 'Subhash Mondal',
@@ -166,19 +186,26 @@ export default function LiveRidePage() {
       plate: vehiclePlate,
     };
 
-    // Sensible driver spawn: 500-600m along the road network on the same side of tracks
-    const startDriverLat = isMoradabad ? 28.8385 : (defaultPickup.lat + 0.0035);
-    const startDriverLng = isMoradabad ? 78.7755 : (defaultPickup.lng + 0.0030);
+    // Sensible driver spawn at Point C: ~500-700m along road network from pickup Spot A
+    const startDriverLat = dynamicTrip?.driverStartLocation?.lat || 
+      (isMoradabad ? 28.8385 : defaultPickup.lat + (defaultDestination.lat >= defaultPickup.lat ? -0.0045 : 0.0045));
+    const startDriverLng = dynamicTrip?.driverStartLocation?.lng || 
+      (isMoradabad ? 78.7755 : defaultPickup.lng + (defaultDestination.lng >= defaultPickup.lng ? -0.0038 : 0.0038));
 
     const initialRide = {
-      id: id || 'RIDE-MBD-8092',
-      status: 'DRIVER_APPROACHING',
-      pickup: defaultPickup,
-      destination: defaultDestination,
-      distance: storeFare?.distance || (isMoradabad ? 1.4 : 3.4),
-      fare: storeFare?.total || storeFare?.base || (isMoradabad ? 42 : 48),
-      otp: '4921',
+      id: id || dynamicTrip?.id || `RIDE-${Date.now().toString().slice(-6)}`,
+      status: dynamicTrip?.status || 'DRIVER_APPROACHING',
+      stage: dynamicTrip?.stage || 'HEADING_TO_PICKUP',
+      pickup: defaultPickup, // Place A
+      destination: defaultDestination, // Place B
+      driverStartLocation: { lat: startDriverLat, lng: startDriverLng, name: `${defaultPickup.name} Proximity Zone` }, // Place C
+      distance: dynamicDistance,
+      fare: dynamicFare,
+      otp: dynamicTrip?.otp || String(Math.floor(1000 + Math.random() * 9000)),
       driverInfo: matchedDriver,
+      requestedAt: dynamicTrip?.requestedAt || new Date().toISOString(),
+      startedAt: dynamicTrip?.startedAt || null,
+      completedAt: dynamicTrip?.completedAt || null,
     };
 
     setRide(initialRide);
@@ -188,33 +215,23 @@ export default function LiveRidePage() {
       lat: startDriverLat,
       lng: startDriverLng,
       category: matchedDriver.category || 'MOTO',
-      heading: 45,
+      heading: calculateBearing(startDriverLat, startDriverLng, defaultPickup.lat, defaultPickup.lng),
       speed: 32,
     });
 
-    // Instant local fallback routes so UI renders in 0 milliseconds
-    const fallbackApproach = isMoradabad
-      ? [
-          [startDriverLat, startDriverLng],
-          [28.8372, 78.7740],
-          [defaultPickup.lat, defaultPickup.lng],
-        ]
-      : [
-          [startDriverLat, startDriverLng],
-          [defaultPickup.lat, defaultPickup.lng],
-        ];
+    // Instant realistic road fallback segments while high-precision OSRM resolves
+    const fallbackApproach = [
+      [startDriverLat, startDriverLng],
+      [startDriverLat + (defaultPickup.lat - startDriverLat) * 0.5 + 0.0003, startDriverLng + (defaultPickup.lng - startDriverLng) * 0.5 - 0.0003],
+      [defaultPickup.lat, defaultPickup.lng],
+    ];
 
-    const fallbackTrip = isMoradabad
-      ? [
-          [defaultPickup.lat, defaultPickup.lng],
-          [28.8335, 78.7710],
-          [28.8312, 78.7672],
-          [defaultDestination.lat, defaultDestination.lng],
-        ]
-      : [
-          [defaultPickup.lat, defaultPickup.lng],
-          [defaultDestination.lat, defaultDestination.lng],
-        ];
+    const fallbackTrip = [
+      [defaultPickup.lat, defaultPickup.lng],
+      [defaultPickup.lat + (defaultDestination.lat - defaultPickup.lat) * 0.4 - 0.0004, defaultPickup.lng + (defaultDestination.lng - defaultPickup.lng) * 0.4 + 0.0004],
+      [defaultPickup.lat + (defaultDestination.lat - defaultPickup.lat) * 0.75 + 0.0002, defaultPickup.lng + (defaultDestination.lng - defaultPickup.lng) * 0.75 - 0.0002],
+      [defaultDestination.lat, defaultDestination.lng],
+    ];
 
     approachWaypoints.current = interpolatePath(fallbackApproach, 24);
     tripWaypoints.current = interpolatePath(fallbackTrip, 32);
@@ -324,10 +341,22 @@ export default function LiveRidePage() {
 
         // Reached destination
         if (idx >= waypoints.length - 1) {
+          const completedTimestamp = new Date().toISOString();
+          const tripDurationMins = Math.max(2, Math.round((ride.distance || 1.4) * 2.2));
+
           const completedRide = {
             ...ride,
             status: 'RIDE_COMPLETED',
-            completedAt: new Date().toISOString(),
+            completedAt: completedTimestamp,
+            duration: tripDurationMins,
+            durationMinutes: tripDurationMins,
+            userRating: userRating || 5,
+            payment: {
+              ...(typeof ride.payment === 'object' ? ride.payment : {}),
+              method: ride.payment?.method || 'UPI',
+              status: 'COMPLETED',
+              amount: typeof ride.fare === 'object' ? Math.round(ride.fare.total) : ride.fare || 42,
+            },
           };
           setRide(completedRide);
           setActiveDriverSpeed(0);
@@ -353,11 +382,7 @@ export default function LiveRidePage() {
           }
 
           // Persist completed trip in rideService & localStorage
-          rideService.updateRide(ride.id, {
-            status: 'RIDE_COMPLETED',
-            completedAt: new Date().toISOString(),
-            userRating: 5,
-          });
+          rideService.updateRide(ride.id, completedRide);
         }
       }
     }, 850);
@@ -793,9 +818,14 @@ export default function LiveRidePage() {
             <Button
               className="w-full py-3.5 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-md"
               onClick={() => {
-                rideService.updateRide(ride.id, { userRating, status: 'RIDE_COMPLETED' });
+                const finalRide = {
+                  ...ride,
+                  userRating,
+                  status: 'RIDE_COMPLETED',
+                };
+                rideService.updateRide(ride.id, finalRide);
                 setShowRating(false);
-                navigate('/app/trips');
+                navigate(`/app/trips/${ride.id}`);
               }}
             >
               Submit Rating & View Trip Receipt

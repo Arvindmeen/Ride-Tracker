@@ -26,70 +26,27 @@ export const driverService = {
   async updateStatus(id, status) { await delay(200); return { ...CURRENT_DRIVER, status }; },
 };
 
-// Default pre-seeded trips including user's Moradabad trip
-const SEED_USER_TRIPS = [
-  {
-    id: 'RIDE-MBD-RECENT',
-    userId: 'USR-PASSENGER-01',
-    driverId: 'DRV-RECORD-01',
-    status: 'RIDE_COMPLETED',
-    category: 'MOTO',
-    pickup: { lat: 28.8358, lng: 78.7725, name: 'Budh Bazaar Market, Moradabad', address: 'Budhbazar Road, Moradabad, Uttar Pradesh' },
-    destination: { lat: 28.8314, lng: 78.7654, name: 'Moradabad Junction Railway Station', address: 'Station Road (SH49), Moradabad Junction' },
-    stops: [],
-    fare: { base: 25, distance: 12, time: 3, tax: 2, total: 42, currency: 'INR' },
-    payment: { id: 'PAY_MBD_01', method: 'UPI', status: 'COMPLETED', amount: 42, currency: 'INR' },
-    requestedAt: new Date(Date.now() - 25 * 60000).toISOString(),
-    acceptedAt: new Date(Date.now() - 24 * 60000).toISOString(),
-    startedAt: new Date(Date.now() - 20 * 60000).toISOString(),
-    completedAt: new Date(Date.now() - 5 * 60000).toISOString(),
-    distance: 1.4,
-    duration: 6,
-    userRating: 5,
-    driverRating: 5,
-    driverInfo: {
-      name: 'Subhash Mondal',
-      phone: '+91 94340 12891',
-      vehicle: 'Hero Splendor Plus (Bike)',
-      plate: 'UP 21 AB 4921',
-      rating: 4.92,
-      category: 'MOTO',
-    },
-  },
-  ...MOCK_RIDES,
-];
-
+// Dynamic user trips storage (purely real dynamic completed rides, NO hardcoded mock rides)
 function getStoredUserTrips() {
-  if (typeof window === 'undefined') return SEED_USER_TRIPS;
+  if (typeof window === 'undefined') return [];
   const raw = localStorage.getItem('veloq_user_trips');
-  if (!raw) {
-    localStorage.setItem('veloq_user_trips', JSON.stringify(SEED_USER_TRIPS));
-    return SEED_USER_TRIPS;
-  }
+  if (!raw) return [];
+
   try {
     let list = JSON.parse(raw);
-    // Ensure the recent Moradabad trip is guaranteed at the top with accurate coordinates
-    const mbdIdx = list.findIndex((r) => r.pickup?.name?.includes('Moradabad') || r.destination?.name?.includes('Moradabad'));
-    if (mbdIdx === -1) {
-      list.unshift(SEED_USER_TRIPS[0]);
-      localStorage.setItem('veloq_user_trips', JSON.stringify(list));
-    } else {
-      // Upgrade existing Moradabad trip record to calibrated coordinates if it was using the old ones
-      const existing = list[mbdIdx];
-      if (existing.destination?.lat === 28.8315 || !existing.destination?.address?.includes('SH49')) {
-        list[mbdIdx] = {
-          ...existing,
-          pickup: SEED_USER_TRIPS[0].pickup,
-          destination: SEED_USER_TRIPS[0].destination,
-          distance: SEED_USER_TRIPS[0].distance,
-          fare: SEED_USER_TRIPS[0].fare,
-        };
-        localStorage.setItem('veloq_user_trips', JSON.stringify(list));
-      }
-    }
+    // Purge any legacy hardcoded Mumbai / mock rides from browser cache
+    const isMock = (r) => {
+      const pName = (r.pickup?.name || r.pickup?.address || '').toLowerCase();
+      const dName = (r.destination?.name || r.destination?.address || '').toLowerCase();
+      return pName.includes('mumbai') || dName.includes('bkc') || pName.includes('andheri') || 
+             dName.includes('santacruz') || pName.includes('worli') || pName.includes('colaba') ||
+             pName.includes('powai') || pName.includes('dadar') || pName.includes('ghatkopar');
+    };
+    list = list.filter((r) => !isMock(r));
+    localStorage.setItem('veloq_user_trips', JSON.stringify(list));
     return list;
   } catch (e) {
-    return SEED_USER_TRIPS;
+    return [];
   }
 }
 
@@ -107,9 +64,24 @@ export const rideService = {
   },
 
   async getRideById(id) {
-    await delay(100);
     const trips = getStoredUserTrips();
-    return trips.find((r) => r.id === id) || (id === 'ACTIVE_RIDE' ? trips[0] : null);
+    const local = trips.find((r) => r.id === id);
+    if (local) return local;
+
+    // Try fetching dynamic record from backend API
+    try {
+      const res = await fetch(`/api/v1/rides/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.id) {
+          trips.unshift(data);
+          saveStoredUserTrips(trips);
+          return data;
+        }
+      }
+    } catch (e) {}
+
+    return id === 'ACTIVE_RIDE' ? trips[0] : null;
   },
 
   async getUserRides(userId) {
@@ -152,22 +124,25 @@ export const rideService = {
   async updateRide(id, updates) {
     const trips = getStoredUserTrips();
     const idx = trips.findIndex(
-      (r) => r.id === id || r.id === 'RIDE-MBD-RECENT' || r.id === 'ACTIVE_RIDE'
+      (r) => r.id === id || (id === 'ACTIVE_RIDE' && r.id === trips[0]?.id)
     );
+    let updatedTrip = null;
     if (idx !== -1) {
       trips[idx] = { ...trips[idx], ...updates };
+      updatedTrip = trips[idx];
       saveStoredUserTrips(trips);
     }
 
     try {
-      await fetch(`/api/v1/rides/${id}/complete`, {
+      const targetId = updatedTrip?.id || id;
+      await fetch(`/api/v1/rides/${targetId}/complete`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({ ...updates, id: targetId }),
       });
     } catch (e) {}
 
-    return trips[idx] || null;
+    return updatedTrip || updates;
   },
 
   async getActiveRide() {
