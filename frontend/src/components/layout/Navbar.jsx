@@ -525,6 +525,28 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div className="xl:hidden fixed inset-x-0 top-16 sm:top-18 bg-white/98 backdrop-blur-xl border-b border-slate-200 shadow-2xl z-40 max-h-[calc(100vh-4.5rem)] overflow-y-auto animate-slide-down">
           <div className="px-4 py-4 space-y-4">
+
+            {/* Signed-in profile shortcut */}
+            {isAuthenticated && (
+              <Link
+                to={role === 'DRIVER' ? '/driver/profile' : role === 'ADMIN' ? '/admin/settings' : '/app/profile'}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg text-white shadow-sm ${
+                  role === 'DRIVER' ? 'bg-emerald-600' : role === 'ADMIN' ? 'bg-indigo-600' : 'bg-blue-600'
+                }`}>
+                  {role === 'DRIVER' ? '🚗' : role === 'ADMIN' ? '🖥️' : '👤'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-slate-900 truncate">{user?.name || 'Ride Tracker User'}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {role === 'DRIVER' ? 'Driver profile' : role === 'ADMIN' ? 'Operations settings' : 'Passenger profile'}
+                  </p>
+                </div>
+                <ChevronRight size={16} className="text-slate-400 shrink-0" />
+              </Link>
+            )}
             
             {/* Quick Emergency 112 SOS */}
             <a
