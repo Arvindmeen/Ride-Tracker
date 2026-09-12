@@ -187,13 +187,11 @@ function HeroRideShowcase({
   onConfirmBooking 
 }) {
   return (
-    <div className="relative bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-2xl border border-slate-800 flex flex-col justify-between h-full min-h-[500px] overflow-hidden">
-      {/* Ambient decorative glowing backdrop lights */}
-      <div className="absolute -top-20 -right-20 w-56 h-56 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-20 -left-20 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative bg-white rounded-3xl p-6 sm:p-8 text-slate-900 shadow-sm border border-slate-200 flex flex-col justify-between h-full min-h-[500px] overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 pointer-events-none" />
 
       {/* Top Status Strip */}
-      <div className="relative z-10 flex items-center justify-between pb-4 border-b border-slate-800/80">
+      <div className="relative z-10 flex items-center justify-between pb-4 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -201,18 +199,18 @@ function HeroRideShowcase({
           </span>
           <div>
             <div className="flex items-center gap-1.5">
-              <h3 className="text-sm font-extrabold text-white tracking-tight">Pan-India Fleet Active</h3>
-              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">Pan-India Fleet Active</h3>
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                 LIVE
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Direct dispatch across {selectedHub.name}</p>
+            <p className="text-[11px] text-slate-500">Direct dispatch across {selectedHub.name}</p>
           </div>
         </div>
 
         <div className="text-right">
-          <span className="text-xs font-mono font-black text-blue-400">11,560 Fleet</span>
-          <p className="text-[10px] text-slate-400 font-medium">Pan-India Online</p>
+          <span className="text-xs font-mono font-black text-blue-600">11,560 Fleet</span>
+          <p className="text-[10px] text-slate-500 font-medium">Pan-India Online</p>
         </div>
       </div>
 
@@ -220,7 +218,7 @@ function HeroRideShowcase({
       <div className="relative z-10 my-auto py-5 space-y-4">
         
         {/* Route Card */}
-        <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-3">
+        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
           <div className="flex items-start gap-3">
             {/* Route Pins */}
             <div className="flex flex-col items-center pt-1">
@@ -233,45 +231,45 @@ function HeroRideShowcase({
             <div className="flex-1 space-y-2.5 min-w-0">
               <div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Pickup Location</p>
-                <p className="text-xs font-bold text-white truncate">{pickupText.replace('📍 ', '')}</p>
+                <p className="text-xs font-bold text-slate-900 truncate">{pickupText.replace('📍 ', '')}</p>
               </div>
               <div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Destination Drop</p>
-                <p className="text-xs font-bold text-white truncate">{selectedHotspot.name}</p>
-                <p className="text-[11px] text-slate-400 truncate">{selectedHotspot.drop}</p>
+                <p className="text-xs font-bold text-slate-900 truncate">{selectedHotspot.name}</p>
+                <p className="text-[11px] text-slate-500 truncate">{selectedHotspot.drop}</p>
               </div>
             </div>
 
             {/* Estimated Fare Box */}
-            <div className="text-right shrink-0 bg-slate-900/90 px-3 py-2 rounded-xl border border-slate-700/60 shadow-xs">
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Estimated</p>
-              <p className="text-lg font-black text-emerald-400">₹{estFare}</p>
-              <p className="text-[10px] text-slate-400">{selectedHotspot.dist} km · {selectedHotspot.mins}m</p>
+            <div className="text-right shrink-0 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs">
+              <p className="text-[10px] text-slate-500 uppercase font-bold">Estimated</p>
+              <p className="text-lg font-black text-emerald-600">₹{estFare}</p>
+              <p className="text-[10px] text-slate-500">{selectedHotspot.dist} km · {selectedHotspot.mins}m</p>
             </div>
           </div>
         </div>
 
         {/* Assigned Driver Preview Pill */}
-        <div className="bg-slate-800/60 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/50 flex items-center justify-between gap-3">
+        <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xl shadow-md shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl shrink-0">
               {selectedService.icon}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-xs font-extrabold text-white truncate">Direct Driver Match</p>
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30 shrink-0">
+                <p className="text-xs font-extrabold text-slate-900 truncate">Direct Driver Match</p>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200 shrink-0">
                   Verified Partner
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 truncate mt-0.5">
+              <p className="text-[11px] text-slate-500 truncate mt-0.5">
                 ★ 4.95 (1,200+ trips) · {selectedService.name}
               </p>
             </div>
           </div>
 
           <div className="text-right shrink-0">
-            <span className="text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            <span className="text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
               ETA 2 MINS
             </span>
           </div>
@@ -279,26 +277,26 @@ function HeroRideShowcase({
 
         {/* 3 Core Trust Pillars */}
         <div className="grid grid-cols-3 gap-2 text-center pt-1">
-          <div className="bg-slate-800/40 rounded-xl p-2 border border-slate-800">
-            <p className="text-xs font-black text-white">&lt; 30s</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Match Speed</p>
+          <div className="bg-blue-50/70 rounded-xl p-2 border border-blue-100">
+            <p className="text-xs font-black text-slate-900">&lt; 30s</p>
+            <p className="text-[10px] text-slate-500 font-medium mt-0.5">Match Speed</p>
           </div>
-          <div className="bg-slate-800/40 rounded-xl p-2 border border-slate-800">
+          <div className="bg-emerald-50/70 rounded-xl p-2 border border-emerald-100">
             <p className="text-xs font-black text-emerald-400">0% Surge</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Fixed Upfront</p>
+            <p className="text-[10px] text-slate-500 font-medium mt-0.5">Fixed Upfront</p>
           </div>
-          <div className="bg-slate-800/40 rounded-xl p-2 border border-slate-800">
+          <div className="bg-amber-50/70 rounded-xl p-2 border border-amber-100">
             <p className="text-xs font-black text-blue-400">112 SOS</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Police Linked</p>
+            <p className="text-[10px] text-slate-500 font-medium mt-0.5">Police Linked</p>
           </div>
         </div>
 
       </div>
 
       {/* Bottom Dispatch Trigger */}
-      <div className="relative z-10 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3">
-        <div className="text-xs text-slate-400">
-          <span className="text-slate-200 font-bold">Fast & transparent</span> pricing
+      <div className="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+        <div className="text-xs text-slate-500">
+          <span className="text-slate-900 font-bold">Fast & transparent</span> pricing
         </div>
         <button
           onClick={onConfirmBooking}
@@ -785,26 +783,31 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center bg-slate-50 text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="landing-page w-full min-h-screen flex flex-col items-center bg-white text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
       {/* ── UNIFIED NAVBAR (Single clean header without stacked bars) ── */}
       <Navbar />
 
       {/* ── HERO SECTION: CENTERED, BALANCED & FULLY RESPONSIVE ── */}
-      <section id="booking" className="w-full flex justify-center pt-8 pb-12 sm:pt-12 sm:pb-16 lg:pt-14 lg:pb-20">
+      <section id="booking" className="landing-hero w-full flex justify-center pt-8 pb-12 sm:pt-12 sm:pb-16 lg:pt-14 lg:pb-20">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Centered Symmetrical Hero Header */}
           <div className="max-w-3xl mx-auto text-center mb-8 sm:mb-10 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-blue-200 text-blue-700 text-xs font-semibold shadow-sm">
               <span className="w-2 h-2 rounded-full bg-blue-600" />
               Pan-India Urban & Campus Mobility Network
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-              Ride Anywhere, <span className="text-blue-600">Instantly.</span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight leading-[1.15]">
+              India moves with <span className="text-blue-600">Riders.</span>
             </h1>
             <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Clean solar campus totos, electric bike taxis, and outstation cabs. Guaranteed upfront fares with real-time GPS telemetry and zero surge pricing.
+              Book verified bikes, autos, and cabs with upfront fares, live tracking, and dependable support wherever the road takes you.
             </p>
+            <div className="flex flex-wrap justify-center gap-2 pt-1 text-[11px] font-bold text-slate-600">
+              <span className="rounded-full bg-white px-3 py-1.5 border border-slate-200 shadow-sm">Verified drivers</span>
+              <span className="rounded-full bg-white px-3 py-1.5 border border-slate-200 shadow-sm">Upfront pricing</span>
+              <span className="rounded-full bg-white px-3 py-1.5 border border-slate-200 shadow-sm">Live trip safety</span>
+            </div>
           </div>
 
           {/* Centered Regional Sector Segment Tabs */}
@@ -1313,7 +1316,6 @@ export default function LandingPage() {
             <div className="flex max-w-full flex-wrap justify-center p-1 bg-slate-200/70 rounded-2xl gap-1">
               {[
                 { id: 'rider', label: 'Passenger App', icon: '👤' },
-                { id: 'driver', label: 'Driver Cockpit', icon: '🚗' },
                 { id: 'admin', label: 'Operations Radar', icon: '🖥️' }
               ].map(tab => (
                 <button key={tab.id} onClick={() => setPortalTab(tab.id)}

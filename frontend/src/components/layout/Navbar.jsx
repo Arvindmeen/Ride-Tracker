@@ -156,7 +156,7 @@ export default function Navbar() {
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 leading-none">
-                    Riders
+                    Riders India
                   </span>
                   <span className={`text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full border shrink-0 ${
                     role === 'DRIVER'
@@ -169,7 +169,7 @@ export default function Navbar() {
                   </span>
                 </div>
                 <span className="text-[10px] text-slate-500 font-semibold tracking-tight hidden sm:inline mt-0.5">
-                  Live National Fleet
+                  Pan-India Mobility
                 </span>
               </div>
             </Link>
@@ -365,15 +365,17 @@ export default function Navbar() {
             >
               Safety
             </a>
-            <button
-              onClick={() => {
-                login('DRIVER');
-                navigate('/driver/dashboard');
-              }}
-              className="px-3 py-2 rounded-xl transition-colors text-emerald-700 hover:bg-emerald-50 font-bold whitespace-nowrap"
-            >
-              Drive & Earn
-            </button>
+            {!isAuthenticated && (
+              <button
+                onClick={() => {
+                  login('DRIVER');
+                  navigate('/driver/dashboard');
+                }}
+                className="px-3 py-2 rounded-xl transition-colors text-emerald-700 hover:bg-emerald-50 font-bold whitespace-nowrap"
+              >
+                Drive & Earn
+              </button>
+            )}
           </nav>
 
           {/* ── Right: 112 SOS + Console CTA + Profile ─────────────────────────── */}
@@ -459,12 +461,14 @@ export default function Navbar() {
                           <span>Passenger App</span>
                           {role === 'USER' && <CheckCircle2 size={13} />}
                         </button>
-                        <button
-                          onClick={() => { login('DRIVER'); navigate('/driver/dashboard'); setProfileMenuOpen(false); }}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between ${role === 'DRIVER' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 hover:bg-slate-50'}`}>
-                          <span>Driver Cockpit</span>
-                          {role === 'DRIVER' && <CheckCircle2 size={13} />}
-                        </button>
+                        {role !== 'USER' && (
+                          <button
+                            onClick={() => { login('DRIVER'); navigate('/driver/dashboard'); setProfileMenuOpen(false); }}
+                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between ${role === 'DRIVER' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+                            <span>Driver Cockpit</span>
+                            {role === 'DRIVER' && <CheckCircle2 size={13} />}
+                          </button>
+                        )}
                         <button
                           onClick={() => { login('ADMIN'); navigate('/admin/dashboard'); setProfileMenuOpen(false); }}
                           className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between ${role === 'ADMIN' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-50'}`}>
@@ -631,17 +635,6 @@ export default function Navbar() {
                 <span>Safety & Standards</span>
                 <ChevronRight size={15} className="text-slate-400" />
               </a>
-              <button
-                onClick={() => {
-                  login('DRIVER');
-                  navigate('/driver/dashboard');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-emerald-700 hover:bg-emerald-50 text-left font-bold"
-              >
-                <span>Drive & Earn (12% Fee)</span>
-                <ChevronRight size={15} className="text-emerald-500" />
-              </button>
               <Link
                 to="/contact"
                 onClick={() => setMobileMenuOpen(false)}
