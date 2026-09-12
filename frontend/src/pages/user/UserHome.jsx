@@ -6,8 +6,8 @@ import {
   ArrowUpDown, Compass, Check, Layers, ChevronRight, CreditCard, Shield
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useAuthStore, useBookingStore, useMapStore } from '@/stores';
-import { locationService, pricingService } from '@/services';
+import { useAuthStore, useBookingStore, useMapStore, useDriverStore } from '@/stores';
+import { locationService, pricingService, rideService, rideSync } from '@/services';
 import { VEHICLE_CATEGORIES } from '@/constants';
 import { Button, Spinner, Badge, Avatar, VehicleIcon } from '@/components/ui';
 import LiveDispatchTicker from '@/components/ui/LiveDispatchTicker';
@@ -390,10 +390,17 @@ export default function UserHome() {
           const totalDist = destination?.distanceKm || routeInfo?.distanceKm || estimatedFare?.distance || 1.4;
 
           const dynamicOtp = String(Math.floor(1000 + Math.random() * 9000));
-          const driverLocationC = update.driver?.location || {
-            lat: currentPickup.lat + (currentDest.lat >= currentPickup.lat ? -0.0045 : 0.0045),
-            lng: currentPickup.lng + (currentDest.lng >= currentPickup.lng ? -0.0038 : 0.0038),
-            name: `${currentPickup.name} Proximity Hub`,
+          const isMbd = Math.abs(currentPickup.lat - 28.835) < 0.09 && Math.abs(currentPickup.lng - 78.77) < 0.09;
+          const cLat = isMbd ? 28.8395 : (update.driver?.location?.lat || (currentPickup.lat + (currentDest.lat >= currentPickup.lat ? -0.0045 : 0.0045)));
+          const cLng = isMbd ? 78.7760 : (update.driver?.location?.lng || (currentPickup.lng + (currentDest.lng >= currentPickup.lng ? -0.0038 : 0.0038)));
+          const cName = isMbd ? 'Civil Lines Taxi Stand, Moradabad' : (update.driver?.location?.name || `${currentPickup.name.split(',')[0]} Transit Point`);
+          const cAddress = isMbd ? 'Civil Lines Approach Road, Moradabad 244001' : (update.driver?.location?.address || `Road corridor ~600m from ${currentPickup.name.split(',')[0]}`);
+
+          const driverLocationC = {
+            lat: cLat,
+            lng: cLng,
+            name: cName,
+            address: cAddress,
           };
 
           const bookedRide = {
@@ -424,6 +431,7 @@ export default function UserHome() {
             },
           };
           rideService.recordRide(bookedRide);
+          rideSync.broadcast('RIDE_BOOKED', bookedRide);
           try {
             useDriverStore.getState().acceptRide(bookedRide);
           } catch (e) {}

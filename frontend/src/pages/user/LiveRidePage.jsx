@@ -7,7 +7,7 @@ import {
   Navigation, Zap, Crosshair, ArrowRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { rideService, locationService } from '@/services';
+import { rideService, locationService, rideSync } from '@/services';
 import { useMapStore, useBookingStore } from '@/stores';
 import { Spinner, Badge, Button, VehicleIcon } from '@/components/ui';
 
@@ -188,9 +188,13 @@ export default function LiveRidePage() {
 
     // Sensible driver spawn at Point C: ~500-700m along road network from pickup Spot A
     const startDriverLat = dynamicTrip?.driverStartLocation?.lat || 
-      (isMoradabad ? 28.8385 : defaultPickup.lat + (defaultDestination.lat >= defaultPickup.lat ? -0.0045 : 0.0045));
+      (isMoradabad ? 28.8395 : defaultPickup.lat + (defaultDestination.lat >= defaultPickup.lat ? -0.0045 : 0.0045));
     const startDriverLng = dynamicTrip?.driverStartLocation?.lng || 
-      (isMoradabad ? 78.7755 : defaultPickup.lng + (defaultDestination.lng >= defaultPickup.lng ? -0.0038 : 0.0038));
+      (isMoradabad ? 78.7760 : defaultPickup.lng + (defaultDestination.lng >= defaultPickup.lng ? -0.0038 : 0.0038));
+    const startDriverName = dynamicTrip?.driverStartLocation?.name ||
+      (isMoradabad ? 'Civil Lines Taxi Stand, Moradabad' : `${defaultPickup.name.split(',')[0]} Transit Point`);
+    const startDriverAddress = dynamicTrip?.driverStartLocation?.address ||
+      (isMoradabad ? 'Civil Lines Approach Road, Moradabad 244001' : `Road corridor ~600m from ${defaultPickup.name.split(',')[0]}`);
 
     const initialRide = {
       id: id || dynamicTrip?.id || `RIDE-${Date.now().toString().slice(-6)}`,
@@ -198,7 +202,7 @@ export default function LiveRidePage() {
       stage: dynamicTrip?.stage || 'HEADING_TO_PICKUP',
       pickup: defaultPickup, // Place A
       destination: defaultDestination, // Place B
-      driverStartLocation: { lat: startDriverLat, lng: startDriverLng, name: `${defaultPickup.name} Proximity Zone` }, // Place C
+      driverStartLocation: { lat: startDriverLat, lng: startDriverLng, name: startDriverName, address: startDriverAddress }, // Place C
       distance: dynamicDistance,
       fare: dynamicFare,
       otp: dynamicTrip?.otp || String(Math.floor(1000 + Math.random() * 9000)),
@@ -261,6 +265,33 @@ export default function LiveRidePage() {
     startSimulation();
   }, [id, storePickup, storeDestination, storeCategory, storeFare, assignedDriver, userLocation, startSimulation]);
 
+  // Cross-Tab real-time listener from Driver Partner actions
+  useEffect(() => {
+    const unsub = rideSync.subscribe((evt) => {
+      if (!evt?.payload) return;
+      const targetId = evt.payload.rideId || evt.payload.id;
+      if (ride?.id && targetId && targetId !== ride.id) return;
+
+      if (evt.type === 'DRIVER_ARRIVED') {
+        setRide((r) => r ? { ...r, status: 'DRIVER_ARRIVED', stage: 'ARRIVED' } : r);
+        animIndexRef.current = 0;
+        if (tripWaypoints.current?.length > 0) {
+          setRoutePolyline(tripWaypoints.current);
+        }
+      } else if (evt.type === 'RIDE_STARTED') {
+        setRide((r) => r ? { ...r, status: 'RIDE_STARTED', stage: 'IN_TRANSIT' } : r);
+        animIndexRef.current = 0;
+        if (tripWaypoints.current?.length > 0) {
+          setRoutePolyline(tripWaypoints.current);
+        }
+      } else if (evt.type === 'RIDE_COMPLETED') {
+        setRide((r) => r ? { ...r, status: 'RIDE_COMPLETED', stage: 'COMPLETED' } : r);
+        setShowRating(true);
+      }
+    });
+    return unsub;
+  }, [ride?.id]);
+
   // Smooth real-time driver movement & passenger journey along route
   useEffect(() => {
     if (!ride || ride.status === 'RIDE_COMPLETED') return;
@@ -297,6 +328,7 @@ export default function LiveRidePage() {
         // Reached pickup spot
         if (idx >= waypoints.length - 1) {
           setRide((r) => ({ ...r, status: 'DRIVER_ARRIVED' }));
+          rideSync.broadcast('DRIVER_ARRIVED', { rideId: ride.id });
           animIndexRef.current = 0;
           // Switch polyline to the trip destination leg
           if (tripWaypoints.current && tripWaypoints.current.length > 0) {
@@ -383,6 +415,7 @@ export default function LiveRidePage() {
 
           // Persist completed trip in rideService & localStorage
           rideService.updateRide(ride.id, completedRide);
+          rideSync.broadcast('RIDE_COMPLETED', { rideId: ride.id, completedRide });
         }
       }
     }, 850);
@@ -395,6 +428,7 @@ export default function LiveRidePage() {
     if (ride?.status === 'DRIVER_ARRIVED') {
       const t = setTimeout(() => {
         setRide((r) => ({ ...r, status: 'RIDE_STARTED' }));
+        rideSync.broadcast('RIDE_STARTED', { rideId: ride.id });
         animIndexRef.current = 0;
       }, 3500);
       return () => clearTimeout(t);

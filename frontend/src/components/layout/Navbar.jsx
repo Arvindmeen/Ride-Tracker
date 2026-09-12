@@ -175,7 +175,7 @@ export default function Navbar() {
             </Link>
 
             {/* Dynamic Live Location Popover */}
-            <div className="relative shrink-0" ref={locationRef}>
+            <div className="relative shrink-0 max-[479px]:hidden" ref={locationRef}>
               <button
                 onClick={() => setLocationMenuOpen(!locationMenuOpen)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-800 transition-colors whitespace-nowrap shadow-xs"
@@ -397,7 +397,7 @@ export default function Navbar() {
                   else if (role === 'ADMIN') navigate('/admin/dashboard');
                   else navigate('/app/home');
                 }}
-                className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs transition-all whitespace-nowrap shrink-0 ${
+                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs transition-all whitespace-nowrap shrink-0 ${
                   role === 'DRIVER'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
                     : role === 'ADMIN'
@@ -412,7 +412,7 @@ export default function Navbar() {
 
             {/* Profile Pill */}
             {isAuthenticated ? (
-              <div className="relative shrink-0" ref={profileRef}>
+              <div className="relative shrink-0 max-lg:hidden" ref={profileRef}>
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold transition-all shadow-xs whitespace-nowrap shrink-0"

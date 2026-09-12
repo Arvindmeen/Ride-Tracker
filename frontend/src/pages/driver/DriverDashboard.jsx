@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useDriverStore, useMapStore } from '@/stores';
+import { rideService, rideSync } from '@/services';
 import { Spinner } from '@/components/ui';
 import { REGIONS } from '@/constants';
 

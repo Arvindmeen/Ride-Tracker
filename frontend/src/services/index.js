@@ -149,8 +149,8 @@ export const rideService = {
     const trips = getStoredUserTrips();
     return (
       trips.find((r) =>
-        ['RIDE_STARTED', 'DRIVER_APPROACHING', 'DRIVER_ASSIGNED'].includes(r.status)
-      ) || trips[0]
+        ['RIDE_STARTED', 'DRIVER_APPROACHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVED'].includes(r.status)
+      ) || null
     );
   },
 
@@ -344,3 +344,5 @@ export const incidentService = {
   async acknowledgeIncident(id) { await delay(300); return { id, status: 'ACKNOWLEDGED', updatedAt: new Date().toISOString() }; },
   async resolveIncident(id) { await delay(300); return { id, status: 'RESOLVED', resolvedAt: new Date().toISOString() }; },
 };
+
+export { rideSync } from './rideSync';

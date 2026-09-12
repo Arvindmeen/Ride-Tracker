@@ -809,7 +809,7 @@ export default function LandingPage() {
 
           {/* Centered Regional Sector Segment Tabs */}
           <div className="flex justify-center mb-8 sm:mb-10">
-            <div className="flex flex-wrap items-center justify-center p-1.5 bg-slate-200/70 rounded-2xl gap-1 max-w-4xl">
+            <div className="flex w-full min-w-0 max-w-4xl flex-wrap items-center justify-center p-1.5 bg-slate-200/70 rounded-2xl gap-1">
               {REGIONAL_HUBS.map(hub => {
                 const isSel = selectedHub.id === hub.id;
                 return (
@@ -825,10 +825,10 @@ export default function LandingPage() {
           </div>
 
           {/* Symmetrical 2-Column Grid (Balanced Heights & Responsive) */}
-          <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
+          <div className="grid w-full min-w-0 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
             
             {/* LEFT: Booking Card */}
-            <div ref={bookingFormRef} className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-5 relative">
+            <div ref={bookingFormRef} className="w-full min-w-0 max-w-full lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-5 relative">
               
               <div>
                 <div className="flex items-center justify-between">
@@ -1129,7 +1129,7 @@ export default function LandingPage() {
             </div>
 
             {/* RIGHT: Live Interactive Ride Showcase (100% Map-Free, High-Converting Perfect UI) */}
-            <div className="lg:col-span-6 h-full">
+            <div className="w-full min-w-0 max-w-full lg:col-span-6 h-full">
               <HeroRideShowcase 
                 selectedHub={selectedHub} 
                 selectedHotspot={selectedHotspot} 
@@ -1310,7 +1310,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex justify-center mb-8">
-            <div className="inline-flex p-1 bg-slate-200/70 rounded-2xl gap-1">
+            <div className="flex max-w-full flex-wrap justify-center p-1 bg-slate-200/70 rounded-2xl gap-1">
               {[
                 { id: 'rider', label: 'Passenger App', icon: '👤' },
                 { id: 'driver', label: 'Driver Cockpit', icon: '🚗' },

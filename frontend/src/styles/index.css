@@ -72,6 +72,15 @@
   box-sizing: border-box;
 }
 
+/* Keep flex and grid content from establishing a wider-than-viewport layout. */
+main, section, header, footer, nav, aside, div {
+  min-width: 0;
+}
+
+input, select, textarea, button {
+  max-width: 100%;
+}
+
 /* Explicit Container Centering Utilities */
 .site-container,
 .mx-auto {
@@ -402,4 +411,11 @@ img { max-width: 100%; display: block; }
 html, body {
   max-width: 100%;
   overflow-x: hidden;
+}
+
+@media (max-width: 639px) {
+  .site-container,
+  .max-w-7xl {
+    width: 100%;
+  }
 }

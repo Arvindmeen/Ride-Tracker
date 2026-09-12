@@ -6,7 +6,7 @@ import {
   Sparkles, Volume2, User, KeyRound, Compass, Car, Send, Zap
 } from 'lucide-react';
 import { useDriverStore, useMapStore } from '@/stores';
-import { rideService, locationService } from '@/services';
+import { rideService, locationService, rideSync } from '@/services';
 import { Spinner } from '@/components/ui';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
@@ -123,9 +123,9 @@ export default function DriverRideActivePage() {
       if (found) {
         setCurrentRide(found);
       } else {
-        rideService.getRides().then((all) => {
-          if (all && all.length > 0) {
-            setCurrentRide(all[0]);
+        rideService.getActiveRide().then((active) => {
+          if (active) {
+            setCurrentRide(active);
           }
         });
       }
@@ -152,12 +152,14 @@ export default function DriverRideActivePage() {
     };
 
     // Point C: Driver's starting position (~500m along road from Place A)
+    const isMbd = Math.abs(pickup.lat - 28.835) < 0.09 && Math.abs(pickup.lng - 78.77) < 0.09;
     const driverStart = currentRide.driverStartLocation?.lat
       ? currentRide.driverStartLocation
       : {
-          lat: pickup.lat + (destination.lat >= pickup.lat ? -0.0045 : 0.0045),
-          lng: pickup.lng + (destination.lng >= pickup.lng ? -0.0038 : 0.0038),
-          name: 'Nearby Proximity Dispatch Hub',
+          lat: isMbd ? 28.8395 : (pickup.lat + (destination.lat >= pickup.lat ? -0.0045 : 0.0045)),
+          lng: isMbd ? 78.7760 : (pickup.lng + (destination.lng >= pickup.lng ? -0.0038 : 0.0038)),
+          name: isMbd ? 'Civil Lines Taxi Stand, Moradabad' : `${pickup.name.split(',')[0]} Transit Point`,
+          address: isMbd ? 'Civil Lines Approach Road, Moradabad 244001' : `Road corridor ~600m from ${pickup.name.split(',')[0]}`,
         };
 
     setDriverPos({
@@ -209,6 +211,41 @@ export default function DriverRideActivePage() {
       console.warn('Driver route background fallback active:', err);
     });
   }, [currentRide]);
+
+  // Cross-Tab synchronization with Passenger tab
+  useEffect(() => {
+    const unsub = rideSync.subscribe((evt) => {
+      if (!evt?.payload) return;
+      const targetId = evt.payload.rideId || evt.payload.id;
+      if (currentRide?.id && targetId && targetId !== currentRide.id) return;
+
+      if (evt.type === 'DRIVER_ARRIVED') {
+        playTone(784, 0.35);
+        setStage('ARRIVED');
+        setRideStage('ARRIVED');
+        setArrivedAlert(true);
+        animIndexRef.current = 0;
+        setSpeed(0);
+        if (tripWaypoints.current?.length > 0) {
+          setRoutePolyline(tripWaypoints.current);
+        }
+      } else if (evt.type === 'RIDE_STARTED') {
+        playTone(880, 0.4);
+        setStage('IN_TRANSIT');
+        setRideStage('IN_TRANSIT');
+        animIndexRef.current = 0;
+        if (tripWaypoints.current?.length > 0) {
+          setRoutePolyline(tripWaypoints.current);
+        }
+      } else if (evt.type === 'RIDE_COMPLETED') {
+        playTone(987, 0.3);
+        setStage('PAYMENT');
+        setRideStage('PAYMENT_PENDING');
+        setSpeed(0);
+      }
+    });
+    return unsub;
+  }, [currentRide?.id, setRideStage]);
 
   // 3. Waiting stopwatch when at pickup
   useEffect(() => {
@@ -333,6 +370,9 @@ export default function DriverRideActivePage() {
     if (tripWaypoints.current?.length > 0) {
       setRoutePolyline(tripWaypoints.current);
     }
+    if (currentRide?.id) {
+      rideSync.broadcast('DRIVER_ARRIVED', { rideId: currentRide.id });
+    }
   };
 
   // Driver action: Verify passenger OTP
@@ -344,6 +384,9 @@ export default function DriverRideActivePage() {
       setStage('IN_TRANSIT');
       setRideStage('IN_TRANSIT');
       animIndexRef.current = 0;
+      if (currentRide?.id) {
+        rideSync.broadcast('RIDE_STARTED', { rideId: currentRide.id });
+      }
     } else {
       setOtpError(`Please enter passenger's 4-digit ride OTP (e.g. ${validOtp})`);
     }
@@ -353,6 +396,9 @@ export default function DriverRideActivePage() {
     playTone(987, 0.3);
     setStage('PAYMENT');
     setRideStage('PAYMENT_PENDING');
+    if (currentRide?.id) {
+      rideSync.broadcast('RIDE_COMPLETED', { rideId: currentRide.id });
+    }
   };
 
   const handleCollectAndFinish = async () => {
@@ -379,6 +425,10 @@ export default function DriverRideActivePage() {
     try {
       await rideService.updateRide(currentRide?.id, completedRidePayload);
     } catch (e) {}
+
+    if (currentRide?.id) {
+      rideSync.broadcast('RIDE_COMPLETED', { rideId: currentRide.id, completedRide: completedRidePayload });
+    }
 
     navigate('/driver/dashboard');
   };
