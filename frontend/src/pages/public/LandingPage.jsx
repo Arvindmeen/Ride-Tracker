@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MapPin, ArrowRight, Zap, Activity, Car, Phone,
@@ -7,13 +7,12 @@ import {
   QrCode, Crosshair, Plane, Train, Hospital, ShoppingBag, X,
   TrendingUp, Star, Terminal, Radio, ExternalLink, Send, Check,
   Cpu, Globe2, BatteryCharging, Leaf, HeartPulse, RefreshCw,
-  Sparkles, ChevronRight, Award, Compass, AlertCircle
+  Sparkles, ChevronRight, Award, Compass, AlertCircle, Search, ArrowUpDown
 } from 'lucide-react';
 import { useAuthStore, useMapStore, useBookingStore } from '@/stores';
+import { locationService } from '@/services';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-
-const LiveMap = React.lazy(() => import('@/components/map/LiveMap'));
 
 /* ─── Regional Hubs ─────────────────────────────────────────────────────────── */
 const REGIONAL_HUBS = [
@@ -89,8 +88,85 @@ const REGIONAL_HUBS = [
       { id: 31, name: 'Sachin Patil', vehicle: 'Tata Express-T EV', icon: '🚗', dist: '0.4 km', eta: '2 min', r: 34, angle: 80, rating: 4.96, battery: 78 },
       { id: 32, name: 'Ganesh More', vehicle: 'TVS iQube Electric', icon: '🏍️', dist: '0.6 km', eta: '2 min', r: 46, angle: 200, rating: 4.91, battery: 94 },
     ]
+  },
+  {
+    id: 'kolkata',
+    name: 'Kolkata Metropolitan',
+    state: 'West Bengal',
+    locality: 'Park Street & Salt Lake IT Corridor',
+    lat: 22.5726,
+    lng: 88.3639,
+    hotspots: [
+      { id: 'park_st', name: 'Park Street Central Hub', icon: ShoppingBag, badge: 'Commercial', dist: 2.5, mins: 8, fare: 50, drop: 'Park Street Metro Gate 2', desc: 'Historic shopping, dining, and central office hub' },
+      { id: 'ccu_airport', name: 'Netaji Subhash Airport (CCU T2)', icon: Plane, badge: 'Airport', dist: 14.2, mins: 32, fare: 320, drop: 'CCU Terminal 2 Departure Expressway', desc: 'VIP flyover drop lane with zero terminal delay' },
+      { id: 'howrah_stn', name: 'Howrah Junction Railway Terminus', icon: Train, badge: 'IRCTC Rail', dist: 4.8, mins: 15, fare: 85, drop: 'Howrah Station Platform 1 Cab Road', desc: 'Direct access to Eastern & South Eastern trains' },
+      { id: 'saltlake_sec5', name: 'Salt Lake Sector V IT Hub', icon: Building2, badge: 'Tech Node', dist: 8.6, mins: 22, fare: 140, drop: 'Sector V Webel Bhavan Junction', desc: 'Major IT tech parks, Wipro & TCS campuses' },
+    ],
+    drivers: [
+      { id: 41, name: 'Subhash Mondal', vehicle: 'Tata Tigor EV Cab', icon: '🚗', dist: '0.5 km', eta: '2 min', r: 38, angle: 90, rating: 4.93, battery: 85 },
+      { id: 42, name: 'Debabrata Sen', vehicle: 'Ather 450X EV', icon: '🏍️', dist: '0.8 km', eta: '3 min', r: 50, angle: 210, rating: 4.96, battery: 90 },
+    ]
+  },
+  {
+    id: 'hyd',
+    name: 'Hyderabad Cyber City',
+    state: 'Telangana',
+    locality: 'HITEC City & Gachibowli Corridor',
+    lat: 17.3850,
+    lng: 78.4867,
+    hotspots: [
+      { id: 'hitec_city', name: 'HITEC City Cyber Towers', icon: Building2, badge: 'Tech Node', dist: 12.5, mins: 24, fare: 180, drop: 'Cyber Towers Main Gate, Madhapur', desc: 'Core tech corridor connecting Google, Microsoft & Oracle' },
+      { id: 'hyd_airport', name: 'Rajiv Gandhi Int Airport (HYD)', icon: Plane, badge: 'Airport', dist: 24.0, mins: 38, fare: 460, drop: 'RGIA Shamshabad Departure Ramp', desc: 'PVNR Elevated Expressway high-speed transit' },
+      { id: 'secunderabad_stn', name: 'Secunderabad Railway Station', icon: Train, badge: 'IRCTC Rail', dist: 7.8, mins: 18, fare: 110, drop: 'Secunderabad Junction Platform 1', desc: 'South Central Railway headquarters & Vande Bharat' },
+    ],
+    drivers: [
+      { id: 51, name: 'Suresh Reddy', vehicle: 'Ola S1 Pro Gen 2', icon: '🏍️', dist: '0.4 km', eta: '1 min', r: 30, angle: 40, rating: 4.97, battery: 95 },
+      { id: 52, name: 'Karthik Rao', vehicle: 'MG ZS EV Prime', icon: '🚗', dist: '1.2 km', eta: '4 min', r: 58, angle: 180, rating: 4.92, battery: 82 },
+    ]
+  },
+  {
+    id: 'pune',
+    name: 'Pune IT & Heritage Hub',
+    state: 'Maharashtra',
+    locality: 'Hinjawadi & Koregaon Park Corridor',
+    lat: 18.5204,
+    lng: 73.8567,
+    hotspots: [
+      { id: 'hinjawadi_ph1', name: 'Hinjawadi IT Park Phase 1', icon: Building2, badge: 'Tech Node', dist: 16.5, mins: 32, fare: 240, drop: 'Rajiv Gandhi Infotech Park Gate 1', desc: 'Infosys, Wipro, and Cognizant corporate corridor' },
+      { id: 'pnq_airport', name: 'Pune Int Airport (PNQ)', icon: Plane, badge: 'Airport', dist: 9.8, mins: 22, fare: 180, drop: 'Lohegaon PNQ Terminal Departure', desc: 'Viman Nagar elevated transit corridor' },
+      { id: 'pune_junction', name: 'Pune Railway Junction', icon: Train, badge: 'IRCTC Rail', dist: 2.4, mins: 7, fare: 40, drop: 'Pune Station Main Concourse', desc: 'Central Mumbai-Pune expressway connections' },
+    ],
+    drivers: [
+      { id: 61, name: 'Rohan Deshmukh', vehicle: 'Mahindra Treo EV', icon: '🛺', dist: '0.3 km', eta: '1 min', r: 28, angle: 110, rating: 4.95, battery: 89 },
+      { id: 62, name: 'Amit Jadhav', vehicle: 'Hero Splendor Plus', icon: '🏍️', dist: '0.6 km', eta: '2 min', r: 42, angle: 270, rating: 4.90, battery: 91 },
+    ]
   }
 ];
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function findClosestHub(lat, lng) {
+  let closest = REGIONAL_HUBS[0];
+  let minD = Infinity;
+  for (const hub of REGIONAL_HUBS) {
+    const d = calculateDistance(lat, lng, hub.lat, hub.lng);
+    if (d < minD) {
+      minD = d;
+      closest = hub;
+    }
+  }
+  return { hub: closest, distanceKm: minD };
+}
 
 /* ─── Vehicle Services ───────────────────────────────────────────────────────── */
 const VEHICLE_SERVICES = [
@@ -101,144 +177,136 @@ const VEHICLE_SERVICES = [
 ];
 
 /* ─── Live Radar Widget (Self-Contained & Symmetrical) ───────────────────────── */
-function LiveRadarWidget({ hub, onOpenMap, selectedDriver, onSelectDriver }) {
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 45);
-    return () => clearInterval(id);
-  }, []);
-
-  const sweepAngle = (tick * 2.2) % 360;
-
+/* ─── Hero Interactive Ride Showcase (Clean, Animated, 100% Map-Free UI) ─────── */
+function HeroRideShowcase({ 
+  selectedHub, 
+  selectedHotspot, 
+  selectedService, 
+  estFare, 
+  pickupText,
+  onConfirmBooking 
+}) {
   return (
-    <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-md border border-slate-800 flex flex-col justify-between h-full min-h-[460px]">
-      {/* Radar Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+    <div className="relative bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-2xl border border-slate-800 flex flex-col justify-between h-full min-h-[500px] overflow-hidden">
+      {/* Ambient decorative glowing backdrop lights */}
+      <div className="absolute -top-20 -right-20 w-56 h-56 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Top Status Strip */}
+      <div className="relative z-10 flex items-center justify-between pb-4 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
-          <span className="relative flex h-2.5 w-2.5">
+          <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
           </span>
           <div>
-            <h3 className="text-sm font-bold text-white">Live Fleet Radar</h3>
-            <p className="text-[11px] text-slate-400">{hub.name} · {hub.drivers.length} Units Online</p>
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-extrabold text-white tracking-tight">Pan-India Fleet Active</h3>
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                LIVE
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">Direct dispatch across {selectedHub.name}</p>
           </div>
         </div>
-        <button onClick={onOpenMap}
-          className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 transition-all">
-          <ExternalLink size={13} /> Fullscreen Map
-        </button>
-      </div>
 
-      {/* Radar Scanner Center */}
-      <div className="relative flex items-center justify-center py-6 sm:py-10 my-auto">
-        <div className="relative w-56 h-56 sm:w-64 sm:h-64">
-          {[100, 75, 50, 25].map(r => (
-            <div key={r} className="absolute rounded-full border border-emerald-500/20 top-1/2 left-1/2"
-              style={{ width: `${r}%`, height: `${r}%`, transform: 'translate(-50%, -50%)' }} />
-          ))}
-
-          {/* Crosshairs */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-full h-px bg-emerald-500/15" />
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="h-full w-px bg-emerald-500/15" />
-          </div>
-
-          {/* Radar Sweep */}
-          <div className="absolute top-1/2 left-1/2 origin-left pointer-events-none z-10"
-            style={{ width: '50%', transform: `translateY(-50%) rotate(${sweepAngle}deg)` }}>
-            <div className="h-0.5 w-full" style={{ background: 'linear-gradient(to right, rgba(52,211,153,0.9), transparent)' }} />
-          </div>
-          <div className="absolute inset-0 rounded-full pointer-events-none" style={{
-            background: `conic-gradient(from ${sweepAngle - 60}deg, rgba(52,211,153,0.16), rgba(52,211,153,0.01), transparent 60deg)`
-          }} />
-
-          {/* User Marker */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-            <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-lg flex items-center justify-center text-[7px]">📍</div>
-            <div className="absolute inset-0 rounded-full bg-blue-400/40 animate-ping" />
-          </div>
-
-          {/* Driver Pings */}
-          {hub.drivers.map(driver => {
-            const rad = (driver.angle * Math.PI) / 180;
-            const cx = 50 + Math.cos(rad) * driver.r / 2;
-            const cy = 50 + Math.sin(rad) * driver.r / 2;
-            const isSel = selectedDriver?.id === driver.id;
-
-            return (
-              <div key={driver.id} onClick={() => onSelectDriver(driver)}
-                className="absolute z-30 cursor-pointer group"
-                style={{ left: `${cx}%`, top: `${cy}%`, transform: 'translate(-50%, -50%)' }}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 shadow-md transition-all group-hover:scale-110 ${
-                  isSel ? 'bg-blue-600 border-white ring-4 ring-blue-500/30' : 'bg-slate-800 border-emerald-400'
-                }`}>
-                  {driver.icon}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected Driver Telemetry Strip */}
-      <div className="bg-slate-800/90 rounded-2xl p-3.5 flex items-center justify-between border border-slate-700/60 mt-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-xl flex-shrink-0">
-            {selectedDriver ? selectedDriver.icon : hub.drivers[0]?.icon}
-          </div>
-          <div>
-            <p className="text-xs font-bold text-white">
-              {selectedDriver ? selectedDriver.name : hub.drivers[0]?.name}
-            </p>
-            <p className="text-[11px] text-slate-400">
-              {selectedDriver ? selectedDriver.vehicle : hub.drivers[0]?.vehicle} · Battery {selectedDriver?.battery || 92}%
-            </p>
-          </div>
-        </div>
         <div className="text-right">
-          <p className="text-xs font-black text-emerald-400">
-            {selectedDriver ? selectedDriver.dist : hub.drivers[0]?.dist} ({selectedDriver ? selectedDriver.eta : hub.drivers[0]?.eta})
-          </p>
-          <p className="text-[11px] text-amber-400 font-semibold mt-0.5">
-            ★ {selectedDriver ? selectedDriver.rating : hub.drivers[0]?.rating}
-          </p>
+          <span className="text-xs font-mono font-black text-blue-400">11,560 Fleet</span>
+          <p className="text-[10px] text-slate-400 font-medium">Pan-India Online</p>
         </div>
       </div>
-    </div>
-  );
-}
 
-/* ─── Fullscreen Map Modal ───────────────────────────────────────────────────── */
-function MapModal({ open, onClose, center, pickup, destination, detectGPS }) {
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+      {/* Center Route & Trip Simulation Visualizer */}
+      <div className="relative z-10 my-auto py-5 space-y-4">
+        
+        {/* Route Card */}
+        <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-3">
+          <div className="flex items-start gap-3">
+            {/* Route Pins */}
+            <div className="flex flex-col items-center pt-1">
+              <div className="w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-500/20" />
+              <div className="w-0.5 h-10 bg-gradient-to-b from-blue-500 via-slate-600 to-emerald-500 my-1" />
+              <div className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
+            </div>
 
-  if (!open) return null;
+            {/* From & To Details */}
+            <div className="flex-1 space-y-2.5 min-w-0">
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Pickup Location</p>
+                <p className="text-xs font-bold text-white truncate">{pickupText.replace('📍 ', '')}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Destination Drop</p>
+                <p className="text-xs font-bold text-white truncate">{selectedHotspot.name}</p>
+                <p className="text-[11px] text-slate-400 truncate">{selectedHotspot.drop}</p>
+              </div>
+            </div>
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-4xl sm:mx-4 bg-white sm:rounded-3xl shadow-2xl overflow-hidden animate-slide-up" style={{ maxHeight: '90vh' }}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">National Fleet Map</h3>
-            <p className="text-xs text-slate-500">Live GPS & NavIC Satellite Navigation</p>
+            {/* Estimated Fare Box */}
+            <div className="text-right shrink-0 bg-slate-900/90 px-3 py-2 rounded-xl border border-slate-700/60 shadow-xs">
+              <p className="text-[10px] text-slate-400 uppercase font-bold">Estimated</p>
+              <p className="text-lg font-black text-emerald-400">₹{estFare}</p>
+              <p className="text-[10px] text-slate-400">{selectedHotspot.dist} km · {selectedHotspot.mins}m</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors">
-            <X size={18} />
-          </button>
         </div>
-        <div className="h-[65vh] sm:h-[70vh]">
-          <React.Suspense fallback={<div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm font-semibold">Loading Satellite Map...</div>}>
-            <LiveMap center={center} zoom={15} pickup={pickup} destination={destination} showSurgeZones tileTheme="light" height="100%" onRecenterGPS={detectGPS} />
-          </React.Suspense>
+
+        {/* Assigned Driver Preview Pill */}
+        <div className="bg-slate-800/60 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/50 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xl shadow-md shrink-0">
+              {selectedService.icon}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-extrabold text-white truncate">Direct Driver Match</p>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30 shrink-0">
+                  Verified Partner
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                ★ 4.95 (1,200+ trips) · {selectedService.name}
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right shrink-0">
+            <span className="text-[10px] font-mono font-extrabold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              ETA 2 MINS
+            </span>
+          </div>
         </div>
+
+        {/* 3 Core Trust Pillars */}
+        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+          <div className="bg-slate-800/40 rounded-xl p-2 border border-slate-800">
+            <p className="text-xs font-black text-white">&lt; 30s</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Match Speed</p>
+          </div>
+          <div className="bg-slate-800/40 rounded-xl p-2 border border-slate-800">
+            <p className="text-xs font-black text-emerald-400">0% Surge</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Fixed Upfront</p>
+          </div>
+          <div className="bg-slate-800/40 rounded-xl p-2 border border-slate-800">
+            <p className="text-xs font-black text-blue-400">112 SOS</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Police Linked</p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Bottom Dispatch Trigger */}
+      <div className="relative z-10 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3">
+        <div className="text-xs text-slate-400">
+          <span className="text-slate-200 font-bold">Fast & transparent</span> pricing
+        </div>
+        <button
+          onClick={onConfirmBooking}
+          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition-all"
+        >
+          <span>Book Ride Now</span>
+          <ArrowRight size={14} />
+        </button>
       </div>
     </div>
   );
@@ -250,13 +318,15 @@ export default function LandingPage() {
   const [searchParams] = useSearchParams();
   const { user, role: userRole, isAuthenticated, login } = useAuthStore();
   const { setPickup, setDestination, setCategory, setEstimatedFare, setStep } = useBookingStore();
-  const { setRegion, startSimulation } = useMapStore();
+  const { userLocation, setUserLocation, setCenter, setRegion, startSimulation } = useMapStore();
   const activeRole = isAuthenticated ? (userRole || user?.role || 'USER') : null;
 
   const [selectedHub, setSelectedHub] = useState(REGIONAL_HUBS[0]);
   const [selectedHotspot, setSelectedHotspot] = useState(REGIONAL_HUBS[0].hotspots[0]);
   const [selectedService, setSelectedService] = useState(VEHICLE_SERVICES[0]);
   const [selectedDriver, setSelectedDriver] = useState(REGIONAL_HUBS[0].drivers[0]);
+  const [dynamicCorridors, setDynamicCorridors] = useState([]);
+  const [corridorsLoading, setCorridorsLoading] = useState(false);
 
   const [liveLocation, setLiveLocation] = useState({
     lat: REGIONAL_HUBS[0].lat,
@@ -267,16 +337,188 @@ export default function LandingPage() {
     loading: false,
   });
 
-  const [pickupText, setPickupText] = useState(`📍 ${REGIONAL_HUBS[0].locality}`);
-  const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [pickupText, setPickupText] = useState(REGIONAL_HUBS[0].locality);
+  const [destText, setDestText] = useState(REGIONAL_HUBS[0].hotspots[0].name || REGIONAL_HUBS[0].hotspots[0].drop);
+  const [pickupCoords, setPickupCoords] = useState({
+    lat: REGIONAL_HUBS[0].lat,
+    lng: REGIONAL_HUBS[0].lng,
+    name: REGIONAL_HUBS[0].locality,
+    address: `${REGIONAL_HUBS[0].name}, ${REGIONAL_HUBS[0].state}`,
+  });
+
+  // Manual Autocomplete Search State
+  const [activeSearchField, setActiveSearchField] = useState(null); // 'pickup' | 'destination' | null
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [destSuggestions, setDestSuggestions] = useState([]);
+  const [isSearchingPickup, setIsSearchingPickup] = useState(false);
+  const [isSearchingDest, setIsSearchingDest] = useState(false);
+  const bookingFormRef = useRef(null);
+
   const [portalTab, setPortalTab] = useState('rider');
   const [contactData, setContactData] = useState({ name: '', email: '', message: '' });
   const [contactSubmitted, setContactSubmitted] = useState(false);
 
+  // Close search dropdowns when clicking outside the booking form
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (bookingFormRef.current && !bookingFormRef.current.contains(e.target)) {
+        setActiveSearchField(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced search for manual Pickup input
+  useEffect(() => {
+    if (activeSearchField !== 'pickup') return;
+    const cleanQuery = pickupText.trim();
+    if (!cleanQuery || cleanQuery.length < 2) {
+      setPickupSuggestions([]);
+      return;
+    }
+
+    setIsSearchingPickup(true);
+    const timer = setTimeout(() => {
+      locationService.searchPlaces(cleanQuery, pickupCoords).then(results => {
+        setPickupSuggestions(results || []);
+        setIsSearchingPickup(false);
+      }).catch(() => {
+        setIsSearchingPickup(false);
+      });
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [pickupText, activeSearchField]);
+
+  // Debounced search for manual Destination input
+  useEffect(() => {
+    if (activeSearchField !== 'destination') return;
+    const cleanQuery = destText.trim();
+    if (!cleanQuery || cleanQuery.length < 2) {
+      setDestSuggestions([]);
+      return;
+    }
+
+    setIsSearchingDest(true);
+    const timer = setTimeout(() => {
+      locationService.searchPlaces(cleanQuery, pickupCoords).then(results => {
+        setDestSuggestions(results || []);
+        setIsSearchingDest(false);
+      }).catch(() => {
+        setIsSearchingDest(false);
+      });
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [destText, activeSearchField]);
+
+  // Sync Popular Corridors and Hero with userLocation (from GPS or Navbar selector)
+  useEffect(() => {
+    if (!userLocation?.lat || !userLocation?.lng) return;
+
+    const lat = userLocation.lat;
+    const lng = userLocation.lng;
+    const { hub: closestHub, distanceKm } = findClosestHub(lat, lng);
+
+    if (distanceKm <= 50) {
+      setSelectedHub(closestHub);
+    }
+
+    const locName = userLocation.name || 'Current Location';
+    const locAddress = userLocation.address || userLocation.name || 'Current Location';
+
+    setLiveLocation({
+      lat,
+      lng,
+      name: locName,
+      locality: locAddress,
+      isLive: Boolean(userLocation.isGpsDetected),
+      loading: false,
+    });
+    setPickupCoords({
+      lat,
+      lng,
+      name: locName,
+      address: locAddress,
+    });
+    setPickupText(locName);
+
+    setCorridorsLoading(true);
+    // Request nearby corridors strictly within 100 KM
+    locationService.getNearbyPlaces(lat, lng, 100).then((places) => {
+      setCorridorsLoading(false);
+      if (places && places.length > 0) {
+        const mapped = places.map((p, idx) => {
+          const dist = p.distanceKm
+            ? Math.round(p.distanceKm * 10) / 10
+            : Math.round(calculateDistance(lat, lng, p.lat, p.lng) * 10) / 10 || 3.8;
+          const mins = Math.max(3, Math.round(dist * 2.2));
+          const fare = Math.round(25 + dist * 12);
+
+          let Icon = Building2;
+          let badge = p.type ? p.type.toUpperCase() : 'Transit';
+          const lowerName = (p.name || '').toLowerCase();
+          if (lowerName.includes('airport') || p.type === 'airport') { Icon = Plane; badge = 'Airport'; }
+          else if (lowerName.includes('station') || lowerName.includes('junction') || p.type === 'station') { Icon = Train; badge = 'Rail Hub'; }
+          else if (lowerName.includes('iit') || lowerName.includes('college') || lowerName.includes('campus')) { Icon = GraduationCap; badge = 'Academic'; }
+          else if (lowerName.includes('hospital')) { Icon = Hospital; badge = '24/7 Med'; }
+          else if (lowerName.includes('market') || lowerName.includes('mall') || lowerName.includes('complex')) { Icon = ShoppingBag; badge = 'Commercial'; }
+          else if (lowerName.includes('park') || lowerName.includes('tech') || lowerName.includes('cyber')) { Icon = Building2; badge = 'Tech Node'; }
+
+          return {
+            id: p.id || `dyn-corr-${idx}`,
+            name: p.name,
+            icon: Icon,
+            badge,
+            dist,
+            mins,
+            fare,
+            drop: p.address || p.name,
+            desc: p.address || `${p.name}, ${p.city || userLocation.city || ''}`,
+            lat: p.lat,
+            lng: p.lng,
+          };
+        });
+
+        setDynamicCorridors(mapped);
+        setSelectedHotspot(mapped[0]);
+        setDestText(mapped[0].name || mapped[0].drop);
+      } else {
+        setDynamicCorridors(closestHub.hotspots);
+        setSelectedHotspot(closestHub.hotspots[0]);
+        setDestText(closestHub.hotspots[0].name || closestHub.hotspots[0].drop);
+      }
+    }).catch(() => {
+      setCorridorsLoading(false);
+      setDynamicCorridors(closestHub.hotspots);
+      setSelectedHotspot(closestHub.hotspots[0]);
+      setDestText(closestHub.hotspots[0].name || closestHub.hotspots[0].drop);
+    });
+  }, [userLocation?.lat, userLocation?.lng, userLocation?.city, userLocation?.name]);
+
   const handleHubSelect = (hub) => {
     setSelectedHub(hub);
     setSelectedHotspot(hub.hotspots[0]);
+    setDestText(hub.hotspots[0].name || hub.hotspots[0].drop);
     setSelectedDriver(hub.drivers[0]);
+    setDynamicCorridors(hub.hotspots);
+    const newLoc = {
+      lat: hub.lat,
+      lng: hub.lng,
+      name: hub.locality,
+      address: `${hub.name}, ${hub.state}`,
+      city: hub.name,
+      state: hub.state,
+      isGpsDetected: false,
+    };
+    setUserLocation(newLoc);
+    setPickupCoords({
+      lat: hub.lat,
+      lng: hub.lng,
+      name: hub.locality,
+      address: `${hub.name}, ${hub.state}`,
+    });
     setLiveLocation({
       lat: hub.lat,
       lng: hub.lng,
@@ -285,17 +527,182 @@ export default function LandingPage() {
       isLive: false,
       loading: false,
     });
-    setPickupText(`📍 ${hub.locality}`);
+    setPickupText(hub.locality);
+    setActiveSearchField(null);
     setRegion(hub.id.toUpperCase(), { lat: hub.lat, lng: hub.lng }, 15);
+  };
+
+  const handleSelectPickup = (place) => {
+    setPickupText(place.name);
+    const newCoords = {
+      lat: place.lat,
+      lng: place.lng,
+      name: place.name,
+      address: place.address || place.name,
+    };
+    setPickupCoords(newCoords);
+    setLiveLocation(prev => ({
+      ...prev,
+      lat: place.lat,
+      lng: place.lng,
+      name: place.name,
+      locality: place.address || place.name,
+    }));
+    setActiveSearchField(null);
+
+    // Recalculate distance to current destination
+    if (selectedHotspot?.lat && selectedHotspot?.lng) {
+      const dist = Math.round(calculateDistance(place.lat, place.lng, selectedHotspot.lat, selectedHotspot.lng) * 10) / 10 || 4.2;
+      const mins = Math.max(3, Math.round(dist * 2.2));
+      const fare = Math.round(25 + dist * 12);
+      setSelectedHotspot(prev => ({ ...prev, dist, mins, fare }));
+    }
+  };
+
+  const handleSelectDestination = (place) => {
+    setDestText(place.name);
+    const dist = Math.round(calculateDistance(pickupCoords.lat, pickupCoords.lng, place.lat, place.lng) * 10) / 10 || 4.8;
+    const mins = Math.max(3, Math.round(dist * 2.2));
+    const fare = Math.round(25 + dist * 12);
+
+    let Icon = Building2;
+    let badge = place.type ? place.type.toUpperCase() : (dist > 50 ? 'Outstation' : 'Custom');
+    const lowerName = (place.name || '').toLowerCase();
+    if (lowerName.includes('airport') || place.type === 'airport') { Icon = Plane; badge = 'Airport'; }
+    else if (lowerName.includes('station') || lowerName.includes('junction') || place.type === 'station') { Icon = Train; badge = 'Rail Hub'; }
+    else if (lowerName.includes('iit') || lowerName.includes('college') || lowerName.includes('campus')) { Icon = GraduationCap; badge = 'Academic'; }
+    else if (lowerName.includes('hospital')) { Icon = Hospital; badge = '24/7 Med'; }
+    else if (lowerName.includes('market') || lowerName.includes('mall')) { Icon = ShoppingBag; badge = 'Commercial'; }
+
+    setSelectedHotspot({
+      id: place.id || `custom-${Date.now()}`,
+      name: place.name,
+      drop: place.address || place.name,
+      desc: place.address || `${place.name}, ${place.city || ''}`,
+      dist,
+      mins,
+      fare,
+      lat: place.lat,
+      lng: place.lng,
+      badge,
+      icon: Icon,
+    });
+    setActiveSearchField(null);
+  };
+
+  const handleSwapLocations = () => {
+    const currentPickupText = pickupText;
+    const currentPickupCoords = { ...pickupCoords };
+    const currentDestText = destText;
+    const currentHotspot = { ...selectedHotspot };
+
+    setPickupText(currentDestText);
+    setPickupCoords({
+      lat: currentHotspot.lat || currentPickupCoords.lat,
+      lng: currentHotspot.lng || currentPickupCoords.lng,
+      name: currentHotspot.name || currentDestText,
+      address: currentHotspot.desc || currentHotspot.drop || currentDestText,
+    });
+
+    setDestText(currentPickupText);
+    setSelectedHotspot({
+      ...currentHotspot,
+      name: currentPickupText,
+      drop: currentPickupCoords.address || currentPickupText,
+      desc: currentPickupCoords.address || currentPickupText,
+      lat: currentPickupCoords.lat,
+      lng: currentPickupCoords.lng,
+    });
+  };
+
+  const handlePickupKeyDown = async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (pickupSuggestions.length > 0) {
+        handleSelectPickup(pickupSuggestions[0]);
+      } else if (pickupText.trim()) {
+        setIsSearchingPickup(true);
+        try {
+          const results = await locationService.searchPlaces(pickupText.trim(), pickupCoords);
+          if (results && results.length > 0) {
+            handleSelectPickup(results[0]);
+          }
+        } finally {
+          setIsSearchingPickup(false);
+        }
+      }
+    }
+  };
+
+  const handleDestKeyDown = async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (destSuggestions.length > 0) {
+        handleSelectDestination(destSuggestions[0]);
+      } else if (destText.trim()) {
+        setIsSearchingDest(true);
+        try {
+          const results = await locationService.searchPlaces(destText.trim(), pickupCoords);
+          if (results && results.length > 0) {
+            handleSelectDestination(results[0]);
+          }
+        } finally {
+          setIsSearchingDest(false);
+        }
+      }
+    }
+  };
+
+  const handleSelectHotspot = (place) => {
+    setSelectedHotspot(place);
+    setDestText(place.name || place.drop);
+    setActiveSearchField(null);
+    document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const detectGPS = () => {
     if (!navigator.geolocation) return;
     setLiveLocation(p => ({ ...p, loading: true }));
     navigator.geolocation.getCurrentPosition(
-      ({ coords: { latitude: lat, longitude: lng } }) => {
-        setLiveLocation({ lat, lng, name: 'Live GPS', locality: 'Detected GPS Location', isLive: true, loading: false });
-        setPickupText(`📍 Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+      async ({ coords: { latitude: lat, longitude: lng } }) => {
+        try {
+          const geo = await locationService.reverseGeocode(lat, lng);
+          const newLoc = {
+            lat,
+            lng,
+            name: geo.name || `Live Location (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`,
+            address: geo.address || 'Current Live GPS Location',
+            city: geo.city || 'Your Area',
+            state: geo.state || '',
+            isGpsDetected: true,
+          };
+          setUserLocation(newLoc);
+          setPickupCoords({ lat, lng, name: newLoc.name, address: newLoc.address });
+          setLiveLocation({ lat, lng, name: newLoc.name, locality: newLoc.address, isLive: true, loading: false });
+          setPickupText(newLoc.name);
+
+          if (selectedHotspot?.lat && selectedHotspot?.lng) {
+            const dist = Math.round(calculateDistance(lat, lng, selectedHotspot.lat, selectedHotspot.lng) * 10) / 10 || 4.2;
+            const mins = Math.max(3, Math.round(dist * 2.2));
+            const fare = Math.round(25 + dist * 12);
+            setSelectedHotspot(prev => ({ ...prev, dist, mins, fare }));
+          }
+        } catch (e) {
+          const newLoc = {
+            lat,
+            lng,
+            name: `Live Location (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`,
+            address: 'Detected GPS Location',
+            city: 'Current Area',
+            state: '',
+            isGpsDetected: true,
+          };
+          setUserLocation(newLoc);
+          setPickupCoords({ lat, lng, name: newLoc.name, address: newLoc.address });
+          setLiveLocation({ lat, lng, name: newLoc.name, locality: newLoc.address, isLive: true, loading: false });
+          setPickupText(newLoc.name);
+        }
+        setActiveSearchField(null);
         setRegion('LIVE_GPS', { lat, lng }, 15);
       },
       () => { setLiveLocation(p => ({ ...p, loading: false })); },
@@ -309,9 +716,6 @@ export default function LandingPage() {
   }, []);
 
   const estFare = Math.round(selectedService.basePrice + selectedHotspot.dist * selectedService.pricePerKm);
-  const mapCenter = useMemo(() => ({ lat: liveLocation.lat, lng: liveLocation.lng }), [liveLocation.lat, liveLocation.lng]);
-  const mapPickup  = useMemo(() => ({ lat: liveLocation.lat, lng: liveLocation.lng, name: pickupText }), [liveLocation.lat, liveLocation.lng, pickupText]);
-  const mapDest    = useMemo(() => ({ lat: liveLocation.lat + 0.01, lng: liveLocation.lng + 0.01, name: selectedHotspot.drop }), [liveLocation.lat, liveLocation.lng, selectedHotspot]);
 
   const handleLaunchRole = role => {
     login(role);
@@ -321,11 +725,55 @@ export default function LandingPage() {
   };
 
   const handleConfirmBooking = () => {
-    if (!isAuthenticated) login('USER');
-    setPickup({ lat: liveLocation.lat, lng: liveLocation.lng, name: pickupText, address: liveLocation.locality });
-    setDestination({ lat: mapDest.lat, lng: mapDest.lng, name: selectedHotspot.drop, address: selectedHotspot.desc });
-    setCategory(selectedService.id === 'bike' ? 'MOTO' : 'CAR');
-    setEstimatedFare(estFare);
+    // ALWAYS switch active persona to USER for passenger booking flow
+    login('USER');
+
+    const pLat = pickupCoords.lat || liveLocation.lat;
+    const pLng = pickupCoords.lng || liveLocation.lng;
+    const pName = pickupText.replace(/^📍\s*/, '') || 'Selected Pickup';
+    const pAddress = pickupCoords.address || liveLocation.locality || pName;
+
+    const dLat = selectedHotspot.lat || (pLat + 0.015);
+    const dLng = selectedHotspot.lng || (pLng + 0.015);
+    const dName = selectedHotspot.name || destText || 'Selected Destination';
+    const dAddress = selectedHotspot.desc || selectedHotspot.drop || destText || dName;
+    const distKm = selectedHotspot.dist || 4.2;
+
+    // Center map and generate local simulated drivers for the searched city
+    if (setUserLocation) {
+      setUserLocation({
+        lat: pLat,
+        lng: pLng,
+        name: pName,
+        address: pAddress,
+        isGpsDetected: false,
+      });
+    }
+    if (setCenter) {
+      setCenter({ lat: pLat, lng: pLng });
+    }
+
+    setPickup({
+      lat: pLat,
+      lng: pLng,
+      name: pName,
+      address: pAddress,
+    });
+    setDestination({
+      lat: dLat,
+      lng: dLng,
+      name: dName,
+      address: dAddress,
+      distanceKm: distKm,
+    });
+    setCategory(selectedService.id === 'bike' ? 'MOTO' : selectedService.id === 'toto' ? 'AUTO' : 'ECONOMY');
+    setEstimatedFare({
+      base: Math.round(estFare * 0.35),
+      distanceFare: Math.round(estFare * 0.58),
+      tax: Math.round(estFare * 0.07),
+      total: estFare,
+      distance: distKm,
+    });
     setStep('CONFIRM');
     navigate('/app/home');
   };
@@ -361,7 +809,7 @@ export default function LandingPage() {
 
           {/* Centered Regional Sector Segment Tabs */}
           <div className="flex justify-center mb-8 sm:mb-10">
-            <div className="inline-flex p-1 bg-slate-200/70 rounded-2xl gap-1">
+            <div className="flex flex-wrap items-center justify-center p-1.5 bg-slate-200/70 rounded-2xl gap-1 max-w-4xl">
               {REGIONAL_HUBS.map(hub => {
                 const isSel = selectedHub.id === hub.id;
                 return (
@@ -380,40 +828,258 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
             
             {/* LEFT: Booking Card */}
-            <div className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-5">
+            <div ref={bookingFormRef} className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-5 relative">
               
               <div>
-                <h2 className="text-lg font-extrabold text-slate-900">Where are you going?</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-extrabold text-slate-900">Where are you going?</h2>
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                    ⚡ 100 KM Corridors & Manual
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500 mt-0.5">Current Hub: {selectedHub.name} ({selectedHub.state})</p>
               </div>
 
-              {/* Pickup Point */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Pickup Location</label>
+              {/* Pickup Point with Manual Typing & GPS */}
+              <div className="space-y-1.5 relative">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">Pickup Location (From)</label>
+                  <span className="text-[10px] font-semibold text-blue-600">Manual Search / GPS</span>
+                </div>
                 <div className="relative">
-                  <div className="absolute left-3.5 top-3.5 text-slate-400">
+                  <div className="absolute left-3.5 top-3.5 text-blue-600">
                     <MapPin size={16} />
                   </div>
-                  <input type="text" value={pickupText} onChange={e => setPickupText(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl pl-10 pr-24 py-3 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                    placeholder="Enter pickup location" />
-                  <button onClick={detectGPS}
-                    className="absolute right-2 top-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition-all flex items-center gap-1">
-                    <Crosshair size={12} className={liveLocation.loading ? 'animate-spin' : ''} /> GPS
-                  </button>
+                  <input
+                    type="text"
+                    value={pickupText}
+                    onChange={e => {
+                      setPickupText(e.target.value);
+                      setActiveSearchField('pickup');
+                    }}
+                    onFocus={() => setActiveSearchField('pickup')}
+                    onKeyDown={handlePickupKeyDown}
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl pl-10 pr-24 py-3 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-xs"
+                    placeholder="Search pickup city, landmark, or campus..."
+                  />
+                  <div className="absolute right-2 top-1.5 flex items-center gap-1">
+                    {pickupText && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPickupText('');
+                          setActiveSearchField('pickup');
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-slate-600"
+                        title="Clear pickup"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={detectGPS}
+                      className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition-all flex items-center gap-1"
+                      title="Detect live GPS"
+                    >
+                      <Crosshair size={12} className={liveLocation.loading ? 'animate-spin' : ''} /> GPS
+                    </button>
+                  </div>
                 </div>
+
+                {/* Pickup Autocomplete Dropdown */}
+                {activeSearchField === 'pickup' && (
+                  <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-100 animate-fade-in">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        detectGPS();
+                        setActiveSearchField(null);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 bg-blue-50/80 hover:bg-blue-100 text-left transition-colors font-bold text-xs text-blue-700"
+                    >
+                      <Crosshair size={14} className="text-blue-600 shrink-0" />
+                      <div>
+                        <p className="font-extrabold text-blue-800">Use My Exact Live GPS Location</p>
+                        <p className="text-[10px] text-blue-600 font-normal">Real-time GPS pin with high accuracy</p>
+                      </div>
+                    </button>
+
+                    {isSearchingPickup && (
+                      <div className="px-4 py-3 text-xs text-slate-500 flex items-center gap-2">
+                        <RefreshCw size={13} className="animate-spin text-blue-600" />
+                        <span>Searching locations in India...</span>
+                      </div>
+                    )}
+
+                    {!isSearchingPickup && pickupSuggestions.map(place => (
+                      <button
+                        key={place.id || place.name}
+                        type="button"
+                        onClick={() => handleSelectPickup(place)}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left transition-colors"
+                      >
+                        <MapPin size={14} className="text-blue-600 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-bold text-slate-900 truncate">{place.name}</p>
+                            {place.distanceKm != null && (
+                              <span className="text-[10px] font-mono text-blue-600 font-bold shrink-0">{place.distanceKm} km</span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400 truncate">{place.address}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Destination Drop */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Destination</label>
+              {/* Connecting Line & Swap Button */}
+              <div className="flex justify-center -my-2.5 relative z-20">
+                <button
+                  type="button"
+                  onClick={handleSwapLocations}
+                  className="px-3.5 py-1 rounded-full bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-blue-600 hover:border-blue-300 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 text-[11px] font-bold"
+                  title="Swap Pickup & Destination"
+                >
+                  <ArrowUpDown size={13} className="text-blue-600" />
+                  <span>Swap From ⇄ To</span>
+                </button>
+              </div>
+
+              {/* Destination Drop (Manual Autocomplete Search & 100km Corridors) */}
+              <div className="space-y-1.5 relative">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">Destination (To)</label>
+                  <span className="text-[10px] font-semibold text-emerald-600">Manual Search / 100km Corridors</span>
+                </div>
                 <div className="relative">
-                  <div className="absolute left-3.5 top-3.5 text-slate-400">
+                  <div className="absolute left-3.5 top-3.5 text-emerald-600">
                     <Navigation size={16} />
                   </div>
-                  <input type="text" value={selectedHotspot.drop} readOnly
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
-                    placeholder="Select destination" />
+                  <input
+                    type="text"
+                    value={destText}
+                    onChange={e => {
+                      setDestText(e.target.value);
+                      setActiveSearchField('destination');
+                    }}
+                    onFocus={() => setActiveSearchField('destination')}
+                    onKeyDown={handleDestKeyDown}
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl pl-10 pr-10 py-3 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-xs"
+                    placeholder="Search destination city, landmark, or corridor..."
+                  />
+                  {destText && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDestText('');
+                        setActiveSearchField('destination');
+                      }}
+                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 p-0.5"
+                      title="Clear destination"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Destination Autocomplete Dropdown */}
+                {activeSearchField === 'destination' && (
+                  <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-64 overflow-y-auto divide-y divide-slate-100 animate-fade-in">
+                    {isSearchingDest && (
+                      <div className="px-4 py-3 text-xs text-slate-500 flex items-center gap-2">
+                        <RefreshCw size={13} className="animate-spin text-blue-600" />
+                        <span>Searching destinations across India...</span>
+                      </div>
+                    )}
+
+                    {/* Search Results */}
+                    {destSuggestions.length > 0 && destSuggestions.map(place => (
+                      <button
+                        key={place.id || place.name}
+                        type="button"
+                        onClick={() => handleSelectDestination(place)}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left transition-colors"
+                      >
+                        <Navigation size={14} className="text-emerald-600 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-bold text-slate-900 truncate">{place.name}</p>
+                            {place.distanceKm != null && (
+                              <span className="text-[10px] font-mono text-emerald-600 font-bold shrink-0">{place.distanceKm} km</span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400 truncate">{place.address}</p>
+                        </div>
+                      </button>
+                    ))}
+
+                    {/* Quick 100km Corridors Suggestions if no search results yet */}
+                    {destSuggestions.length === 0 && !isSearchingDest && (
+                      <div className="p-3 bg-slate-50/70">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-2">
+                          ⚡ Suggested Corridors Within 100 KM
+                        </p>
+                        <div className="space-y-1">
+                          {(dynamicCorridors.length > 0 ? dynamicCorridors : selectedHub.hotspots).slice(0, 4).map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                handleSelectHotspot(c);
+                              }}
+                              className="w-full flex items-center justify-between p-2 rounded-xl bg-white hover:bg-blue-50 border border-slate-200 text-left transition-colors"
+                            >
+                              <div className="min-w-0 flex-1 pr-2">
+                                <p className="text-xs font-bold text-slate-900 truncate">{c.name}</p>
+                                <p className="text-[10px] text-slate-500 truncate">{c.desc || c.drop}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="text-[10px] font-bold text-emerald-600">₹{c.fare}</span>
+                                <p className="text-[9px] text-slate-400">{c.dist} km</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick 100 KM Suggested Corridors Strip */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+                    ⚡ 100 KM Suggested Corridors:
+                  </span>
+                  <a href="#places-to-go" className="text-[10px] font-bold text-blue-600 hover:underline">
+                    View All Corridors
+                  </a>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(dynamicCorridors.length > 0 ? dynamicCorridors : selectedHub.hotspots).slice(0, 4).map(place => {
+                    const isSel = selectedHotspot?.id === place.id;
+                    return (
+                      <button
+                        key={place.id}
+                        type="button"
+                        onClick={() => handleSelectHotspot(place)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all border flex items-center gap-1 ${
+                          isSel
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
+                        }`}
+                      >
+                        <span>{place.name.split(' ')[0]}</span>
+                        <span className={`text-[10px] ${isSel ? 'text-blue-100' : 'text-slate-400'}`}>
+                          ({place.dist}km)
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -462,9 +1128,16 @@ export default function LandingPage() {
 
             </div>
 
-            {/* RIGHT: Live Radar (Clean & Symmetrical, no awkward stacked cards below it!) */}
+            {/* RIGHT: Live Interactive Ride Showcase (100% Map-Free, High-Converting Perfect UI) */}
             <div className="lg:col-span-6 h-full">
-              <LiveRadarWidget hub={selectedHub} onOpenMap={() => setMapModalOpen(true)} selectedDriver={selectedDriver} onSelectDriver={setSelectedDriver} />
+              <HeroRideShowcase 
+                selectedHub={selectedHub} 
+                selectedHotspot={selectedHotspot} 
+                selectedService={selectedService} 
+                estFare={estFare} 
+                pickupText={pickupText} 
+                onConfirmBooking={handleConfirmBooking} 
+              />
             </div>
 
           </div>
@@ -477,9 +1150,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-center divide-y sm:divide-y-0 sm:divide-x divide-slate-200/60">
             
             <div className="pt-3 sm:pt-0 sm:px-4">
-              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">1,200+</p>
-              <p className="text-xs font-bold text-slate-700 mt-1">Active Verified Fleet</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Across 742 Indian Districts</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">11,560+</p>
+              <p className="text-xs font-bold text-slate-700 mt-1">Verified Fleet Online</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Across 30+ Indian Hubs</p>
             </div>
 
             <div className="pt-3 sm:pt-0 sm:px-4">
@@ -504,57 +1177,80 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── POPULAR ROUTES SECTION ── */}
+      {/* ── POPULAR ROUTES SECTION (LOCATION-AWARE & STRICTLY 100 KM RANGE) ── */}
       <section id="places-to-go" className="w-full flex justify-center py-14 sm:py-20 bg-slate-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-3">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-1 block">Popular Corridors</span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                Top Destinations in {selectedHub.name}
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <span className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                  ⚡ 100 KM Range Suggestions
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>📍 Based on {userLocation?.city || selectedHub.name} (Live GPS)</span>
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                Popular Corridors (Within 100 KM)
               </h2>
-              <p className="text-sm text-slate-500 mt-1">Upfront pricing with pre-mapped coordinates.</p>
+              <p className="text-sm text-slate-500 mt-1 max-w-2xl">
+                High-frequency transit corridors, regional hubs, and campus links suggested within 100 km of {userLocation?.name || selectedHub.locality}. Tap any corridor or freely enter custom destinations above.
+              </p>
             </div>
             <button onClick={detectGPS}
-              className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-200">
-              <Crosshair size={13} className={liveLocation.loading ? 'animate-spin' : ''} /> Detect GPS
+              className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-200 shadow-xs">
+              <Crosshair size={13} className={liveLocation.loading ? 'animate-spin text-blue-600' : 'text-blue-600'} />
+              <span>{liveLocation.isLive ? 'GPS Synced' : 'Detect GPS'}</span>
             </button>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {selectedHub.hotspots.map(place => {
-              const Icon = place.icon;
-              const isSel = selectedHotspot.id === place.id;
-              return (
-                <div key={place.id} onClick={() => { setSelectedHotspot(place); document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  className={`group cursor-pointer rounded-2xl p-5 border transition-all hover:shadow-md ${
-                    isSel ? 'border-blue-600 bg-blue-50/40 shadow-sm ring-2 ring-blue-600/10' : 'border-slate-200 hover:border-slate-300 bg-white'
-                  }`}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                      <Icon size={18} />
+          {corridorsLoading ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-2 text-slate-400">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+              <p className="text-xs font-semibold text-slate-600">Finding popular 100 KM travel corridors for your location...</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(dynamicCorridors.length > 0 ? dynamicCorridors : selectedHub.hotspots).map(place => {
+                const Icon = place.icon || Building2;
+                const isSel = selectedHotspot?.id === place.id;
+                return (
+                  <div key={place.id} onClick={() => handleSelectHotspot(place)}
+                    className={`group cursor-pointer rounded-2xl p-5 border transition-all hover:shadow-md ${
+                      isSel ? 'border-blue-600 bg-blue-50/40 shadow-sm ring-2 ring-blue-600/10' : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                        <Icon size={18} />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                          {place.dist} km
+                        </span>
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                          {place.badge || '100km'}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                      {place.badge}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900">{place.name}</h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-normal line-clamp-2">{place.desc}</p>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-slate-400">{place.dist} km · {place.mins} mins</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">₹{place.fare}</span>
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                        isSel ? 'bg-blue-600 text-white' : 'bg-slate-100 text-blue-700'
-                      }`}>
-                        {isSel ? 'Selected' : 'Select'}
-                      </span>
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{place.name}</h3>
+                    <p className="text-xs text-slate-500 mt-1 leading-normal line-clamp-2">{place.desc || place.drop}</p>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-medium">⚡ Within 100 km · ~{place.mins}m</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 text-sm">₹{place.fare}</span>
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                          isSel ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-blue-700 group-hover:bg-blue-50'
+                        }`}>
+                          {isSel ? 'Selected' : 'Pick Corridor'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -805,9 +1501,6 @@ export default function LandingPage() {
       </section>
 
       <Footer />
-
-      {/* Fullscreen Map Modal */}
-      <MapModal open={mapModalOpen} onClose={() => setMapModalOpen(false)} center={mapCenter} pickup={mapPickup} destination={mapDest} detectGPS={detectGPS} />
     </div>
   );
 }

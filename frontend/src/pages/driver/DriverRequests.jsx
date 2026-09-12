@@ -219,19 +219,20 @@ export default function DriverRequests() {
             </div>
 
             {/* Accept / Pass Buttons */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={() => clearRequests()}
-                className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold transition-all"
+                className="px-4 py-2.5 rounded-xl border border-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-semibold transition-all active:scale-95"
               >
                 Pass
               </button>
               <button
                 onClick={() => handleAcceptTrip(req)}
-                className="flex-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/25 transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
-                <CheckCircle size={16} />
-                <span>Accept {req.is100KmOutstation ? '100+ km Trip' : 'Ride'}</span>
+                <CheckCircle size={15} />
+                <span>Accept {req.is100KmOutstation ? 'Outstation Trip' : 'Ride'}</span>
+                <ArrowRight size={13} />
               </button>
             </div>
           </div>

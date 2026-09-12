@@ -1,14 +1,15 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Phone, MessageSquare, Share2, AlertTriangle, MapPin,
   Clock, Star, X, CheckCircle2, ShieldCheck, DollarSign,
-  Copy, Send, Lock, Check, ChevronUp, ChevronDown, Compass
+  Copy, Send, Lock, Check, ChevronUp, ChevronDown, Compass,
+  Navigation, Zap, Crosshair, ArrowRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { rideService } from '@/services';
-import { useMapStore } from '@/stores';
-import { Spinner, Modal, Badge, Button, VehicleIcon } from '@/components/ui';
+import { rideService, locationService } from '@/services';
+import { useMapStore, useBookingStore } from '@/stores';
+import { Spinner, Badge, Button, VehicleIcon } from '@/components/ui';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
 
@@ -21,20 +22,78 @@ const STATUS_STEPS = [
 ];
 
 function getFareDisplay(fare) {
-  if (!fare) return '28';
+  if (!fare) return '48';
   if (typeof fare === 'object') {
-    return Math.round(fare.total ?? fare.base ?? 28);
+    return Math.round(fare.total ?? fare.base ?? 48);
   }
   return typeof fare === 'number' ? Math.round(fare) : fare;
+}
+
+// Calculate bearing heading angle between two coordinate points
+function calculateBearing(startLat, startLng, destLat, destLng) {
+  const startLatRad = (startLat * Math.PI) / 180;
+  const startLngRad = (startLng * Math.PI) / 180;
+  const destLatRad = (destLat * Math.PI) / 180;
+  const destLngRad = (destLng * Math.PI) / 180;
+
+  const y = Math.sin(destLngRad - startLngRad) * Math.cos(destLatRad);
+  const x =
+    Math.cos(startLatRad) * Math.sin(destLatRad) -
+    Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(destLngRad - startLngRad);
+  let brng = (Math.atan2(y, x) * 180) / Math.PI;
+  return (brng + 360) % 360;
+}
+
+// Generate smooth multi-step interpolated coordinates along polyline via cumulative distance resampling
+function interpolatePath(points, targetSteps = 30) {
+  if (!points || points.length === 0) return [];
+  if (points.length === 1) return points;
+
+  // Calculate cumulative distances
+  const cumDists = [0];
+  for (let i = 0; i < points.length - 1; i++) {
+    const d = Math.hypot(points[i + 1][0] - points[i][0], points[i + 1][1] - points[i][1]);
+    cumDists.push(cumDists[i] + d);
+  }
+  const totalDist = cumDists[cumDists.length - 1];
+  if (totalDist === 0) return points;
+
+  const result = [];
+  for (let s = 0; s < targetSteps; s++) {
+    const targetDist = (s / (targetSteps - 1)) * totalDist;
+    let segIdx = 0;
+    while (segIdx < cumDists.length - 2 && cumDists[segIdx + 1] < targetDist) {
+      segIdx++;
+    }
+    const segStart = cumDists[segIdx];
+    const segLen = cumDists[segIdx + 1] - segStart;
+    const t = segLen > 0 ? (targetDist - segStart) / segLen : 0;
+    const p1 = points[segIdx];
+    const p2 = points[segIdx + 1];
+    result.push([
+      p1[0] + (p2[0] - p1[0]) * t,
+      p1[1] + (p2[1] - p1[1]) * t,
+    ]);
+  }
+  return result;
 }
 
 export default function LiveRidePage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { startSimulation } = useMapStore();
+  const { startSimulation, userLocation, drivers, setUserLocation } = useMapStore();
+  const {
+    pickup: storePickup,
+    destination: storeDestination,
+    category: storeCategory,
+    estimatedFare: storeFare,
+    assignedDriver,
+    setPickup,
+    setDestination,
+  } = useBookingStore();
 
   const [ride, setRide] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showSOS, setShowSOS] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [userRating, setUserRating] = useState(5);
@@ -46,79 +105,275 @@ export default function LiveRidePage() {
   const [newMsg, setNewMsg] = useState('');
   const [copiedOtp, setCopiedOtp] = useState(false);
 
-  // Driver moving coordinates
+  // Moving driver coordinates & dynamic telemetry
   const [driverLocation, setDriverLocation] = useState(null);
+  const [activeDriverEta, setActiveDriverEta] = useState(2);
+  const [activeDriverDistance, setActiveDriverDistance] = useState(0.6);
+  const [activeDriverSpeed, setActiveDriverSpeed] = useState(32);
+  const [routePolyline, setRoutePolyline] = useState(null);
 
+  // Waypoints for smooth simulation
+  const approachWaypoints = useRef([]);
+  const tripWaypoints = useRef([]);
+  const animIndexRef = useRef(0);
+
+  // Initialize Ride Details
   useEffect(() => {
-    rideService.getRideById(id).then((r) => {
-      const defaultRide = r || {
-        id: id || 'RIDE-8092',
-        status: 'DRIVER_APPROACHING',
-        pickup: { lat: 22.3150, lng: 87.3050, name: 'Scholars Avenue (RK Hall Gate)' },
-        destination: { lat: 22.3190, lng: 87.3040, name: 'Technology Market (Tech Mkt)' },
-        distance: 2.4,
-        fare: 28,
-        otp: '4921',
-        driverInfo: {
-          name: 'Subhash Mondal',
-          phone: '+91 94340 12891',
-          rating: 4.92,
-          category: 'MOTO',
-          vehicle: 'Hero Splendor Plus (Bike)',
-          plate: 'WB 29 AB 1042',
-          eta: 3,
-        },
-      };
-
-      setRide(defaultRide);
-      setDriverLocation({
-        lat: defaultRide.pickup.lat - 0.003,
-        lng: defaultRide.pickup.lng - 0.002,
-        category: defaultRide.driverInfo?.category || 'MOTO',
-        heading: 45,
-      });
-      setLoading(false);
+    const defaultPickup = storePickup?.lat ? storePickup : (userLocation?.lat ? userLocation : {
+      lat: 28.8358,
+      lng: 78.7725,
+      name: 'Budh Bazaar Market, Moradabad',
+      address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
     });
+
+    const defaultDestination = storeDestination?.lat ? storeDestination : {
+      lat: 28.8314,
+      lng: 78.7654,
+      name: 'Moradabad Junction Railway Station',
+      address: 'Station Road (SH49), Moradabad Junction',
+    };
+
+    const isMoradabad = Math.abs(defaultPickup.lat - 28.835) < 0.08 && Math.abs(defaultPickup.lng - 78.77) < 0.08;
+
+    // Safely extract and normalize driver properties (guarantees strings/primitives, NO raw nested objects in JSX)
+    const rawDriver = assignedDriver || drivers?.[0] || {
+      name: 'Subhash Mondal',
+      phone: '+91 94340 12891',
+      rating: 4.92,
+      category: storeCategory || 'MOTO',
+      vehicle: storeCategory === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Hero Splendor Plus (Bike)',
+      plate: 'UP 21 AB 4921',
+    };
+
+    const vehicleModel = typeof rawDriver.vehicle === 'object'
+      ? (rawDriver.vehicle?.model || rawDriver.vehicleModel || 'Hero Splendor Plus (Bike)')
+      : (rawDriver.vehicleModel || rawDriver.vehicle || 'Hero Splendor Plus (Bike)');
+
+    const vehiclePlate = typeof rawDriver.vehicle === 'object'
+      ? (rawDriver.vehicle?.plate || rawDriver.vehicleNumber || 'UP 21 AB 4921')
+      : (rawDriver.vehicleNumber || rawDriver.plate || 'UP 21 AB 4921');
+
+    const vehicleCategory = typeof rawDriver.vehicle === 'object'
+      ? (rawDriver.vehicle?.category || rawDriver.category || storeCategory || 'MOTO')
+      : (rawDriver.category || storeCategory || 'MOTO');
+
+    const matchedDriver = {
+      name: rawDriver.name || 'Subhash Mondal',
+      phone: rawDriver.phone || '+91 94340 12891',
+      rating: typeof rawDriver.rating === 'number' ? rawDriver.rating : 4.92,
+      category: vehicleCategory,
+      vehicle: vehicleModel,
+      plate: vehiclePlate,
+    };
+
+    // Sensible driver spawn: 500-600m along the road network on the same side of tracks
+    const startDriverLat = isMoradabad ? 28.8385 : (defaultPickup.lat + 0.0035);
+    const startDriverLng = isMoradabad ? 78.7755 : (defaultPickup.lng + 0.0030);
+
+    const initialRide = {
+      id: id || 'RIDE-MBD-8092',
+      status: 'DRIVER_APPROACHING',
+      pickup: defaultPickup,
+      destination: defaultDestination,
+      distance: storeFare?.distance || (isMoradabad ? 1.4 : 3.4),
+      fare: storeFare?.total || storeFare?.base || (isMoradabad ? 42 : 48),
+      otp: '4921',
+      driverInfo: matchedDriver,
+    };
+
+    setRide(initialRide);
+    rideService.recordRide(initialRide);
+
+    setDriverLocation({
+      lat: startDriverLat,
+      lng: startDriverLng,
+      category: matchedDriver.category || 'MOTO',
+      heading: 45,
+      speed: 32,
+    });
+
+    // Instant local fallback routes so UI renders in 0 milliseconds
+    const fallbackApproach = isMoradabad
+      ? [
+          [startDriverLat, startDriverLng],
+          [28.8372, 78.7740],
+          [defaultPickup.lat, defaultPickup.lng],
+        ]
+      : [
+          [startDriverLat, startDriverLng],
+          [defaultPickup.lat, defaultPickup.lng],
+        ];
+
+    const fallbackTrip = isMoradabad
+      ? [
+          [defaultPickup.lat, defaultPickup.lng],
+          [28.8335, 78.7710],
+          [28.8312, 78.7672],
+          [defaultDestination.lat, defaultDestination.lng],
+        ]
+      : [
+          [defaultPickup.lat, defaultPickup.lng],
+          [defaultDestination.lat, defaultDestination.lng],
+        ];
+
+    approachWaypoints.current = interpolatePath(fallbackApproach, 24);
+    tripWaypoints.current = interpolatePath(fallbackTrip, 32);
+    setRoutePolyline(fallbackApproach);
+    setLoading(false);
+
+    // Fetch detailed real street geometry in background
+    Promise.all([
+      locationService.getRoute({ lat: startDriverLat, lng: startDriverLng }, defaultPickup),
+      locationService.getRoute(defaultPickup, defaultDestination),
+    ]).then(([approachRes, tripRes]) => {
+      const approachPoints = approachRes?.coordinates && approachRes.coordinates.length > 2
+        ? approachRes.coordinates
+        : fallbackApproach;
+      const tripPoints = tripRes?.coordinates && tripRes.coordinates.length > 2
+        ? tripRes.coordinates
+        : fallbackTrip;
+
+      approachWaypoints.current = interpolatePath(approachPoints, 24);
+      tripWaypoints.current = interpolatePath(tripPoints, 32);
+
+      setRoutePolyline(approachPoints);
+    }).catch((err) => {
+      console.warn('Background route calculation fallback active:', err);
+    });
+
     startSimulation();
-  }, [id, startSimulation]);
+  }, [id, storePickup, storeDestination, storeCategory, storeFare, assignedDriver, userLocation, startSimulation]);
 
-  // Smooth real-time driver movement simulation
-  useEffect(() => {
-    if (!ride || !driverLocation) return;
-    const interval = setInterval(() => {
-      setDriverLocation((prev) => {
-        if (!prev) return prev;
-        const target = ride.status === 'RIDE_STARTED' ? ride.destination : ride.pickup;
-        if (!target?.lat) return prev;
-
-        const dLat = (target.lat - prev.lat) * 0.12;
-        const dLng = (target.lng - prev.lng) * 0.12;
-
-        return {
-          ...prev,
-          lat: prev.lat + dLat,
-          lng: prev.lng + dLng,
-          heading: (prev.heading + 15) % 360,
-        };
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [ride, driverLocation]);
-
-  // Simulate ride state progression
+  // Smooth real-time driver movement & passenger journey along route
   useEffect(() => {
     if (!ride || ride.status === 'RIDE_COMPLETED') return;
-    const statuses = ['DRIVER_APPROACHING', 'DRIVER_ARRIVED', 'RIDE_STARTED', 'RIDE_COMPLETED'];
-    const currentIdx = statuses.indexOf(ride.status);
-    if (currentIdx < 0) return;
 
-    const timer = setTimeout(() => {
-      const nextStatus = statuses[Math.min(currentIdx + 1, statuses.length - 1)];
-      setRide((r) => ({ ...r, status: nextStatus }));
-      if (nextStatus === 'RIDE_COMPLETED') setShowRating(true);
-    }, 14000);
+    const interval = setInterval(() => {
+      if (ride.status === 'DRIVER_APPROACHING') {
+        const waypoints = approachWaypoints.current;
+        if (!waypoints || waypoints.length === 0) return;
 
-    return () => clearTimeout(timer);
+        animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
+        const idx = animIndexRef.current;
+        const currentPt = waypoints[idx];
+        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
+
+        if (!currentPt) return;
+
+        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
+        const remainingEta = Math.max(1, Math.round((1 - progress) * 2));
+        const remainingDist = Math.max(0.1, Math.round((1 - progress) * 0.6 * 10) / 10);
+        const speed = Math.round(28 + Math.random() * 10);
+
+        setDriverLocation({
+          lat: currentPt[0],
+          lng: currentPt[1],
+          category: ride.driverInfo?.category || 'MOTO',
+          heading,
+          speed,
+        });
+        setActiveDriverEta(remainingEta);
+        setActiveDriverDistance(remainingDist);
+        setActiveDriverSpeed(speed);
+
+        // Reached pickup spot
+        if (idx >= waypoints.length - 1) {
+          setRide((r) => ({ ...r, status: 'DRIVER_ARRIVED' }));
+          animIndexRef.current = 0;
+          // Switch polyline to the trip destination leg
+          if (tripWaypoints.current && tripWaypoints.current.length > 0) {
+            setRoutePolyline(tripWaypoints.current);
+          }
+        }
+      } else if (ride.status === 'DRIVER_ARRIVED') {
+        // Paused at pickup waiting for boarding, then automatically start ride
+        setActiveDriverEta(0);
+        setActiveDriverDistance(0);
+        setActiveDriverSpeed(0);
+      } else if (ride.status === 'RIDE_STARTED') {
+        // Driver and User move TOGETHER along trip route to destination
+        const waypoints = tripWaypoints.current;
+        if (!waypoints || waypoints.length === 0) return;
+
+        animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
+        const idx = animIndexRef.current;
+        const currentPt = waypoints[idx];
+        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
+
+        if (!currentPt) return;
+
+        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
+        const totalTripKm = ride.distance || 1.4;
+        const totalTripMins = Math.max(2, Math.round(totalTripKm * 2.2));
+        const remainingEta = Math.max(1, Math.round((1 - progress) * totalTripMins));
+        const remainingDist = Math.max(0.1, Math.round((1 - progress) * totalTripKm * 10) / 10);
+        const speed = Math.round(32 + Math.random() * 12);
+
+        setDriverLocation({
+          lat: currentPt[0],
+          lng: currentPt[1],
+          category: ride.driverInfo?.category || 'MOTO',
+          heading,
+          speed,
+        });
+        setActiveDriverEta(remainingEta);
+        setActiveDriverDistance(remainingDist);
+        setActiveDriverSpeed(speed);
+
+        // Reached destination
+        if (idx >= waypoints.length - 1) {
+          const completedRide = {
+            ...ride,
+            status: 'RIDE_COMPLETED',
+            completedAt: new Date().toISOString(),
+          };
+          setRide(completedRide);
+          setActiveDriverSpeed(0);
+          setShowRating(true);
+
+          // Update user's physical location to the destination they just arrived at!
+          if (ride.destination?.lat && ride.destination?.lng) {
+            setUserLocation({
+              lat: ride.destination.lat,
+              lng: ride.destination.lng,
+              name: ride.destination.name || 'Current Location',
+              address: ride.destination.address || ride.destination.name,
+              city: ride.destination.city || 'Moradabad',
+              isGpsDetected: true,
+            });
+            setPickup({
+              lat: ride.destination.lat,
+              lng: ride.destination.lng,
+              name: ride.destination.name,
+              address: ride.destination.address || ride.destination.name,
+            });
+            setDestination(null);
+          }
+
+          // Persist completed trip in rideService & localStorage
+          rideService.updateRide(ride.id, {
+            status: 'RIDE_COMPLETED',
+            completedAt: new Date().toISOString(),
+            userRating: 5,
+          });
+        }
+      }
+    }, 850);
+
+    return () => clearInterval(interval);
+  }, [ride, setUserLocation, setPickup, setDestination]);
+
+  // Handle manual start ride from arrived state or timer
+  useEffect(() => {
+    if (ride?.status === 'DRIVER_ARRIVED') {
+      const t = setTimeout(() => {
+        setRide((r) => ({ ...r, status: 'RIDE_STARTED' }));
+        animIndexRef.current = 0;
+      }, 3500);
+      return () => clearTimeout(t);
+    }
   }, [ride?.status]);
 
   const handleSendChat = (e) => {
@@ -134,26 +389,27 @@ export default function LiveRidePage() {
     }, 1500);
   };
 
-  if (loading) {
+  if (loading || !ride) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] gap-3 bg-slate-50">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] gap-3 bg-slate-50">
         <Spinner size="xl" className="text-blue-600" />
         <span className="text-xs font-bold text-slate-500">Connecting to Active Trip...</span>
       </div>
     );
   }
 
-  if (!ride) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] gap-4 bg-slate-50">
-        <p className="text-slate-600 font-bold text-base">Active Ride not found</p>
-        <Button onClick={() => navigate('/app/home')}>Back to Home</Button>
-      </div>
-    );
-  }
-
   const statusIdx = STATUS_STEPS.findIndex((s) => s.key === ride.status);
   const statusLabel = STATUS_STEPS[statusIdx]?.label || ride.status;
+
+  const driverName = ride.driverInfo?.name || 'Subhash Mondal';
+  const driverVehicle = typeof ride.driverInfo?.vehicle === 'object'
+    ? (ride.driverInfo?.vehicle?.model || 'Maruti Suzuki Dzire')
+    : (ride.driverInfo?.vehicle || 'Hero Splendor Plus (Bike)');
+  const driverPlate = typeof ride.driverInfo?.plate === 'object'
+    ? 'DL 01 AB 1042'
+    : (ride.driverInfo?.plate || 'DL 01 AB 1042');
+  const driverRating = ride.driverInfo?.rating || 4.9;
+  const driverCategory = ride.driverInfo?.category || 'MOTO';
 
   return (
     <div className="relative w-full max-w-full overflow-x-hidden min-h-[calc(100vh-3.5rem)] flex flex-col md:flex-row bg-slate-100 font-sans">
@@ -198,7 +454,11 @@ export default function LiveRidePage() {
                 <p className="text-xs text-slate-500">
                   {ride.status === 'RIDE_COMPLETED'
                     ? 'Arrived safely at destination'
-                    : `Driver is ${ride.driverInfo?.eta || 3} mins away · ${ride.distance} km`}
+                    : ride.status === 'RIDE_STARTED'
+                    ? `En route to destination · ${activeDriverEta} mins remaining (${activeDriverDistance} km)`
+                    : ride.status === 'DRIVER_ARRIVED'
+                    ? 'Driver arrived at pickup! Board vehicle and share OTP.'
+                    : `Driver is ${activeDriverEta} mins away · ${activeDriverDistance} km`}
                 </p>
               </div>
             </div>
@@ -242,24 +502,24 @@ export default function LiveRidePage() {
         </div>
 
         {/* Driver Partner Details Card */}
-        <div className="p-4 sm:p-6 space-y-5 flex-1 overflow-y-auto">
-          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-4 sm:p-5 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3">
                 {/* Real Vehicle Icon */}
                 <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-xs">
-                  <VehicleIcon category={ride.driverInfo?.category || 'MOTO'} size="lg" />
+                  <VehicleIcon category={driverCategory} size="lg" />
                 </div>
                 <div>
                   <h2 className="font-black text-slate-900 text-base">
-                    {ride.driverInfo?.name || 'Subhash Mondal'}
+                    {driverName}
                   </h2>
                   <p className="text-xs text-slate-500">
-                    {ride.driverInfo?.vehicle || 'Hero Splendor Plus (Bike)'} ·{' '}
-                    <span className="text-amber-500 font-bold">★ {ride.driverInfo?.rating || 4.9}</span>
+                    {driverVehicle} ·{' '}
+                    <span className="text-amber-500 font-bold">★ {driverRating}</span>
                   </p>
                   <span className="font-mono text-xs font-bold bg-white text-slate-900 px-2.5 py-0.5 rounded-lg border border-slate-200 inline-block mt-1">
-                    {ride.driverInfo?.plate || 'WB 29 AB 1042'}
+                    {driverPlate}
                   </span>
                 </div>
               </div>
@@ -362,6 +622,12 @@ export default function LiveRidePage() {
             pickup={ride.pickup}
             destination={ride.destination}
             activeDriverLocation={driverLocation}
+            routeCoordinates={routePolyline}
+            rideStage={ride.status}
+            activeRide={ride}
+            activeDriverEta={activeDriverEta}
+            activeDriverDistance={activeDriverDistance}
+            activeDriverSpeed={activeDriverSpeed}
             height="100%"
           />
         </Suspense>
@@ -377,7 +643,7 @@ export default function LiveRidePage() {
             <div>
               <h3 className="text-base font-black text-slate-900">Encrypted Masked Call</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Connecting to {ride.driverInfo?.name}. Your personal mobile number remains completely confidential.
+                Connecting to {driverName}. Your personal mobile number remains completely confidential.
               </p>
             </div>
             <div className="bg-slate-50 p-3 rounded-2xl font-mono text-xs font-bold text-slate-700 border border-slate-200">
@@ -401,10 +667,10 @@ export default function LiveRidePage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">
-                  {ride.driverInfo?.name?.charAt(0) || 'D'}
+                  {driverName.charAt(0) || 'D'}
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900">{ride.driverInfo?.name}</h3>
+                  <h3 className="text-sm font-black text-slate-900">{driverName}</h3>
                   <p className="text-[10px] text-slate-400">Encrypted in-app messaging</p>
                 </div>
               </div>
@@ -466,7 +732,7 @@ export default function LiveRidePage() {
             </div>
 
             <div className="p-3 bg-red-50 text-red-800 text-xs rounded-2xl border border-red-200 font-mono">
-              Broadcasting GPS: {driverLocation?.lat.toFixed(4)}° N, {driverLocation?.lng.toFixed(4)}° E
+              Broadcasting GPS: {driverLocation?.lat?.toFixed ? driverLocation.lat.toFixed(4) : '22.3150'}° N, {driverLocation?.lng?.toFixed ? driverLocation.lng.toFixed(4) : '87.3050'}° E
             </div>
 
             <div className="flex gap-2">
@@ -509,7 +775,7 @@ export default function LiveRidePage() {
 
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-700">
-                Rate your journey with {ride.driverInfo?.name}:
+                Rate your journey with {driverName}:
               </p>
               <div className="flex justify-center gap-2 text-amber-400 py-1">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -527,6 +793,7 @@ export default function LiveRidePage() {
             <Button
               className="w-full py-3.5 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-md"
               onClick={() => {
+                rideService.updateRide(ride.id, { userRating, status: 'RIDE_COMPLETED' });
                 setShowRating(false);
                 navigate('/app/trips');
               }}

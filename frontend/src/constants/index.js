@@ -1,4 +1,4 @@
-export const APP_NAME = 'Veloq';
+export const APP_NAME = 'Riders';
 
 export const ROUTES = {
   HOME: '/',

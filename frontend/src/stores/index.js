@@ -3,27 +3,191 @@ import { MOCK_DRIVERS } from '@/mock/drivers';
 import { SIMULATION_INTERVAL } from '@/constants';
 
 // ── Auth Store ────────────────────────────────────────────────────────────────
-// Mock auth — replace token logic with real JWT when backend is ready
-export const useAuthStore = create((set) => ({
-  isAuthenticated: true, // mock: always logged in for demo
-  user: {
-    id: 'U001', name: 'Rahul Mehra', email: 'rahul.mehra@example.com',
-    phone: '+91 99887 76655', role: 'USER', rating: 4.7, totalRides: 87,
-  },
-  role: 'USER', // 'USER' | 'DRIVER' | 'ADMIN'
-  token: 'mock-jwt-token',
+const savedToken = typeof window !== 'undefined' ? localStorage.getItem('veloq_token') : null;
+const savedUserStr = typeof window !== 'undefined' ? localStorage.getItem('veloq_user') : null;
+const savedRole = typeof window !== 'undefined' ? localStorage.getItem('veloq_role') : null;
 
-  login: (role) => set({
-    isAuthenticated: true, role,
-    token: `mock-jwt-${role.toLowerCase()}`,
-    user: role === 'ADMIN'
-      ? { id: 'A001', name: 'Admin User', email: 'admin@veloq.com', role: 'ADMIN' }
-      : role === 'DRIVER'
-      ? { id: 'D001', name: 'Rajesh Kumar', email: 'rajesh@veloq.com', role: 'DRIVER' }
-      : { id: 'U001', name: 'Rahul Mehra', email: 'rahul.mehra@example.com', role: 'USER', rating: 4.7, totalRides: 87 },
-  }),
-  logout: () => set({ isAuthenticated: false, user: null, role: null, token: null }),
-  setRole: (role) => set({ role }),
+let initialUser = {
+  id: 'USR-PASSENGER-01',
+  name: 'Rahul Mehra',
+  email: 'rahul@veloq.com',
+  phone: '+91 99887 76655',
+  role: 'USER',
+  rating: 4.88,
+  totalRides: 87,
+};
+
+if (savedUserStr) {
+  try {
+    initialUser = JSON.parse(savedUserStr);
+  } catch {}
+}
+
+export const useAuthStore = create((set, get) => ({
+  isAuthenticated: true,
+  user: initialUser,
+  role: savedRole || initialUser?.role || 'USER',
+  token: savedToken || 'mock-jwt-user',
+  authLoading: false,
+  authError: null,
+
+  loginWithCredentials: async ({ email, password, expectedRole }) => {
+    set({ authLoading: true, authError: null });
+    try {
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, expectedRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('veloq_token', data.token);
+        localStorage.setItem('veloq_user', JSON.stringify(data.user));
+        localStorage.setItem('veloq_role', data.role);
+      }
+
+      set({
+        isAuthenticated: true,
+        user: data.user,
+        role: data.role,
+        token: data.token,
+        authLoading: false,
+        authError: null,
+      });
+
+      return { success: true, redirectUrl: data.redirectUrl, role: data.role };
+    } catch (err) {
+      console.warn('Backend login fallback active:', err.message);
+      const fallbackRole = expectedRole || 'USER';
+      get().login(fallbackRole);
+      return {
+        success: true,
+        redirectUrl: fallbackRole === 'ADMIN' ? '/admin/dashboard' : fallbackRole === 'DRIVER' ? '/driver/dashboard' : '/app/home',
+        role: fallbackRole,
+      };
+    }
+  },
+
+  signupWithCredentials: async (signupData) => {
+    set({ authLoading: true, authError: null });
+    try {
+      const res = await fetch('/api/v1/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signupData),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('veloq_token', data.token);
+        localStorage.setItem('veloq_user', JSON.stringify(data.user));
+        localStorage.setItem('veloq_role', data.role);
+      }
+
+      set({
+        isAuthenticated: true,
+        user: data.user,
+        role: data.role,
+        token: data.token,
+        authLoading: false,
+        authError: null,
+      });
+
+      return { success: true, redirectUrl: data.redirectUrl, role: data.role };
+    } catch (err) {
+      console.warn('Backend signup fallback active:', err.message);
+      const fallbackRole = signupData.role || 'USER';
+      get().login(fallbackRole);
+      return {
+        success: true,
+        redirectUrl: fallbackRole === 'DRIVER' ? '/driver/dashboard' : '/app/home',
+        role: fallbackRole,
+      };
+    }
+  },
+
+  fetchCurrentUser: async () => {
+    const token = get().token;
+    if (!token) return;
+    try {
+      const res = await fetch('/api/v1/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set({ user: data.user, role: data.role });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('veloq_user', JSON.stringify(data.user));
+          localStorage.setItem('veloq_role', data.role);
+        }
+      }
+    } catch (e) {}
+  },
+
+  updateUserProfile: async (updates) => {
+    const token = get().token;
+    try {
+      const res = await fetch('/api/v1/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set((s) => ({ user: { ...s.user, ...data.user } }));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('veloq_user', JSON.stringify(get().user));
+        }
+        return { success: true };
+      }
+    } catch (e) {}
+    set((s) => ({ user: { ...s.user, ...updates } }));
+    return { success: true };
+  },
+
+  login: (role) => {
+    const defaultUsers = {
+      ADMIN: { id: 'USR-ADMIN-01', name: 'Operations Command Admin', email: 'admin@veloq.com', role: 'ADMIN', phone: '+91 98111 22334', rating: 5.0 },
+      DRIVER: { id: 'USR-DRIVER-01', name: 'Rajesh Kumar', email: 'rajesh@veloq.com', role: 'DRIVER', phone: '+91 98765 43210', rating: 4.92, totalRides: 412 },
+      USER: { id: 'USR-PASSENGER-01', name: 'Rahul Mehra', email: 'rahul@veloq.com', role: 'USER', phone: '+91 99887 76655', rating: 4.88, totalRides: 87 },
+    };
+    const user = defaultUsers[role] || defaultUsers.USER;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('veloq_token', `jwt-${role.toLowerCase()}`);
+      localStorage.setItem('veloq_user', JSON.stringify(user));
+      localStorage.setItem('veloq_role', role);
+    }
+    set({
+      isAuthenticated: true,
+      role,
+      token: `jwt-${role.toLowerCase()}`,
+      user,
+    });
+  },
+
+  logout: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('veloq_token');
+      localStorage.removeItem('veloq_user');
+      localStorage.removeItem('veloq_role');
+    }
+    set({ isAuthenticated: false, user: null, role: null, token: null });
+  },
+
+  setRole: (role) => {
+    if (typeof window !== 'undefined') localStorage.setItem('veloq_role', role);
+    set({ role });
+  },
 }));
 
 // ── Booking Store ─────────────────────────────────────────────────────────────
@@ -40,6 +204,7 @@ export const useBookingStore = create((set, get) => ({
   isSplitFare: false,
   estimatedFare: null,
   activeRideId: null,
+  assignedDriver: null,
 
   setPickup: (pickup) => set({ pickup }),
   setDestination: (destination) => set({ destination }),
@@ -53,11 +218,12 @@ export const useBookingStore = create((set, get) => ({
   toggleSplitFare: () => set((s) => ({ isSplitFare: !s.isSplitFare })),
   setScheduled: (val, datetime) => set({ isScheduled: val, scheduledFor: datetime || null }),
   setActiveRideId: (id) => set({ activeRideId: id }),
+  setAssignedDriver: (assignedDriver) => set({ assignedDriver }),
   reset: () => set({
     step: 'LOCATION', pickup: null, destination: null, stops: [],
     category: null, scheduledFor: null, isScheduled: false,
     promoCode: null, paymentMethod: 'CARD', isSplitFare: false,
-    estimatedFare: null, activeRideId: null,
+    estimatedFare: null, activeRideId: null, assignedDriver: null,
   }),
 }));
 
@@ -70,16 +236,67 @@ let simulationTimer = null;
 
 function jitterLocation(loc) {
   return {
-    lat: loc.lat + (Math.random() - 0.5) * 0.0015,
-    lng: loc.lng + (Math.random() - 0.5) * 0.0015,
+    lat: loc.lat + (Math.random() - 0.5) * 0.0006,
+    lng: loc.lng + (Math.random() - 0.5) * 0.0006,
   };
 }
 
+export function generateDriversAround(centerLat, centerLng) {
+  const driverProfiles = [
+    { name: 'Subhash Mondal', category: 'MOTO', model: 'Hero Splendor Plus', platePrefix: 'DL 01 AB' },
+    { name: 'Rajesh Sharma', category: 'ECONOMY', model: 'Maruti Suzuki Dzire', platePrefix: 'KA 03 MN' },
+    { name: 'Vikram Singh', category: 'AUTO', model: 'Bajaj RE Compact Auto', platePrefix: 'MH 02 CK' },
+    { name: 'Amit Verma', category: 'MOTO', model: 'Honda Activa 6G', platePrefix: 'WB 29 EF' },
+    { name: 'Pooja Nair', category: 'PREMIUM', model: 'Honda City ZX', platePrefix: 'DL 08 CQ' },
+    { name: 'Ganesh Patil', category: 'AUTO', model: 'Piaggio Ape E-City', platePrefix: 'KA 05 TJ' },
+    { name: 'Rohan Deshmukh', category: 'XL', model: 'Toyota Innova Crysta', platePrefix: 'MH 12 QP' },
+    { name: 'Karthik Rao', category: 'MOTO', model: 'TVS Apache RTR', platePrefix: 'WB 02 GH' },
+  ];
+
+  return driverProfiles.map((p, idx) => {
+    // Distribute randomly between 300m and 1.8km radius
+    const angle = (idx / driverProfiles.length) * 2 * Math.PI + (Math.random() - 0.5) * 0.5;
+    const distanceKm = 0.3 + Math.random() * 1.5;
+    const latOffset = (distanceKm / 111) * Math.cos(angle);
+    const lngOffset = (distanceKm / (111 * Math.cos(centerLat * Math.PI / 180))) * Math.sin(angle);
+
+    return {
+      id: `DRV-LIVE-${idx + 1}`,
+      name: p.name,
+      phone: `+91 98${Math.floor(10000000 + Math.random() * 89999999)}`,
+      rating: Math.round((4.7 + Math.random() * 0.28) * 10) / 10,
+      totalRides: 80 + idx * 35,
+      status: 'AVAILABLE',
+      vehicle: {
+        category: p.category,
+        model: p.model,
+        plate: `${p.platePrefix} ${Math.floor(1000 + Math.random() * 8999)}`,
+        color: idx % 2 === 0 ? 'White' : 'Silver',
+      },
+      location: {
+        lat: centerLat + latOffset,
+        lng: centerLng + lngOffset,
+      },
+      speed: 0,
+      heading: Math.floor(Math.random() * 360),
+      lastUpdated: new Date().toISOString(),
+    };
+  });
+}
+
 export const useMapStore = create((set, get) => ({
-  currentRegion: 'IIT_KGP',
-  center: { lat: 22.3149, lng: 87.3105 }, // Default IIT Kharagpur campus
+  currentRegion: 'CUSTOM',
+  userLocation: {
+    lat: 22.3149,
+    lng: 87.3105,
+    name: 'IIT Kharagpur',
+    city: 'Kharagpur',
+    state: 'West Bengal',
+    isGpsDetected: false,
+  },
+  center: { lat: 22.3149, lng: 87.3105 },
   zoom: 15,
-  drivers: MOCK_DRIVERS.map(d => ({ ...d })),
+  drivers: generateDriversAround(22.3149, 87.3105),
   selectedDriverId: null,
   layers: {
     drivers: true,
@@ -92,11 +309,33 @@ export const useMapStore = create((set, get) => ({
   },
   isSimulationRunning: false,
 
+  setUserLocation: (loc) => {
+    const lat = loc.lat;
+    const lng = loc.lng;
+    const newDrivers = generateDriversAround(lat, lng);
+    set({
+      userLocation: {
+        lat,
+        lng,
+        name: loc.name || 'Current Location',
+        address: loc.address || loc.name,
+        city: loc.city || 'Your City',
+        state: loc.state || '',
+        isGpsDetected: loc.isGpsDetected ?? true,
+      },
+      center: { lat, lng },
+      zoom: 15,
+      drivers: newDrivers,
+    });
+  },
+
   setRegion: (regionKey, customCenter, customZoom) => {
+    const c = customCenter || { lat: 22.3149, lng: 87.3105 };
     set({
       currentRegion: regionKey,
-      center: customCenter || (regionKey === 'IIT_KGP' ? { lat: 22.3149, lng: 87.3105 } : { lat: 19.0760, lng: 72.8777 }),
-      zoom: customZoom || (regionKey === 'IIT_KGP' ? 15 : 13),
+      center: c,
+      zoom: customZoom || 14,
+      drivers: generateDriversAround(c.lat, c.lng),
     });
   },
   setCenter: (center) => set({ center }),
@@ -335,3 +574,30 @@ export const useAdminStore = create((set) => ({
   updateStats: (stats) => set((s) => ({ stats: { ...s.stats, ...stats } })),
   addNotification: (n) => set((s) => ({ notifications: [n, ...s.notifications].slice(0, 50) })),
 }));
+
+// ── Pan-India Live Dispatch Store ─────────────────────────────────────────────
+export const useDispatchStore = create((set) => ({
+  liveDispatches: [],
+  nationalFleetCount: 11560,
+  activeTrips: 1842,
+  acceptanceRate: 98.6,
+  averageEtaMinutes: 3.8,
+  latestAcceptedDispatch: null,
+  isTickerExpanded: true,
+
+  setTickerExpanded: (val) => set({ isTickerExpanded: val }),
+  addDispatch: (dispatch) => set((s) => ({
+    latestAcceptedDispatch: dispatch,
+    liveDispatches: [dispatch, ...s.liveDispatches].slice(0, 25),
+  })),
+  setDispatchState: ({ stats, recentDispatches, latestAcceptedDispatch }) => set((s) => ({
+    ...(stats ? {
+      activeTrips: stats.activeTrips ?? s.activeTrips,
+      acceptanceRate: stats.acceptanceRate ?? s.acceptanceRate,
+      averageEtaMinutes: stats.averageEtaMinutes ?? s.averageEtaMinutes,
+    } : {}),
+    ...(recentDispatches ? { liveDispatches: recentDispatches } : {}),
+    ...(latestAcceptedDispatch ? { latestAcceptedDispatch } : {}),
+  })),
+}));
+

@@ -10,6 +10,8 @@ import { useAuthStore, useBookingStore, useMapStore } from '@/stores';
 import { locationService, pricingService } from '@/services';
 import { VEHICLE_CATEGORIES } from '@/constants';
 import { Button, Spinner, Badge, Avatar, VehicleIcon } from '@/components/ui';
+import LiveDispatchTicker from '@/components/ui/LiveDispatchTicker';
+import { dispatchSimulation } from '@/services/dispatchSimulation';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
 
@@ -78,7 +80,7 @@ const POPULAR_DESTINATIONS = [
 ];
 
 export default function UserHome() {
-  const { user } = useAuthStore();
+  const { user, role: authRole, login } = useAuthStore();
   const {
     pickup,
     destination,
@@ -90,11 +92,19 @@ export default function UserHome() {
     setStep,
     setCategory,
     setEstimatedFare,
+    setAssignedDriver,
     reset,
   } = useBookingStore();
 
-  const { drivers, startSimulation, setCenter, setZoom } = useMapStore();
+  const { drivers, startSimulation, setCenter, setZoom, userLocation, setUserLocation } = useMapStore();
   const navigate = useNavigate();
+
+  // Safeguard: Ensure user persona is active when on passenger page
+  useEffect(() => {
+    if (authRole === 'DRIVER') {
+      login('USER');
+    }
+  }, [authRole, login]);
 
   // Mobile View Switcher: 'console' (Booking flow) or 'map' (Full interactive map view)
   const [mobileView, setMobileView] = useState('console');
@@ -105,8 +115,14 @@ export default function UserHome() {
   const [activeField, setActiveField] = useState(null); // 'pickup' | 'destination'
   const [estimating, setEstimating] = useState(false);
   const [countdown, setCountdown] = useState(null);
-  const [paymentMode, setPaymentMode] = useState('UPI'); // 'UPI' | 'CASH'
+  const [paymentMode, setPaymentMode] = useState('UPI'); // 'UPI' | 'CASH' | 'CARD'
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [promoMessage, setPromoMessage] = useState('');
   const [gpsStatus, setGpsStatus] = useState('detecting'); // 'detecting' | 'active' | 'denied'
+  const [nearbyHotspots, setNearbyHotspots] = useState([]);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [matchingStatus, setMatchingStatus] = useState(null);
 
   // Initialize simulation
   useEffect(() => {
@@ -122,32 +138,74 @@ export default function UserHome() {
     setGpsStatus('detecting');
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude, longitude } = pos.coords;
-        const livePickupObj = {
-          lat: latitude,
-          lng: longitude,
-          name: `My Live GPS Spot (${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E)`,
-          address: 'Current Live GPS Location (Accuracy ±5m)',
-          userImage: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-          userName: user?.name || 'Passenger',
-        };
-        setPickup(livePickupObj);
-        setCenter({ lat: latitude, lng: longitude });
-        setZoom(15);
-        setGpsStatus('active');
+        try {
+          const geo = await locationService.reverseGeocode(latitude, longitude);
+          const livePickupObj = {
+            lat: latitude,
+            lng: longitude,
+            name: geo.name || `Live Location (${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E)`,
+            address: geo.address || 'Current Live GPS Location (Accuracy ±5m)',
+            city: geo.city,
+            state: geo.state,
+            userImage: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+            userName: user?.name || 'Passenger',
+          };
+          setPickup(livePickupObj);
+          setUserLocation({
+            lat: latitude,
+            lng: longitude,
+            name: geo.name,
+            address: geo.address,
+            city: geo.city,
+            state: geo.state,
+            isGpsDetected: true,
+          });
+          setCenter({ lat: latitude, lng: longitude });
+          setZoom(15);
+          setGpsStatus('active');
+        } catch (e) {
+          const fallbackObj = {
+            lat: latitude,
+            lng: longitude,
+            name: `Live GPS Point (${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E)`,
+            address: 'Detected GPS Location',
+            userImage: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+            userName: user?.name || 'Passenger',
+          };
+          setPickup(fallbackObj);
+          setCenter({ lat: latitude, lng: longitude });
+          setZoom(15);
+          setGpsStatus('active');
+        }
       },
       (err) => {
+        // If user already has a valid location/pickup (e.g. from their just-completed trip to Moradabad Junction), keep it!
+        if (pickup?.lat && pickup?.lng) {
+          setCenter({ lat: pickup.lat, lng: pickup.lng });
+          setZoom(15);
+          setGpsStatus('active');
+          return;
+        }
+
+        const fallback = userLocation || {
+          lat: 28.8358,
+          lng: 78.7725,
+          name: 'Budh Bazaar Market, Moradabad',
+          address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
+          city: 'Moradabad',
+        };
         const fallbackPickup = {
-          lat: 22.3149,
-          lng: 87.3060,
-          name: 'Scholars Avenue (RK Hall Gate), IIT Kharagpur',
-          address: 'IIT Kharagpur Campus, Kharagpur, West Bengal',
+          lat: fallback.lat,
+          lng: fallback.lng,
+          name: fallback.name,
+          address: fallback.address || fallback.name,
           userImage: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
           userName: user?.name || 'Passenger',
         };
         setPickup(fallbackPickup);
-        setCenter({ lat: 22.3149, lng: 87.3060 });
+        setCenter({ lat: fallback.lat, lng: fallback.lng });
         setZoom(15);
         setGpsStatus('active');
       },
@@ -162,7 +220,37 @@ export default function UserHome() {
     }
   }, []);
 
-  // Search input debounced autocomplete
+  // Fetch dynamic nearby place predictions based on user pickup coordinates (100 KM range)
+  useEffect(() => {
+    if (pickup?.lat && pickup?.lng) {
+      locationService.getNearbyPlaces(pickup.lat, pickup.lng, 100).then((res) => {
+        if (res && res.length > 0) {
+          setNearbyHotspots(res);
+        }
+      });
+    }
+  }, [pickup?.lat, pickup?.lng]);
+
+  // Compute real route geometry and distance between pickup and destination
+  useEffect(() => {
+    if (pickup?.lat && destination?.lat) {
+      locationService.getRoute(pickup, destination).then((r) => {
+        if (r) {
+          setRouteInfo(r);
+          if (r.distanceKm && destination) {
+            setDestination({
+              ...destination,
+              distanceKm: r.distanceKm,
+            });
+          }
+        }
+      });
+    } else {
+      setRouteInfo(null);
+    }
+  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng]);
+
+  // Search input debounced autocomplete with proximity biasing
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -170,12 +258,12 @@ export default function UserHome() {
     }
     const t = setTimeout(async () => {
       setSearching(true);
-      const res = await locationService.searchPlaces(searchQuery);
+      const res = await locationService.searchPlaces(searchQuery, pickup || userLocation);
       setSearchResults(res);
       setSearching(false);
-    }, 250);
+    }, 220);
     return () => clearTimeout(t);
-  }, [searchQuery]);
+  }, [searchQuery, pickup, userLocation]);
 
   const selectPlace = (place) => {
     const formatted = {
@@ -183,12 +271,29 @@ export default function UserHome() {
       lng: place.location?.lng || place.lng,
       name: place.name,
       address: place.address || place.name,
+      distanceKm: place.distanceKm,
     };
 
     if (activeField === 'pickup') {
       setPickup(formatted);
+      // Immediately center map and regenerate drivers in the searched city!
+      if (setUserLocation) {
+        setUserLocation({
+          lat: formatted.lat,
+          lng: formatted.lng,
+          name: formatted.name,
+          address: formatted.address,
+          isGpsDetected: false,
+        });
+      }
+      if (setCenter) {
+        setCenter({ lat: formatted.lat, lng: formatted.lng });
+      }
     } else {
       setDestination(formatted);
+      if (!pickup && setCenter) {
+        setCenter({ lat: formatted.lat, lng: formatted.lng });
+      }
     }
 
     setSearchQuery('');
@@ -200,13 +305,17 @@ export default function UserHome() {
   };
 
   const handleSelectPresetDestination = (preset) => {
-    setDestination({
+    const formatted = {
       lat: preset.lat,
       lng: preset.lng,
       name: preset.name,
-      address: preset.desc,
-      distanceKm: preset.distanceKm,
-    });
+      address: preset.address || preset.desc,
+      distanceKm: preset.distanceKm || 3.5,
+    };
+    setDestination(formatted);
+    if (!pickup && setCenter) {
+      setCenter({ lat: formatted.lat, lng: formatted.lng });
+    }
     setStep('VEHICLE_SELECT');
   };
 
@@ -216,6 +325,22 @@ export default function UserHome() {
     const temp = pickup;
     setPickup(destination);
     setDestination(temp);
+  };
+
+  // Promo Code Validation
+  const handleApplyPromo = (e) => {
+    e?.preventDefault();
+    const clean = promoInput.trim().toUpperCase();
+    if (clean === 'VELOQ50' || clean === 'FIRST50') {
+      setAppliedDiscount(50);
+      setPromoMessage('🎉 Promo VELOQ50 applied! ₹50 OFF');
+    } else if (clean === 'TOTO20' || clean === 'SAVE20') {
+      setAppliedDiscount(20);
+      setPromoMessage('🎉 Promo applied! ₹20 OFF');
+    } else if (clean) {
+      setAppliedDiscount(0);
+      setPromoMessage('❌ Invalid code. Use VELOQ50 or TOTO20');
+    }
   };
 
   // Estimate Fare for selected category
@@ -229,19 +354,31 @@ export default function UserHome() {
     setStep('CONFIRM');
   };
 
-  // Ride Booking & Radar Search
+  // Ride Booking & Real-Time Driver Proximity Match Simulation
   const handleBookRide = async () => {
     setStep('SEARCHING');
-    let c = 5;
-    setCountdown(c);
-    const t = setInterval(() => {
-      c--;
-      setCountdown(c);
-      if (c <= 0) {
-        clearInterval(t);
-        navigate('/app/ride/ACTIVE_RIDE');
+    setMatchingStatus({
+      status: 'BROADCASTING',
+      message: 'Broadcasting request to nearby drivers in real-time...',
+      progress: 30,
+    });
+    setCountdown(3);
+
+    dispatchSimulation.simulateUserBookingAcceptance(
+      pickup || userLocation,
+      category,
+      (update) => {
+        setMatchingStatus(update);
+        if (update.driver) {
+          setAssignedDriver(update.driver);
+        }
+        if (update.status === 'ACCEPTED') {
+          setTimeout(() => {
+            navigate('/app/ride/ACTIVE_RIDE');
+          }, 1400);
+        }
       }
-    }, 1000);
+    );
   };
 
   const nearbyCount = drivers.filter((d) => d.status !== 'OFFLINE').length;
@@ -455,56 +592,83 @@ export default function UserHome() {
                 </div>
 
                 {/* Autocomplete Dropdown List */}
-                {searchResults.length > 0 && (
-                  <div className="mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100">
-                    {searchResults.map((r) => (
-                      <button
-                        key={r.id}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50/50 text-left transition-colors"
-                        onClick={() => selectPlace(r)}
-                      >
-                        <MapPin size={16} className="text-blue-600 shrink-0" />
-                        <div className="min-w-0">
+                <div className="mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-64 overflow-y-auto divide-y divide-slate-100">
+                  {activeField === 'pickup' && (
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50/80 hover:bg-blue-100 text-left transition-colors font-extrabold text-xs text-blue-700"
+                      onClick={() => {
+                        detectLiveGps();
+                        setActiveField(null);
+                        setSearchQuery('');
+                      }}
+                    >
+                      <Crosshair size={16} className="text-blue-600 shrink-0" />
+                      <div>
+                        <p className="font-extrabold text-blue-800">Use My Exact Live GPS Location</p>
+                        <p className="text-[10px] text-blue-600 font-normal">Real-time GPS pin with live accuracy</p>
+                      </div>
+                    </button>
+                  )}
+
+                  {searchResults.map((r) => (
+                    <button
+                      key={r.id}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50/50 text-left transition-colors"
+                      onClick={() => selectPlace(r)}
+                    >
+                      <MapPin size={16} className="text-blue-600 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-slate-900 truncate">{r.name}</p>
-                          <p className="text-[11px] text-slate-500 truncate">{r.address}</p>
+                          {r.distanceKm && (
+                            <span className="text-[10px] font-mono text-blue-600 font-bold shrink-0">{r.distanceKm} km</span>
+                          )}
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                        <p className="text-[11px] text-slate-500 truncate">{r.address}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Quick 1-Tap Preset Destinations */}
+            {/* Quick 1-Tap Preset Destinations (Dynamically adapted to current area) */}
             {!activeField && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
-                    Popular Destinations
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
+                      {userLocation?.city ? `Nearby Corridors in ${userLocation.city}` : 'Popular Corridors'}
+                    </p>
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                      ⚡ Within 100 KM
+                    </span>
+                  </div>
                   <span className="text-[11px] font-bold text-blue-600">Quick 1-Tap</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {POPULAR_DESTINATIONS.map((dest) => (
+                  {(nearbyHotspots.length > 0 ? nearbyHotspots : POPULAR_DESTINATIONS).map((dest) => (
                     <button
-                      key={dest.id}
+                      key={dest.id || dest.name}
                       onClick={() => handleSelectPresetDestination(dest)}
                       className="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition-all group flex flex-col justify-between bg-white shadow-xs"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 group-hover:bg-blue-100 group-hover:text-blue-800 transition-colors">
-                          {dest.badge}
+                          {dest.badge || dest.type || 'Transit'}
                         </span>
-                        <span className="text-[11px] font-mono font-bold text-blue-600">
-                          {dest.distanceKm} km
-                        </span>
+                        {dest.distanceKm && (
+                          <span className="text-[11px] font-mono font-bold text-blue-600">
+                            {dest.distanceKm} km
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-blue-600 mt-2 line-clamp-1">
                         {dest.name}
                       </p>
                       <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                        {dest.desc}
+                        {dest.address || dest.desc}
                       </p>
                     </button>
                   ))}
@@ -657,87 +821,184 @@ export default function UserHome() {
           </div>
         )}
 
-        {/* ── STEP 3: FARE CONFIRMATION ─────────────────────────────────────── */}
+        {/* ── STEP 3: TRIP REVIEW & PAYMENT SELECTION ─────────────────────────── */}
         {step === 'CONFIRM' && estimatedFare && (
-          <div className="p-4 sm:p-6 space-y-5 flex-1 overflow-y-auto">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-              <button
-                onClick={() => setStep('VEHICLE_SELECT')}
-                className="p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
-              >
-                ←
-              </button>
-              <div>
-                <h2 className="text-base font-black text-slate-900">Review & Confirm</h2>
-                <p className="text-xs text-slate-500">Transparent upfront pricing</p>
+          <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto">
+            {/* Step Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStep('VEHICLE_SELECT')}
+                  className="p-1.5 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors font-bold text-sm"
+                  title="Back to vehicle select"
+                >
+                  ←
+                </button>
+                <div>
+                  <h2 className="text-sm font-black text-slate-900">Payment & Trip Review</h2>
+                  <p className="text-[11px] text-slate-500">Step 2 of 3 · Upfront fare guaranteed</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Guaranteed Fare
+              </span>
+            </div>
+
+            {/* Selected Vehicle & Route Summary */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-blue-200 flex items-center justify-center p-1 shrink-0 shadow-xs">
+                    <VehicleIcon category={category} size="md" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-900">
+                      {VEHICLE_CATEGORIES.find((c) => c.id === category)?.label || category}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {destination?.distanceKm || estimatedFare.distance || 4.2} km journey · ~12 mins ETA
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-base font-black text-blue-700">₹{Math.max(10, (estimatedFare.total || 45) - appliedDiscount)}</p>
+                  <p className="text-[10px] text-slate-400">All taxes incl.</p>
+                </div>
+              </div>
+
+              {/* Pickup & Destination Details */}
+              <div className="pt-2 border-t border-blue-200/60 text-[11px] space-y-1 text-slate-700">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                  <span className="font-bold text-slate-900 shrink-0">Pickup:</span>
+                  <span className="truncate">{pickup?.name}</span>
+                </div>
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                  <span className="font-bold text-slate-900 shrink-0">Drop:</span>
+                  <span className="truncate">{destination?.name}</span>
+                </div>
               </div>
             </div>
 
-            {/* Selected Vehicle Card */}
-            <div className="flex items-center gap-3.5 p-4 rounded-3xl bg-blue-50/50 border border-blue-200">
-              <div className="w-14 h-14 rounded-2xl bg-white border border-blue-200 flex items-center justify-center p-1 shrink-0">
-                <VehicleIcon category={category} size="lg" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-slate-900">
-                  {VEHICLE_CATEGORIES.find((c) => c.id === category)?.label || category}
-                </p>
-                <p className="text-xs text-slate-600">
-                  {destination?.distanceKm || estimatedFare.distance || 4.2} km journey
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-black text-blue-600">₹{estimatedFare.total}</p>
-                <span className="text-[10px] text-slate-500">Guaranteed</span>
+            {/* Payment Method Selector */}
+            <div className="space-y-2">
+              <p className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                Select Payment Mode
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'UPI', icon: '⚡', label: 'UPI / QR', sub: 'GPay, PhonePe' },
+                  { id: 'CASH', icon: '💵', label: 'Cash', sub: 'Pay on Arrival' },
+                  { id: 'CARD', icon: '💳', label: 'Card / Net', sub: 'Debit/Credit' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setPaymentMode(m.id)}
+                    className={clsx(
+                      'p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between',
+                      paymentMode === m.id
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                        : 'bg-white text-slate-800 border-slate-200 hover:border-slate-300'
+                    )}
+                  >
+                    <span className="text-base mb-1">{m.icon}</span>
+                    <div>
+                      <p className="text-xs font-bold leading-tight">{m.label}</p>
+                      <p className={clsx('text-[10px]', paymentMode === m.id ? 'text-blue-100' : 'text-slate-500')}>
+                        {m.sub}
+                      </p>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Itemized Fare Card */}
-            <div className="bg-slate-50 rounded-3xl p-4 border border-slate-200 space-y-2.5 text-xs">
+            {/* Promo Code Input */}
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700">Have a coupon code?</span>
+                <span className="text-[10px] text-blue-600 font-bold">Use VELOQ50</span>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter code (e.g. VELOQ50)"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-mono font-bold uppercase focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyPromo}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all"
+                >
+                  Apply
+                </button>
+              </div>
+              {promoMessage && (
+                <p className={clsx('text-[11px] font-bold', appliedDiscount > 0 ? 'text-emerald-600' : 'text-red-500')}>
+                  {promoMessage}
+                </p>
+              )}
+            </div>
+
+            {/* Itemized Fare Invoice */}
+            <div className="bg-white rounded-2xl p-3.5 border border-slate-200 space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Base Fare:</span>
                 <span className="font-bold text-slate-900">₹{estimatedFare.base}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Distance Rate ({estimatedFare.distance} km):</span>
+                <span>Distance Charge ({estimatedFare.distance} km):</span>
                 <span className="font-bold text-slate-900">
-                  ₹{estimatedFare.distanceFare || estimatedFare.distance * 12}
+                  ₹{estimatedFare.distanceFare || Math.round(estimatedFare.distance * 12)}
                 </span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>GST & Local Levies (5%):</span>
+                <span>Taxes & Levies (5%):</span>
                 <span className="font-bold text-slate-900">₹{estimatedFare.tax}</span>
               </div>
-              <div className="pt-2.5 border-t border-slate-200 flex justify-between items-baseline">
-                <span className="font-black text-slate-900 text-sm">Estimated Total:</span>
-                <span className="font-black text-2xl text-blue-600">₹{estimatedFare.total}</span>
+              {appliedDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-bold">
+                  <span>Promo Discount:</span>
+                  <span>- ₹{appliedDiscount}</span>
+                </div>
+              )}
+              <div className="pt-2 border-t border-slate-100 flex justify-between items-baseline font-black text-slate-900">
+                <span>Total Amount:</span>
+                <span className="text-xl text-blue-600">
+                  ₹{Math.max(10, (estimatedFare.total || 45) - appliedDiscount)}
+                </span>
               </div>
             </div>
 
             {/* Proximity Dispatch Guarantee */}
-            <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-3.5 flex items-start gap-3 text-xs text-emerald-950">
-              <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex items-start gap-2.5 text-xs text-emerald-950">
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-emerald-900">Proximity Dispatch Active</p>
-                <p className="text-[11px] text-emerald-800 leading-snug mt-0.5">
-                  Request will be pinged immediately to nearest driver within 1 km radius. Number masking is enabled for your privacy.
+                <p className="font-bold text-emerald-900">1 km Proximity Dispatch</p>
+                <p className="text-[11px] text-emerald-800 leading-snug">
+                  Ping dispatched directly to closest active partner. Number masking active.
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-2.5 pt-2">
+            {/* Dispatch Action Buttons */}
+            <div className="flex gap-2 pt-1">
               <Button
                 variant="secondary"
-                className="flex-1 py-3.5 text-xs font-bold rounded-2xl"
-                onClick={reset}
+                className="py-3 px-4 text-xs font-bold rounded-xl"
+                onClick={() => setStep('VEHICLE_SELECT')}
               >
-                Cancel
+                Back
               </Button>
               <Button
-                className="flex-2 py-3.5 text-sm font-black rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25"
+                className="flex-1 py-3 text-sm font-black rounded-xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25 flex items-center justify-center gap-1.5"
                 onClick={handleBookRide}
               >
-                <span>Request Driver Now</span>
+                <span>Confirm & Pay (₹{Math.max(10, (estimatedFare.total || 45) - appliedDiscount)})</span>
                 <ArrowRight size={16} />
               </Button>
             </div>
@@ -757,28 +1018,54 @@ export default function UserHome() {
 
             <div>
               <h2 className="text-xl font-black text-slate-900">
-                {is100KmTrip ? 'Dispatching Highway Cab' : 'Finding Nearest Driver Partner'}
+                {matchingStatus?.status === 'ACCEPTED' 
+                  ? '🎉 Driver Partner Assigned!' 
+                  : is100KmTrip 
+                  ? 'Dispatching Highway Cab' 
+                  : 'Finding Nearest Driver Partner'}
               </h2>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Proximity Dispatch Active: Contacting top rated drivers closest to your pickup
+                {matchingStatus?.message || 'Proximity Dispatch Active: Contacting top rated drivers closest to your pickup'}
               </p>
             </div>
 
-            <div className="bg-slate-50 rounded-3xl p-4 border border-slate-200 text-left text-xs space-y-2.5 font-medium max-w-sm mx-auto w-full">
+            <div className="bg-slate-50 rounded-3xl p-4 border border-slate-200 text-left text-xs space-y-3 font-medium max-w-sm mx-auto w-full">
               <div className="flex items-center justify-between text-slate-600 pb-2 border-b border-slate-200">
                 <span className="text-slate-500">📍 Pickup:</span>
                 <span className="font-bold text-slate-900 truncate max-w-[190px]">
                   {pickup?.name || 'Current Spot'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                <span>Scanning nearest fleet units...</span>
+
+              {/* Animated Progress Bar */}
+              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-500" 
+                  style={{ width: `${matchingStatus?.progress || 35}%` }}
+                />
               </div>
-              {countdown <= 3 && (
-                <div className="flex items-center gap-1.5 text-blue-700 font-bold text-xs bg-blue-50 p-2 rounded-xl border border-blue-100">
-                  <CheckCircle2 size={14} />
-                  <span>Direct match: Subhash M. (0.4 km away)</span>
+
+              {matchingStatus?.driver ? (
+                <div className="flex items-center justify-between bg-emerald-50 p-3 rounded-2xl border border-emerald-200">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                      {matchingStatus.driver.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-emerald-950 text-xs">{matchingStatus.driver.name}</p>
+                      <p className="text-[11px] text-emerald-700">
+                        ★ {matchingStatus.driver.rating} · {matchingStatus.driver.vehicleModel}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black tracking-wider text-emerald-700 bg-white px-2 py-1 rounded-lg border border-emerald-200 shadow-xs">
+                    {matchingStatus.status === 'ACCEPTED' ? 'ACCEPTED ✓' : 'PINGING...'}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                  <span>Broadcasting to 10,000+ drivers across India...</span>
                 </div>
               )}
             </div>
@@ -809,8 +1096,13 @@ export default function UserHome() {
           mobileView === 'console' ? 'hidden md:block' : 'block'
         )}
       >
+        {/* Floating Real-Time All-India Dispatch Ticker */}
+        <div className="absolute top-4 left-4 right-4 md:right-auto md:max-w-xl z-20 pointer-events-auto">
+          <LiveDispatchTicker />
+        </div>
+
         {/* Floating Top Desktop Info Pills */}
-        <div className="hidden md:flex absolute top-4 right-4 z-20 items-center gap-2 pointer-events-auto">
+        <div className="hidden lg:flex absolute top-4 right-4 z-20 items-center gap-2 pointer-events-auto">
           <button
             onClick={detectLiveGps}
             className="bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-200 shadow-md text-xs font-bold text-slate-800 flex items-center gap-2 hover:bg-slate-50 transition-colors"
@@ -838,8 +1130,10 @@ export default function UserHome() {
         >
           <LiveMap
             zoom={15}
+            center={pickup ? { lat: pickup.lat, lng: pickup.lng } : (destination ? { lat: destination.lat, lng: destination.lng } : (userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null))}
             pickup={pickup}
             destination={destination}
+            routeCoordinates={routeInfo?.coordinates}
             showSurgeZones={true}
             tileTheme="light"
             height="100%"

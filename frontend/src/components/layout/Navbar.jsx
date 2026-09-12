@@ -4,24 +4,40 @@ import {
   Activity, ArrowRight, ChevronDown, Menu, X, Users, Car,
   Shield, Phone, MapPin, Sparkles, LayoutDashboard, ExternalLink,
   Zap, LogOut, CheckCircle2, ChevronRight, Navigation, DollarSign,
-  Terminal, ShieldCheck, UserCheck, AlertCircle, Clock
+  Terminal, ShieldCheck, UserCheck, AlertCircle, Clock, Search,
+  Crosshair, Loader2
 } from 'lucide-react';
 import { useAuthStore, useMapStore, useDriverStore } from '@/stores';
+import { locationService } from '@/services';
 import { REGIONS } from '@/constants';
+
+const POPULAR_CITIES = [
+  { name: 'Bengaluru', state: 'Karnataka', lat: 12.9716, lng: 77.5946, icon: '💻' },
+  { name: 'Delhi NCR', state: 'Delhi', lat: 28.6139, lng: 77.2090, icon: '🏛️' },
+  { name: 'Mumbai MMR', state: 'Maharashtra', lat: 19.0760, lng: 72.8777, icon: '🌊' },
+  { name: 'Kolkata', state: 'West Bengal', lat: 22.5726, lng: 88.3639, icon: '✈️' },
+  { name: 'IIT Kharagpur', state: 'West Bengal', lat: 22.3149, lng: 87.3105, icon: '🎓' },
+  { name: 'Hyderabad', state: 'Telangana', lat: 17.3850, lng: 78.4867, icon: '💎' },
+  { name: 'Pune', state: 'Maharashtra', lat: 18.5204, lng: 73.8567, icon: '🚗' },
+];
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, logout, login } = useAuthStore();
-  const { currentRegion, setRegion } = useMapStore();
+  const { userLocation, setUserLocation, currentRegion, setRegion } = useMapStore();
   const { todayEarnings, status: driverStatus } = useDriverStore();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [regionMenuOpen, setRegionMenuOpen] = useState(false);
+  const [locationMenuOpen, setLocationMenuOpen] = useState(false);
+  const [locSearchQuery, setLocSearchQuery] = useState('');
+  const [locSearchResults, setLocSearchResults] = useState([]);
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
 
   const profileRef = useRef(null);
-  const regionRef = useRef(null);
+  const locationRef = useRef(null);
 
   const role = isAuthenticated ? (user?.role || 'USER') : null;
 
@@ -30,8 +46,8 @@ export default function Navbar() {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileMenuOpen(false);
       }
-      if (regionRef.current && !regionRef.current.contains(event.target)) {
-        setRegionMenuOpen(false);
+      if (locationRef.current && !locationRef.current.contains(event.target)) {
+        setLocationMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -41,15 +57,77 @@ export default function Navbar() {
   useEffect(() => {
     setMobileMenuOpen(false);
     setProfileMenuOpen(false);
-    setRegionMenuOpen(false);
+    setLocationMenuOpen(false);
   }, [location.pathname]);
 
-  const handleSelectRegion = (regKey) => {
-    const reg = REGIONS[regKey];
-    if (reg) {
-      setRegion(regKey, reg.center, reg.zoom);
+  // Handle GPS detection
+  const handleDetectGPS = () => {
+    if (!navigator.geolocation) return;
+    setIsDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const geocoded = await locationService.reverseGeocode(latitude, longitude);
+        setUserLocation({
+          lat: latitude,
+          lng: longitude,
+          name: geocoded.name || 'My Live Location',
+          address: geocoded.address,
+          city: geocoded.city || 'Detected City',
+          state: geocoded.state || '',
+          isGpsDetected: true,
+        });
+        setIsDetectingGps(false);
+        setLocationMenuOpen(false);
+      },
+      (err) => {
+        setIsDetectingGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 6000 }
+    );
+  };
+
+  // Search input debounced autocomplete
+  useEffect(() => {
+    if (!locSearchQuery.trim()) {
+      setLocSearchResults([]);
+      return;
     }
-    setRegionMenuOpen(false);
+    const timer = setTimeout(async () => {
+      setIsSearchingLoc(true);
+      const results = await locationService.searchPlaces(locSearchQuery, userLocation);
+      setLocSearchResults(results);
+      setIsSearchingLoc(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [locSearchQuery, userLocation]);
+
+  const handleSelectSearchedPlace = (place) => {
+    setUserLocation({
+      lat: place.lat,
+      lng: place.lng,
+      name: place.name,
+      address: place.address,
+      city: place.city || place.name,
+      state: place.state || '',
+      isGpsDetected: false,
+    });
+    setLocSearchQuery('');
+    setLocSearchResults([]);
+    setLocationMenuOpen(false);
+  };
+
+  const handleSelectCity = (city) => {
+    setUserLocation({
+      lat: city.lat,
+      lng: city.lng,
+      name: city.name,
+      address: `${city.name}, ${city.state}`,
+      city: city.name,
+      state: city.state,
+      isGpsDetected: false,
+    });
+    setLocationMenuOpen(false);
   };
 
   const handleLogout = () => {
@@ -57,14 +135,14 @@ export default function Navbar() {
     navigate('/');
   };
 
-  const activeRegionObj = REGIONS[currentRegion] || REGIONS.IIT_KGP;
+  const displayLocationName = userLocation?.city || userLocation?.name || 'Set Location';
 
   return (
     <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans flex justify-center">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-18 gap-4">
           
-          {/* ── Left: Brand Identity + Territory Dropdown ───────────────────────── */}
+          {/* ── Left: Brand Identity + Dynamic Location Selector ─────────────────── */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <Link
               to={role === 'DRIVER' ? '/driver/dashboard' : role === 'ADMIN' ? '/admin/dashboard' : '/'}
@@ -72,13 +150,13 @@ export default function Navbar() {
             >
               <img
                 src="/logo.png"
-                alt="Veloq Logo"
+                alt="Riders Logo"
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover shadow-sm border border-slate-200 transition-transform group-hover:scale-105"
               />
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 leading-none">
-                    Veloq
+                    Riders
                   </span>
                   <span className={`text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full border shrink-0 ${
                     role === 'DRIVER'
@@ -96,46 +174,124 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Territory / Hub Dropdown */}
-            <div className="relative shrink-0" ref={regionRef}>
+            {/* Dynamic Live Location Popover */}
+            <div className="relative shrink-0" ref={locationRef}>
               <button
-                onClick={() => setRegionMenuOpen(!regionMenuOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-800 transition-colors whitespace-nowrap"
-                title="Select Hub / Territory"
+                onClick={() => setLocationMenuOpen(!locationMenuOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-800 transition-colors whitespace-nowrap shadow-xs"
+                title="Change or Detect Your Location"
               >
-                <MapPin size={13} className="text-blue-600 shrink-0" />
-                <span className="max-w-[100px] sm:max-w-[140px] truncate">
-                  {currentRegion === 'IIT_KGP' ? 'IIT Kharagpur' : activeRegionObj.name}
+                <span className="relative flex h-2 w-2">
+                  {userLocation?.isGpsDetected && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  )}
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${userLocation?.isGpsDetected ? 'bg-emerald-500' : 'bg-blue-600'}`}></span>
                 </span>
-                <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${regionMenuOpen ? 'rotate-180' : ''}`} />
+                <MapPin size={13} className="text-blue-600 shrink-0" />
+                <span className="max-w-[110px] sm:max-w-[160px] truncate">
+                  {displayLocationName}
+                </span>
+                <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${locationMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {regionMenuOpen && (
-                <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-1.5 border-b border-slate-100 mb-1">
-                    <p className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Select Active Territory</p>
+              {locationMenuOpen && (
+                <div className="absolute left-0 mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2.5">
+                    <p className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                      <MapPin size={12} className="text-blue-600" />
+                      <span>Your Active Location</span>
+                    </p>
+                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      {userLocation?.isGpsDetected ? 'GPS Active' : 'Manual'}
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    {Object.values(REGIONS).map((reg) => {
-                      const isSelected = reg.id === (currentRegion || 'IIT_KGP');
-                      return (
+
+                  {/* 1-Tap Use GPS Location Button */}
+                  <button
+                    onClick={handleDetectGPS}
+                    disabled={isDetectingGps}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold text-xs border border-blue-200 transition-all active:scale-[0.99] mb-3"
+                  >
+                    {isDetectingGps ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin text-blue-600" />
+                        <span>Detecting live GPS location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Crosshair size={14} className="text-blue-600" />
+                        <span>Use Exact GPS Location</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Search City / Locality Input */}
+                  <div className="relative mb-3">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search any city, campus, or area..."
+                      value={locSearchQuery}
+                      onChange={(e) => setLocSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    />
+                    {locSearchQuery && (
+                      <button
+                        onClick={() => { setLocSearchQuery(''); setLocSearchResults([]); }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Live Search Autocomplete Results */}
+                  {locSearchResults.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto space-y-1 mb-3 pr-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-0.5">Matching Locations</p>
+                      {locSearchResults.map((place) => (
                         <button
-                          key={reg.id}
-                          onClick={() => handleSelectRegion(reg.id)}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                            isSelected
-                              ? 'bg-blue-50 text-blue-700 font-extrabold'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
+                          key={place.id}
+                          onClick={() => handleSelectSearchedPlace(place)}
+                          className="w-full text-left p-2 rounded-xl text-xs hover:bg-blue-50/80 transition-colors flex items-start gap-2 group"
                         >
-                          <div className="flex items-center gap-2 truncate">
-                            <span>{reg.id === 'IIT_KGP' ? '🎓' : reg.id === 'KOLKATA' ? '✈️' : reg.id === 'DELHI' ? '🏛️' : reg.id === 'BANGALORE' ? '💻' : '🌊'}</span>
-                            <span className="truncate">{reg.id === 'IIT_KGP' ? 'IIT Kharagpur Campus' : reg.name}</span>
+                          <MapPin size={13} className="text-slate-400 group-hover:text-blue-600 shrink-0 mt-0.5" />
+                          <div className="truncate">
+                            <p className="font-extrabold text-slate-900 group-hover:text-blue-700 truncate">{place.name}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{place.address}</p>
                           </div>
-                          {isSelected && <CheckCircle2 size={14} className="text-blue-600 shrink-0" />}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Quick Select Popular Cities */}
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 mb-1.5">
+                      Popular Hubs
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {POPULAR_CITIES.map((city) => {
+                        const isCurrent = userLocation?.city === city.name || userLocation?.name === city.name;
+                        return (
+                          <button
+                            key={city.name}
+                            onClick={() => handleSelectCity(city)}
+                            className={`text-left px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between border transition-colors ${
+                              isCurrent
+                                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5 truncate">
+                              <span>{city.icon}</span>
+                              <span className="truncate">{city.name}</span>
+                            </span>
+                            {isCurrent && <CheckCircle2 size={12} className="text-blue-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

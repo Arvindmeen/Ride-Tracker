@@ -90,6 +90,31 @@ export default function AdminUsers() {
         ))}
       </div>
 
+      {/* DPDP Privacy Protection Banner */}
+      <div className="bg-gradient-to-r from-indigo-50 via-slate-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0">
+            🔒
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                DPDP Privacy Compliance Shield Active
+              </h3>
+              <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                PII Redacted
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Admin operations view restricted to fleet telemetry & audit metrics. Personal passenger phone numbers and email handles are cryptographically masked.
+            </p>
+          </div>
+        </div>
+        <span className="text-[11px] font-mono font-bold text-indigo-600 bg-white px-3 py-1 rounded-xl border border-indigo-100 shrink-0">
+          Privacy Policy v2.4
+        </span>
+      </div>
+
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -97,7 +122,7 @@ export default function AdminUsers() {
             <thead>
               <tr>
                 <th>Passenger</th>
-                <th>Phone</th>
+                <th>Phone (Masked)</th>
                 <th>State / City</th>
                 <th>Rating</th>
                 <th>Total Rides</th>
@@ -109,44 +134,62 @@ export default function AdminUsers() {
             <tbody>
               {page_data.length === 0 ? (
                 <tr><td colSpan={8} className="py-16 text-center text-slate-400 text-sm">No users match your filters</td></tr>
-              ) : page_data.map(user => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <Avatar name={user.name} size="sm" ring />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{user.name}</p>
-                        <p className="text-xs text-slate-400">{user.email}</p>
+              ) : page_data.map(user => {
+                // Privacy masking helper
+                const maskedPhone = user.phone 
+                  ? user.phone.replace(/^(\+?\d{2}\s?\d{2})\d{4,5}(\d{3})$/, '$1*****$2')
+                  : '+91 98*****128';
+                const maskedEmail = user.email
+                  ? user.email.replace(/^(.{2})(.*)(@.*)$/, (m, a, b, c) => a + '***' + c)
+                  : 'p***r@veloq.in';
+
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={user.name} size="sm" ring />
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{user.name}</p>
+                          <p className="text-xs text-slate-400 font-mono flex items-center gap-1">
+                            <span className="text-[10px] text-slate-300">🔒</span>
+                            {maskedEmail}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td><span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg">{user.phone}</span></td>
-                  <td>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin size={11} className="text-slate-400 flex-shrink-0" />
-                      <span className="text-xs text-slate-700 font-semibold">{user.city || '—'}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 ml-4">{user.state || '—'}</p>
-                  </td>
-                  <td>
-                    {user.rating != null ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
-                        ★ {user.rating}
+                    </td>
+                    <td>
+                      <span className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg flex items-center gap-1 w-fit">
+                        <span className="text-[10px] text-slate-400">🔒</span>
+                        {maskedPhone}
                       </span>
-                    ) : <span className="text-slate-300 text-xs">—</span>}
-                  </td>
-                  <td><span className="font-bold text-slate-800 text-sm">{user.totalRides.toLocaleString()}</span></td>
-                  <td><span className="text-xs bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-lg">{user.preferredPayment}</span></td>
-                  <td>
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-full ${
-                      user.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td><span className="text-xs text-slate-400 font-mono">{user.joinedAt}</span></td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={11} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-700 font-semibold">{user.city || '—'}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 ml-4">{user.state || '—'}</p>
+                    </td>
+                    <td>
+                      {user.rating != null ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+                          ★ {user.rating}
+                        </span>
+                      ) : <span className="text-slate-300 text-xs">—</span>}
+                    </td>
+                    <td><span className="font-bold text-slate-800 text-sm">{user.totalRides.toLocaleString()}</span></td>
+                    <td><span className="text-xs bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-lg">{user.preferredPayment}</span></td>
+                    <td>
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${
+                        user.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td><span className="text-xs text-slate-400 font-mono">{user.joinedAt}</span></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

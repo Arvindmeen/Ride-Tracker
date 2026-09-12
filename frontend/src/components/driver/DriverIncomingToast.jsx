@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin, Navigation, Clock, Star, Shield, ArrowRight, X, ChevronDown,
   ChevronUp, CheckCircle2, DollarSign, Smartphone, Zap, AlertCircle, Volume2
@@ -28,6 +27,7 @@ function playDispatchChime() {
 
 export default function DriverIncomingToast() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     status,
     activeRide,
@@ -72,7 +72,8 @@ export default function DriverIncomingToast() {
   }, [request, activeRide, status, clearRequests]);
 
   // Strict rule: if on active trip OR status is not available OR no requests, don't show toast
-  if (!request || activeRide || status !== 'AVAILABLE') {
+  // Also suppress on /driver/dashboard to avoid duplicate popups with the native bottom offer card
+  if (!request || activeRide || status !== 'AVAILABLE' || location.pathname === '/driver/dashboard' || location.pathname === '/driver') {
     return null;
   }
 

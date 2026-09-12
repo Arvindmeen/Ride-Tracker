@@ -310,20 +310,15 @@ export default function DriverRideActivePage() {
                 </span>
               </div>
 
-              {/* 🎯 CORE USER REQUEST: "SAY I ARRIVED" BUTTON */}
+              {/* "Say I Arrived" Button */}
               <div className="pt-1">
                 <button
                   onClick={handleSayIArrived}
-                  className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 flex flex-col items-center justify-center gap-1 text-sm sm:text-base transition-all hover:scale-[1.01] active:scale-95 border-2 border-emerald-400/80"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 text-xs transition-all active:scale-95"
                 >
-                  <div className="flex items-center gap-2.5 text-base sm:text-lg">
-                    <span className="w-3 h-3 rounded-full bg-white animate-ping" />
-                    <CheckCircle2 size={22} className="shrink-0" />
-                    <span>I HAVE ARRIVED AT PICKUP POINT</span>
-                  </div>
-                  <span className="text-[11px] font-medium text-emerald-100/90">
-                    Tap to notify passenger & activate free waiting timer
-                  </span>
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                  <CheckCircle2 size={16} />
+                  <span>I've Arrived at Pickup</span>
                 </button>
               </div>
             </div>
@@ -428,11 +423,11 @@ export default function DriverRideActivePage() {
 
                 <button
                   onClick={handleVerifyOtp}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-3.5 px-6 rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 text-sm sm:text-base transition-all hover:scale-[1.01] active:scale-95"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 text-xs transition-all active:scale-95"
                 >
-                  <KeyRound size={18} />
+                  <KeyRound size={15} />
                   <span>Verify OTP & Start Trip</span>
-                  <ArrowRight size={18} />
+                  <ArrowRight size={14} />
                 </button>
               </div>
             </div>
@@ -466,10 +461,10 @@ export default function DriverRideActivePage() {
 
               <button
                 onClick={handleFinishRide}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 text-sm sm:text-base transition-all"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 text-xs transition-all active:scale-95"
               >
-                <CheckCircle2 size={20} />
-                <span>Arrived at Destination · Complete Trip</span>
+                <CheckCircle2 size={16} />
+                <span>Complete Trip (Arrived at Drop)</span>
               </button>
             </div>
           )}
@@ -505,11 +500,11 @@ export default function DriverRideActivePage() {
               {/* Collect & Finish CTA */}
               <button
                 onClick={handleCollectAndFinish}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 px-4 rounded-2xl shadow-xl shadow-emerald-600/30 text-sm sm:text-base transition-all flex items-center justify-center gap-2"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/25 text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
-                <DollarSign size={18} />
+                <DollarSign size={15} />
                 <span>Payment Received · Ready for Next Ride</span>
-                <ArrowRight size={18} />
+                <ArrowRight size={14} />
               </button>
             </div>
           )}

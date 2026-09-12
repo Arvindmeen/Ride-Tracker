@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
+import { APP_NAME } from '@/constants';
 import { MapPin, Phone, Shield, Zap, DollarSign, Users } from 'lucide-react';
 
 export default function Footer() {
@@ -16,10 +17,10 @@ export default function Footer() {
           {/* Brand column */}
           <div className="sm:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="Veloq Logo"
+              <img src="/logo.png" alt={`${APP_NAME} Logo`}
                 className="w-10 h-10 rounded-2xl object-cover shadow-lg shadow-sky-500/20 border border-sky-500/30" />
               <div>
-                <span className="font-black text-xl text-white tracking-tight block leading-none">Veloq India</span>
+                <span className="font-black text-xl text-white tracking-tight block leading-none">{APP_NAME} India</span>
                 <span className="text-[10px] text-slate-500 font-semibold">Real-Time Mobility Network</span>
               </div>
             </div>
@@ -110,7 +111,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-600">
-          <p>© 2026 Veloq Technologies India Pvt. Ltd. All rights reserved.</p>
+          <p>© 2026 Riders Technologies India Pvt. Ltd. All rights reserved.</p>
           <div className="flex items-center gap-4 sm:gap-5 flex-wrap justify-center">
             <Link to="/contact" className="hover:text-slate-300 transition-colors">Contact</Link>
             <span>UPI Settlements</span>

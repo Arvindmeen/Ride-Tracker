@@ -76,6 +76,31 @@ export default function AdminDrivers() {
         })}
       </div>
 
+      {/* Driver Privacy Shield Banner */}
+      <div className="bg-gradient-to-r from-emerald-50 via-slate-50 to-teal-50 border border-emerald-100 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0">
+            🛡️
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                Driver Partner Privacy Protection Active
+              </h3>
+              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                Financial & Aadhaar Redacted
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Operations audit view restricted to fleet performance, vehicle plate, and safety ratings. Driver bank IFSC, payout account numbers, and personal Aadhaar are securely vaulted.
+            </p>
+          </div>
+        </div>
+        <span className="text-[11px] font-mono font-bold text-emerald-700 bg-white px-3 py-1 rounded-xl border border-emerald-100 shrink-0">
+          Vault ID: VQ-SHIELD-99
+        </span>
+      </div>
+
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

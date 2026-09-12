@@ -19,27 +19,27 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     rideService.getRideById(id).then((data) => {
-      if (data) { setTrip(data); setLoading(false); return; }
-      // Look up in generated dataset
-      const found = MOCK_RIDES.find(r => r.id === id);
-      if (found) {
+      if (data) {
         setTrip({
-          ...found,
-          durationMinutes: found.duration || 12,
-          paymentMethod: found.payment?.method + (found.payment?.method === 'UPI' ? ' AutoPay' : ''),
-          paymentStatus: found.payment?.status === 'COMPLETED' ? 'PAID' : found.payment?.status || 'PENDING',
+          ...data,
+          durationMinutes: data.duration || 12,
+          paymentMethod: typeof data.payment === 'object'
+            ? `${data.payment.method || 'UPI'} AutoPay`
+            : (data.paymentMethod || 'UPI AutoPay'),
+          paymentStatus: typeof data.payment === 'object' && data.payment.status === 'COMPLETED' ? 'PAID' : 'PAID',
         });
-      } else {
-        // Rich default using first completed ride
-        const sample = MOCK_RIDES.find(r => r.status === 'RIDE_COMPLETED') || MOCK_RIDES[0];
-        setTrip({
-          ...sample,
-          id: id || sample.id,
-          durationMinutes: sample.duration || 12,
-          paymentMethod: sample.payment?.method + ' AutoPay',
-          paymentStatus: 'PAID',
-        });
+        setLoading(false);
+        return;
       }
+      // Rich default using first completed ride
+      const sample = MOCK_RIDES.find((r) => r.status === 'RIDE_COMPLETED') || MOCK_RIDES[0];
+      setTrip({
+        ...sample,
+        id: id || sample.id,
+        durationMinutes: sample.duration || 12,
+        paymentMethod: sample.payment?.method ? `${sample.payment.method} AutoPay` : 'UPI AutoPay',
+        paymentStatus: 'PAID',
+      });
       setLoading(false);
     });
   }, [id]);

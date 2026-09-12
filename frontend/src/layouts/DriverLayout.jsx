@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import {
   LayoutDashboard, Bell, DollarSign, User, LogOut, Phone,
@@ -21,7 +21,10 @@ export default function DriverLayout() {
   const { user, logout } = useAuthStore();
   const { status, setStatus, vehicleType, operatingScope, todayEarnings } = useDriverStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isCockpit = location.pathname === '/driver/dashboard' || location.pathname === '/driver';
 
   const handleLogout = () => {
     logout();
@@ -40,8 +43,9 @@ export default function DriverLayout() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans">
-      {/* ── Driver Status Ribbon ──────────────────────────────────────────── */}
-      <div className="bg-slate-900 border-b border-slate-800 text-xs py-1.5 px-4">
+      {/* ── Driver Status Ribbon (Hidden on cockpit to maximize map height) ── */}
+      {!isCockpit && (
+        <div className="bg-slate-900 border-b border-slate-800 text-xs py-1.5 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 text-[11px]">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
@@ -63,6 +67,7 @@ export default function DriverLayout() {
           </Link>
         </div>
       </div>
+      )}
 
       {/* ── Main Driver Top Navigation ─────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-md">
@@ -207,49 +212,53 @@ export default function DriverLayout() {
       <DriverIncomingToast />
 
       {/* ── Content Area ─────────────────────────────────────────────────── */}
-      <main className="flex-1 pb-16 lg:pb-0">
+      <main className={clsx("flex-1", isCockpit ? "pb-0 overflow-hidden" : "pb-16 lg:pb-0")}>
         <Outlet />
       </main>
 
-      {/* ── Slim Driver Footer ────────────────────────────────────────────── */}
-      <footer className="bg-slate-950 text-slate-500 text-xs border-t border-slate-800 hidden md:block">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-emerald-700 rounded-lg flex items-center justify-center">
-              <CheckCircle2 size={14} className="text-white" />
+      {/* ── Slim Driver Footer (Hidden on Cockpit to maximize map space) ────── */}
+      {!isCockpit && (
+        <footer className="bg-slate-950 text-slate-500 text-xs border-t border-slate-800 hidden md:block">
+          <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-emerald-700 rounded-lg flex items-center justify-center">
+                <CheckCircle2 size={14} className="text-white" />
+              </div>
+              <div>
+                <span className="font-bold text-white text-xs">Veloq Driver Partner</span>
+                <p className="text-[10px] text-slate-600">12% lowest fee · Instant UPI · Zero penalties</p>
+              </div>
             </div>
-            <div>
-              <span className="font-bold text-white text-xs">Veloq Driver Partner</span>
-              <p className="text-[10px] text-slate-600">12% lowest fee · Instant UPI · Zero penalties</p>
+            <div className="flex items-center gap-5 text-[11px]">
+              <Link to="/driver/dashboard" className="hover:text-slate-300 transition-colors">Cockpit</Link>
+              <Link to="/driver/earnings" className="hover:text-slate-300 transition-colors">Earnings</Link>
+              <Link to="/contact" className="text-emerald-400 hover:text-emerald-300 transition-colors">Partner Helpdesk</Link>
             </div>
+            <p className="text-[10px] text-slate-700">© 2026 Veloq Technologies India Pvt. Ltd.</p>
           </div>
-          <div className="flex items-center gap-5 text-[11px]">
-            <Link to="/driver/dashboard" className="hover:text-slate-300 transition-colors">Cockpit</Link>
-            <Link to="/driver/earnings" className="hover:text-slate-300 transition-colors">Earnings</Link>
-            <Link to="/contact" className="text-emerald-400 hover:text-emerald-300 transition-colors">Partner Helpdesk</Link>
-          </div>
-          <p className="text-[10px] text-slate-700">© 2026 Veloq Technologies India Pvt. Ltd.</p>
-        </div>
-      </footer>
+        </footer>
+      )}
 
-      {/* ── Mobile Bottom Navigation Bar ─────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex z-30 shadow-xl">
-        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              clsx(
-                'flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold transition-colors',
-                isActive ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300',
-              )
-            }
-          >
-            <Icon size={18} />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
+      {/* ── Mobile Bottom Navigation Bar (Hidden on Cockpit so drawer has full height) ─── */}
+      {!isCockpit && (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex z-30 shadow-xl">
+          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                clsx(
+                  'flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold transition-colors',
+                  isActive ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300',
+                )
+              }
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

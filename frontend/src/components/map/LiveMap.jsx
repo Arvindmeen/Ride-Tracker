@@ -15,14 +15,14 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Tile Providers for Production Grade Appearance (with native zoom scaling for extreme street-level detail)
+// Tile Providers for Production Grade Appearance (Clean, High-Res, Zero Watermarks)
 const TILE_PROVIDERS = {
   voyager: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 20,
     maxNativeZoom: 19,
-    subdomains: 'abcd',
+    subdomains: 'abc',
   },
   dark: {
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -32,75 +32,132 @@ const TILE_PROVIDERS = {
     subdomains: 'abcd',
   },
   light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 20,
     maxNativeZoom: 19,
-    subdomains: 'abcd',
+    subdomains: 'abc',
   },
   osm: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
     maxNativeZoom: 19,
+    subdomains: 'abc',
   },
 };
+
+// ── High-Definition Realistic Vehicle SVGs (Cab, Bike, Auto/Toto) ───────────────
+const CAB_SVG = `
+  <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Cab Roof Taxi Sign -->
+    <rect x="11.5" y="5.2" width="5" height="2.2" rx="0.6" fill="#facc15" stroke="#ca8a04" stroke-width="0.5"/>
+    <!-- Cab Aerodynamic Body -->
+    <path d="M4 17.5C4 16.5 4.7 15.6 5.6 15.4L7.2 15L9 9.5C9.5 8 10.8 7 12.4 7H15.6C17.2 7 18.5 8 19 9.5L20.8 15L22.4 15.4C23.3 15.6 24 16.5 24 17.5V20.5C24 21.3 23.3 22 22.5 22H21.5C21.5 20.6 20.4 19.5 19 19.5C17.6 19.5 16.5 20.6 16.5 22H11.5C11.5 20.6 10.4 19.5 9 19.5C7.6 19.5 6.5 20.6 6.5 22H5.5C4.7 22 4 21.3 4 20.5V17.5Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.5"/>
+    <!-- Windshield and Tinted Windows -->
+    <path d="M9.8 14.5L11.2 9.8C11.4 9.3 11.8 9 12.3 9H15.7C16.2 9 16.6 9.3 16.8 9.8L18.2 14.5H9.8Z" fill="#1e293b"/>
+    <!-- Headlights Glow -->
+    <circle cx="6.5" cy="18" r="1.3" fill="#fef08a"/>
+    <circle cx="21.5" cy="18" r="1.3" fill="#fef08a"/>
+    <!-- Wheels with Rims -->
+    <circle cx="9" cy="22" r="2.6" fill="#0f172a" stroke="#ffffff" stroke-width="0.8"/>
+    <circle cx="9" cy="22" r="1" fill="#94a3b8"/>
+    <circle cx="19" cy="22" r="2.6" fill="#0f172a" stroke="#ffffff" stroke-width="0.8"/>
+    <circle cx="19" cy="22" r="1" fill="#94a3b8"/>
+  </svg>
+`;
+
+const BIKE_SVG = `
+  <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Rear Spoke Wheel -->
+    <circle cx="7" cy="19" r="4.2" fill="#0f172a" stroke="#ffffff" stroke-width="1.2"/>
+    <circle cx="7" cy="19" r="2" fill="#94a3b8"/>
+    <circle cx="7" cy="19" r="0.8" fill="#ffffff"/>
+    <!-- Front Spoke Wheel -->
+    <circle cx="21" cy="19" r="4.2" fill="#0f172a" stroke="#ffffff" stroke-width="1.2"/>
+    <circle cx="21" cy="19" r="2" fill="#94a3b8"/>
+    <circle cx="21" cy="19" r="0.8" fill="#ffffff"/>
+    <!-- Motorcycle Chassis -->
+    <path d="M7 19L11.5 13.5H16.5L21 19" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 13.5L14 8H16.5L18 13.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Aerodynamic Fuel Tank -->
+    <path d="M13 11.5C13 10.2 14.2 9.2 16 9.2H17.8L18.8 12.5H14.5C13.6 12.5 13 12 13 11.5Z" fill="#ffedd5" stroke="#ffffff" stroke-width="0.8"/>
+    <!-- Sport Handlebars -->
+    <path d="M15 7.5H19" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Headlight Beam -->
+    <path d="M19 8.5L24 7.5V10.5L19 9.5" fill="#fef08a" opacity="0.9"/>
+    <!-- Rider Cushion Seat -->
+    <path d="M10 12.5H13C13.6 12.5 14 13 14 13.5H9.5C9.5 13 9.7 12.5 10 12.5Z" fill="#0f172a"/>
+  </svg>
+`;
+
+const AUTO_SVG = `
+  <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Iconic Yellow Canopy Roof -->
+    <path d="M5.5 12.5C5.5 8.5 8.5 6 12.5 6H17.5C20.5 6 22.8 8 23.3 11L24.5 15.5H5.2L5.5 12.5Z" fill="#facc15" stroke="#ca8a04" stroke-width="0.8"/>
+    <!-- Curved Windshield -->
+    <path d="M20.5 11L22 15H17V11H20.5Z" fill="#38bdf8" opacity="0.8"/>
+    <!-- Classic Emerald Green Body (Indian Auto / Solar E-Toto) -->
+    <path d="M4.8 15.5H23.5L22.5 20.2C22.2 21.2 21.2 21.8 20.2 21.8H7.8C6.8 21.8 5.8 21.2 5.5 20.2L4.8 15.5Z" fill="#16a34a" stroke="#ffffff" stroke-width="0.8"/>
+    <!-- Open Passenger Door Cabin -->
+    <rect x="8.5" y="11.5" width="7" height="4" rx="0.8" fill="#0f172a" opacity="0.7"/>
+    <!-- 3-Wheeler Front Single Wheel -->
+    <circle cx="21.5" cy="22" r="2.8" fill="#0f172a" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="21.5" cy="22" r="1.1" fill="#94a3b8"/>
+    <!-- 3-Wheeler Rear Wheel -->
+    <circle cx="8.5" cy="22" r="2.8" fill="#0f172a" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="8.5" cy="22" r="1.1" fill="#94a3b8"/>
+    <!-- Single Round Headlight -->
+    <circle cx="24" cy="17.2" r="1.3" fill="#fef08a" stroke="#eab308" stroke-width="0.5"/>
+  </svg>
+`;
 
 // Ultra-crisp SVG vector icons for Rider and Drivers (Bike, Cab, Auto/Toto)
 function createVehicleIcon(category, status, heading = 0) {
   const isBike = category === 'MOTO' || category === 'BIKE' || category === 'CAMPUS_BIKE';
   const isAuto = category === 'AUTO' || category === 'TOTO' || category === 'CAMPUS_AUTO';
 
-  const statusColor = status === 'AVAILABLE' ? '#10b981' : status === 'ON_RIDE' ? '#f59e0b' : '#64748b';
-  const glowColor = status === 'AVAILABLE' ? 'rgba(16,185,129,0.45)' : status === 'ON_RIDE' ? 'rgba(245,158,11,0.45)' : 'rgba(100,116,139,0.3)';
-
-  let badgeLabel = 'CAB';
-  let vehicleSvg = '';
+  let discBg = 'linear-gradient(135deg, #1e40af, #0f172a)';
+  let glowColor = 'rgba(37,99,235,0.45)';
+  let badgeLabel = '🚗 CAB';
+  let badgeText = '#60a5fa';
+  let badgeBorder = 'rgba(96,165,250,0.35)';
+  let vehicleSvg = CAB_SVG;
 
   if (isBike) {
-    badgeLabel = 'BIKE';
-    vehicleSvg = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="18.5" cy="17.5" r="3.5" fill="none" stroke="white"/>
-        <circle cx="5.5" cy="17.5" r="3.5" fill="none" stroke="white"/>
-        <circle cx="15" cy="5" r="1.5" fill="white"/>
-        <path d="M12 17.5V14l-3-3 4-3 2 3h3"/>
-      </svg>
-    `;
+    discBg = 'linear-gradient(135deg, #ea580c, #7c2d12)';
+    glowColor = 'rgba(234,88,12,0.45)';
+    badgeLabel = '🏍️ BIKE';
+    badgeText = '#fb923c';
+    badgeBorder = 'rgba(251,146,60,0.35)';
+    vehicleSvg = BIKE_SVG;
   } else if (isAuto) {
-    badgeLabel = 'AUTO';
-    vehicleSvg = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 17h16M7 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-        <path d="M5 11l2-6h9l2 6M9 5v6M14 5v6"/>
-      </svg>
-    `;
-  } else {
-    badgeLabel = 'CAB';
-    vehicleSvg = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H8.5a1 1 0 0 0-.8.4L5 11l-5.16.86a1 1 0 0 0-.84.99V16h3m14 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm-10 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
-      </svg>
-    `;
+    discBg = 'linear-gradient(135deg, #059669, #064e3b)';
+    glowColor = 'rgba(16,185,129,0.45)';
+    badgeLabel = '🛺 AUTO';
+    badgeText = '#34d399';
+    badgeBorder = 'rgba(52,211,153,0.35)';
+    vehicleSvg = AUTO_SVG;
   }
 
   const html = `
     <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate3d(0,0,0);">
       <div style="
-        width: 38px; height: 38px; border-radius: 50%;
-        background: linear-gradient(135deg, ${statusColor}, #090d16);
+        width: 40px; height: 40px; border-radius: 50%;
+        background: ${discBg};
         border: 2.5px solid #ffffff;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 4px ${glowColor};
+        box-shadow: 0 4px 14px rgba(0,0,0,0.45), 0 0 0 3px ${glowColor};
         display: flex; align-items: center; justify-content: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       ">
         ${vehicleSvg}
       </div>
       <div style="
-        background: #0f172a; color: #38bdf8; font-size: 8px; font-weight: 900;
-        padding: 1.5px 5px; border-radius: 9999px; margin-top: 2px;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.35); white-space: nowrap; letter-spacing: 0.5px;
+        background: #090d16; color: ${badgeText}; font-size: 8px; font-weight: 900;
+        padding: 1.5px 6px; border-radius: 9999px; margin-top: 2px;
+        border: 1px solid ${badgeBorder};
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4); white-space: nowrap; letter-spacing: 0.4px;
+        display: flex; align-items: center; gap: 3px;
       ">
         ${badgeLabel}
       </div>
@@ -110,9 +167,67 @@ function createVehicleIcon(category, status, heading = 0) {
   return L.divIcon({
     html,
     className: 'custom-vehicle-marker',
-    iconSize: [42, 52],
-    iconAnchor: [21, 26],
-    popupAnchor: [0, -22],
+    iconSize: [46, 56],
+    iconAnchor: [23, 28],
+    popupAnchor: [0, -24],
+  });
+}
+
+// Active Assigned Ride Vehicle Marker (supports smooth heading, speed badge, and passenger onboard)
+function createActiveRideVehicleIcon(category, heading = 0, isBoarded = false, driverName = 'Driver', speed = 0) {
+  const isBike = category === 'MOTO' || category === 'BIKE';
+  const isAuto = category === 'AUTO' || category === 'TOTO';
+
+  const themeColor = isBoarded ? '#2563eb' : '#f59e0b';
+  const glow = isBoarded ? 'rgba(37,99,235,0.6)' : 'rgba(245,158,11,0.6)';
+  const badgeText = isBoarded ? '🚗 + 👤 ON TRIP' : '🚖 APPROACHING';
+
+  const vehicleSvg = isBike ? BIKE_SVG : isAuto ? AUTO_SVG : CAB_SVG;
+
+  const html = `
+    <div style="position: relative; display: flex; flex-direction: column; align-items: center; transform: translate3d(0,0,0); pointer-events: auto;">
+      <!-- Pulsing Wave Beacon -->
+      <div style="
+        position: absolute; width: 62px; height: 62px; border-radius: 50%;
+        background: ${glow}; opacity: 0.4;
+        animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+        top: 2px;
+      "></div>
+
+      <!-- Main Vehicle Disc -->
+      <div style="
+        position: relative; width: 48px; height: 48px; border-radius: 50%;
+        background: linear-gradient(135deg, ${themeColor}, #020617);
+        border: 3px solid #ffffff;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 0 3px ${glow};
+        display: flex; align-items: center; justify-content: center;
+        transition: transform 0.4s ease-out;
+      ">
+        <div style="transform: rotate(${heading || 0}deg); display: flex; align-items: center; justify-content: center;">
+          ${vehicleSvg}
+        </div>
+      </div>
+
+      <!-- Status & Name Pill -->
+      <div style="
+        background: #090d16; color: #ffffff; font-size: 8.5px; font-weight: 900;
+        padding: 2.5px 7px; border-radius: 9999px; margin-top: 3px;
+        border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        white-space: nowrap; display: flex; align-items: center; gap: 4px;
+      ">
+        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${isBoarded ? '#60a5fa' : '#34d399'}; box-shadow: 0 0 6px ${isBoarded ? '#60a5fa' : '#34d399'};"></span>
+        <span>${badgeText}</span>
+        ${speed > 0 ? `<span style="color: #94a3b8; font-family: monospace;">· ${speed}km/h</span>` : ''}
+      </div>
+    </div>
+  `;
+
+  return L.divIcon({
+    html,
+    className: 'active-assigned-vehicle-marker',
+    iconSize: [68, 70],
+    iconAnchor: [34, 28],
+    popupAnchor: [0, -28],
   });
 }
 
@@ -125,38 +240,52 @@ const MOCK_PASSENGERS = [
 ];
 
 function createPickupIcon(label = 'YOU (PICKUP)', userImage = null, userName = 'You') {
+  // Format clean user-facing location pill
+  const cleanLabel = (label && label !== 'YOU' && label !== 'You')
+    ? (label.toUpperCase().includes('YOU') ? label : `YOU · ${label}`)
+    : 'YOU (PICKUP)';
+
   const avatarHtml = userImage ? `
     <img src="${userImage}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
   ` : `
-    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; color: #ffffff; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 50%;">
-      ${userName ? userName.charAt(0).toUpperCase() : '👤'}
+    <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 50%;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="none" style="margin-top: 1px;">
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+      </svg>
+      <span style="font-size: 8px; font-weight: 900; line-height: 1; letter-spacing: 0.8px; color: #ffffff; margin-top: -1px; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">YOU</span>
     </div>
   `;
 
   const html = `
     <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
+      <!-- Location & YOU Top Badge -->
       <div style="
-        background: #1d4ed8; color: #ffffff; font-size: 9px; font-weight: 800;
-        padding: 3px 8px; border-radius: 9999px; box-shadow: 0 3px 12px rgba(29,78,216,0.5);
-        margin-bottom: 4px; white-space: nowrap; border: 1.5px solid #ffffff;
+        background: #1d4ed8; color: #ffffff; font-size: 9.5px; font-weight: 800;
+        padding: 3.5px 9px; border-radius: 9999px; box-shadow: 0 4px 14px rgba(29,78,216,0.55);
+        margin-bottom: 4px; white-space: nowrap; border: 2px solid #ffffff;
         display: flex; align-items: center; gap: 4px; letter-spacing: 0.3px;
       ">
         <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #60a5fa; box-shadow: 0 0 6px #60a5fa;"></span>
-        ${label}
+        <span>📍 ${cleanLabel}</span>
       </div>
-      <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+
+      <!-- Pulsing Radar Puck Container -->
+      <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+        <!-- Concentric Ping Wave -->
         <div style="
-          position: absolute; inset: -8px; border-radius: 50%;
-          background: rgba(37,99,235,0.28);
+          position: absolute; inset: -10px; border-radius: 50%;
+          background: rgba(37,99,235,0.25);
           animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
         "></div>
+        <!-- Dashed Accuracy Ring -->
         <div style="
           position: absolute; inset: -3px; border-radius: 50%;
-          border: 2px dashed rgba(37,99,235,0.7);
+          border: 2px dashed rgba(59,130,246,0.8);
         "></div>
+        <!-- Central YOU Disc -->
         <div style="
-          width: 36px; height: 36px; border-radius: 50%;
-          border: 3px solid #ffffff; box-shadow: 0 4px 14px rgba(37,99,235,0.6);
+          width: 38px; height: 38px; border-radius: 50%;
+          border: 3px solid #ffffff; box-shadow: 0 4px 16px rgba(37,99,235,0.65), 0 0 0 2px rgba(37,99,235,0.4);
           overflow: hidden; display: flex; align-items: center; justify-content: center;
           background: #1e3a8a;
         ">
@@ -165,7 +294,29 @@ function createPickupIcon(label = 'YOU (PICKUP)', userImage = null, userName = '
       </div>
     </div>
   `;
-  return L.divIcon({ html, className: '', iconSize: [96, 68], iconAnchor: [48, 60], popupAnchor: [0, -56] });
+  return L.divIcon({ html, className: '', iconSize: [110, 72], iconAnchor: [55, 62], popupAnchor: [0, -56] });
+}
+
+function createOriginWaypointIcon(label = 'Trip Origin') {
+  const html = `
+    <div style="display: flex; flex-direction: column; align-items: center; pointer-events: none;">
+      <div style="
+        background: #0f172a; color: #94a3b8; font-size: 8.5px; font-weight: 800;
+        padding: 2px 7px; border-radius: 9999px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        margin-bottom: 3px; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); letter-spacing: 0.3px;
+        display: flex; align-items: center; gap: 3px;
+      ">
+        <span style="color: #10b981;">🏁</span>
+        <span>Start: ${label}</span>
+      </div>
+      <div style="
+        width: 18px; height: 18px; border-radius: 50%;
+        background: #10b981; border: 2.5px solid #ffffff;
+        box-shadow: 0 2px 8px rgba(16,185,129,0.5);
+      "></div>
+    </div>
+  `;
+  return L.divIcon({ html, className: '', iconSize: [96, 42], iconAnchor: [48, 38], popupAnchor: [0, -34] });
 }
 
 function createPassengerIcon(passenger) {
@@ -270,7 +421,7 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
       setIsExploring?.(false);
       if (bounds && bounds.length >= 2) {
         try {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true });
+          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15, animate: true });
         } catch (e) {
           if (center?.lat && center?.lng) {
             map.flyTo([center.lat, center.lng], zoom || 15, { duration: 0.8 });
@@ -282,31 +433,34 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
     }
   }, [recenterTrigger, bounds, center, zoom, map, setIsExploring]);
 
-  // Handle initial framing and explicit route destination/pickup changes
+  // Handle explicit route destination/pickup changes and search location animations
   useEffect(() => {
-    // If the user has manually panned or zoomed to inspect streets, DO NOT override!
-    if (isUserInteractingRef.current || isExploring) {
-      return;
-    }
-
     if (bounds && bounds.length >= 2) {
       const boundsKey = `${bounds[0][0].toFixed(3)},${bounds[0][1].toFixed(3)}-${bounds[1][0].toFixed(3)},${bounds[1][1].toFixed(3)}`;
       if (boundsKey !== lastBoundsKey.current) {
         lastBoundsKey.current = boundsKey;
+        isUserInteractingRef.current = false;
+        setIsExploring?.(false);
         try {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: !isInitialMount.current });
-        } catch (e) {}
+          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15, animate: true });
+        } catch (e) {
+          if (center?.lat && center?.lng) {
+            map.flyTo([center.lat, center.lng], zoom || 14, { duration: 1.0 });
+          }
+        }
         isInitialMount.current = false;
       }
     } else if (center?.lat && center?.lng) {
-      const centerKey = `${center.lat.toFixed(3)},${center.lng.toFixed(3)}`;
+      const centerKey = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`;
       if (centerKey !== lastCenterKey.current) {
         lastCenterKey.current = centerKey;
-        map.setView([center.lat, center.lng], zoom || map.getZoom() || 15, { animate: !isInitialMount.current });
+        isUserInteractingRef.current = false;
+        setIsExploring?.(false);
+        map.flyTo([center.lat, center.lng], zoom || 15, { duration: 1.0 });
         isInitialMount.current = false;
       }
     }
-  }, [bounds, center, zoom, map, isExploring]);
+  }, [bounds, center, zoom, map, setIsExploring]);
 
   return null;
 }
@@ -436,11 +590,16 @@ export default function LiveMap({
   userName,
   showNearbyPassengers = true,
   onRecenterGPS,
+  rideStage = null, // 'DRIVER_APPROACHING' | 'DRIVER_ARRIVED' | 'RIDE_STARTED' | 'RIDE_COMPLETED'
+  activeRide = null,
+  activeDriverEta = null,
+  activeDriverDistance = null,
+  activeDriverSpeed = null,
   children,
 }) {
   const { drivers: storeDrivers, center: storeCenter, zoom: storeZoom, selectDriver } = useMapStore();
   const drivers = externalDrivers || storeDrivers;
-  const mapCenter = center || storeCenter || { lat: 22.3149, lng: 87.3105 };
+  const mapCenter = center || (pickup?.lat ? { lat: pickup.lat, lng: pickup.lng } : destination?.lat ? { lat: destination.lat, lng: destination.lng } : storeCenter || { lat: 22.3149, lng: 87.3105 });
   const currentZoom = zoom || storeZoom || 14;
 
   const [activeTheme, setActiveTheme] = useState(tileTheme);
@@ -457,10 +616,13 @@ export default function LiveMap({
   // Moving driver coordinates MUST NEVER force fitBounds or jerk the user's camera view!
   const bounds = useMemo(() => {
     const points = [];
+    if (activeDriverLocation?.lat && activeDriverLocation?.lng && !destination?.lat) {
+      points.push([activeDriverLocation.lat, activeDriverLocation.lng]);
+    }
     if (pickup?.lat && pickup?.lng) points.push([pickup.lat, pickup.lng]);
     if (destination?.lat && destination?.lng) points.push([destination.lat, destination.lng]);
     return points.length >= 2 ? points : null;
-  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng]);
+  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, activeDriverLocation?.lat, activeDriverLocation?.lng]);
 
   // Route polyline points
   const polylinePositions = useMemo(() => {
@@ -479,6 +641,8 @@ export default function LiveMap({
   }, [routeCoordinates, pickup, destination]);
 
   const tileConfig = TILE_PROVIDERS[activeTheme] || TILE_PROVIDERS.light || TILE_PROVIDERS.voyager;
+  const isPassengerOnBoard = rideStage === 'RIDE_STARTED' || activeRide?.status === 'RIDE_STARTED';
+  const isTripCompleted = rideStage === 'RIDE_COMPLETED' || activeRide?.status === 'RIDE_COMPLETED';
 
   return (
     <div style={{ height }} className={`relative w-full h-full bg-slate-100 overflow-hidden ${className}`}>
@@ -493,6 +657,58 @@ export default function LiveMap({
             <Crosshair size={13} className="text-blue-600 animate-spin" />
             <span>Exploring Map · Tap to Re-center</span>
           </button>
+        </div>
+      )}
+
+      {/* ── REAL-TIME ON-MAP FLOATING TRIP HUD (Only during active passenger rides) ── */}
+      {activeDriverLocation && (activeRide || rideStage) && (
+        <div className="absolute top-3 left-3 z-[400] max-w-xs sm:max-w-sm w-full pointer-events-auto animate-in fade-in slide-in-from-top-3 duration-200">
+          <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl text-white">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    isPassengerOnBoard ? 'bg-blue-400' : 'bg-amber-400'
+                  }`} />
+                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                    isPassengerOnBoard ? 'bg-blue-500' : 'bg-amber-500'
+                  }`} />
+                </span>
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-300">
+                  {rideStage === 'DRIVER_APPROACHING' ? 'Driver En Route' :
+                   rideStage === 'DRIVER_ARRIVED' ? 'Driver at Pickup' :
+                   rideStage === 'RIDE_STARTED' ? 'Trip in Progress' :
+                   rideStage === 'RIDE_COMPLETED' ? 'Arrived at Destination' : 'Active Ride'}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono bg-blue-900/60 text-blue-300 border border-blue-700/60 px-2 py-0.5 rounded-full font-bold">
+                {activeDriverSpeed || activeDriverLocation.speed || 32} km/h
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2.5">
+              <div>
+                <p className="text-lg font-black tracking-tight text-white leading-tight">
+                  {activeDriverEta ? `${activeDriverEta} mins` : isPassengerOnBoard ? '14 mins' : '3 mins'}
+                  <span className="text-xs font-medium text-slate-400 ml-1.5">
+                    ({activeDriverDistance ? `${activeDriverDistance} km` : isPassengerOnBoard ? '4.8 km' : '1.2 km'})
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-300 mt-0.5 truncate">
+                  {isPassengerOnBoard ? `Heading to ${destination?.name || 'Destination'}` : `Meeting you at ${pickup?.name || 'Pickup'}`}
+                </p>
+              </div>
+
+              {activeRide?.otp && (
+                <div className="text-right">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Ride OTP</span>
+                  <span className="font-mono text-sm font-black bg-white/10 text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                    {activeRide.otp}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -547,8 +763,8 @@ export default function LiveMap({
           </>
         )}
 
-        {/* Fleet Drivers on Map */}
-        {drivers.filter(d => d.status !== 'OFFLINE').map(driver => (
+        {/* Fleet Drivers on Map (Only when not in focused single active ride) */}
+        {(!activeDriverLocation || !isPassengerOnBoard) && drivers.filter(d => d.status !== 'OFFLINE').map(driver => (
           <Marker
             key={driver.id}
             position={[driver.location.lat, driver.location.lng]}
@@ -563,47 +779,84 @@ export default function LiveMap({
           </Marker>
         ))}
 
-        {/* Active Assigned Driver in Motion */}
+        {/* Active Assigned Driver in Motion (Animated marker with Heading & Passenger Onboard) */}
         {activeDriverLocation && (
           <Marker
             position={[activeDriverLocation.lat, activeDriverLocation.lng]}
-            icon={createVehicleIcon(activeDriverLocation.category || 'MOTO', 'ON_RIDE', activeDriverLocation.heading || 45)}
+            icon={createActiveRideVehicleIcon(
+              activeDriverLocation.category || activeRide?.driverInfo?.category || 'MOTO',
+              activeDriverLocation.heading || 45,
+              isPassengerOnBoard,
+              activeRide?.driverInfo?.name || 'Driver',
+              activeDriverSpeed || activeDriverLocation.speed || 30
+            )}
           >
             <Popup>
-              <div className="p-2 text-xs font-bold text-slate-900">
-                🚀 Assigned Driver En Route
+              <div className="p-2.5 text-xs font-bold text-slate-900 min-w-[190px]">
+                <div className="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-100">
+                  <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs">
+                    {(activeRide?.driverInfo?.name || 'D').charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-slate-900">{activeRide?.driverInfo?.name || 'Assigned Driver'}</p>
+                    <p className="text-[10px] text-emerald-600">
+                      ★ {activeRide?.driverInfo?.rating || 4.9} · {activeRide?.driverInfo?.vehicle || 'Verified Vehicle'}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-slate-600 font-medium">
+                  {isPassengerOnBoard ? '🚗 Passenger on board · Heading to destination' : '🚖 Approaching pickup point'}
+                </p>
               </div>
             </Popup>
           </Marker>
         )}
 
-        {/* Pickup Marker (With User Image / Avatar Inside Beacon) */}
+        {/* Pickup Marker: Shows live YOU beacon when waiting; transitions to start origin waypoint once in transit or completed */}
         {pickup?.lat && pickup?.lng && (
-          <Marker
-            position={[pickup.lat, pickup.lng]}
-            icon={createPickupIcon(
-              pickup.name ? pickup.name.split(',')[0] : 'YOU (PICKUP)',
-              pickup.userImage || user?.avatar || userImage,
-              pickup.userName || user?.name || userName || 'You'
+          <>
+            {!isPassengerOnBoard && !isTripCompleted && (
+              <Circle
+                center={[pickup.lat, pickup.lng]}
+                radius={40}
+                pathOptions={{
+                  color: '#2563eb',
+                  fillColor: '#3b82f6',
+                  fillOpacity: 0.15,
+                  weight: 1.5,
+                  dashArray: '4, 4',
+                }}
+              />
             )}
-          >
-            <Popup>
-              <div className="p-2 text-xs font-bold text-slate-900 min-w-[170px]">
-                <div className="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-100">
-                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                    {(user?.name || userName || 'Y').charAt(0)}
+            <Marker
+              position={[pickup.lat, pickup.lng]}
+              icon={isPassengerOnBoard || isTripCompleted
+                ? createOriginWaypointIcon(pickup.name ? pickup.name.split(',')[0] : 'Origin')
+                : createPickupIcon(
+                    pickup.name ? pickup.name.split(',')[0] : 'YOU (PICKUP)',
+                    pickup.userImage || user?.avatar || userImage,
+                    pickup.userName || user?.name || userName || 'You'
+                  )
+              }
+            >
+              <Popup>
+                <div className="p-2 text-xs font-bold text-slate-900 min-w-[170px]">
+                  <div className="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-100">
+                    <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                      🏁
+                    </div>
+                    <div>
+                      <p className="text-slate-900 font-black">Trip Origin</p>
+                      <p className="text-[10px] text-slate-500">Boarding Location</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-slate-900 font-black">{user?.name || userName || 'Your Live Position'}</p>
-                    <p className="text-[10px] text-emerald-600 font-bold">● Live GPS Beacon Active</p>
-                  </div>
+                  <p className="text-slate-600 font-medium">
+                    📍 {pickup.name || pickup.address || 'Your Pickup Location'}
+                  </p>
                 </div>
-                <p className="text-slate-600 font-medium">
-                  📍 {pickup.name || pickup.address || 'Your Selected Pickup Location'}
-                </p>
-              </div>
-            </Popup>
-          </Marker>
+              </Popup>
+            </Marker>
+          </>
         )}
 
         {/* Nearby Passengers on Campus / City Roads */}
@@ -632,15 +885,41 @@ export default function LiveMap({
           </Marker>
         ))}
 
-        {/* Destination Marker */}
+        {/* Destination Marker: Transitions to live YOU ARRIVED beacon once trip is completed! */}
         {destination?.lat && destination?.lng && (
-          <Marker position={[destination.lat, destination.lng]} icon={createDestIcon(destination.name ? destination.name.split('(')[0] : 'DESTINATION')}>
-            <Popup>
-              <div className="p-2 text-xs font-bold text-slate-900">
-                🏁 Destination: {destination.name || destination.address || 'Dropoff Point'}
-              </div>
-            </Popup>
-          </Marker>
+          <>
+            {isTripCompleted && (
+              <Circle
+                center={[destination.lat, destination.lng]}
+                radius={40}
+                pathOptions={{
+                  color: '#2563eb',
+                  fillColor: '#3b82f6',
+                  fillOpacity: 0.18,
+                  weight: 2,
+                  dashArray: '4, 4',
+                }}
+              />
+            )}
+            <Marker
+              position={[destination.lat, destination.lng]}
+              icon={isTripCompleted
+                ? createPickupIcon(
+                    destination.name ? `YOU (ARRIVED) · ${destination.name.split(',')[0]}` : 'YOU (ARRIVED)',
+                    pickup?.userImage || user?.avatar || userImage,
+                    pickup?.userName || user?.name || userName || 'You'
+                  )
+                : createDestIcon(destination.name ? destination.name.split('(')[0] : 'DESTINATION')
+              }
+            >
+              <Popup>
+                <div className="p-2 text-xs font-bold text-slate-900">
+                  {isTripCompleted ? '📍 You Arrived: ' : '🏁 Destination: '}
+                  {destination.name || destination.address || 'Dropoff Point'}
+                </div>
+              </Popup>
+            </Marker>
+          </>
         )}
 
         {/* Surge Zone Heatmap Circles */}

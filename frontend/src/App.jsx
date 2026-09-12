@@ -1,6 +1,58 @@
+import React, { Component } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('App ErrorBoundary caught error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center font-sans">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto text-2xl">
+              ⚠️
+            </div>
+            <h2 className="text-lg font-black text-white">Something went wrong</h2>
+            <p className="text-xs text-slate-400">
+              {this.state.error?.message || 'An unexpected error occurred while loading this view.'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false });
+                  window.location.reload();
+                }}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-colors"
+              >
+                Reload Page
+              </button>
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false });
+                  window.location.href = '/app/home';
+                }}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-blue-600/30"
+              >
+                Return to Ride
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Layouts
 import PublicLayout from '@/layouts/PublicLayout';
@@ -119,55 +171,57 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<LandingPage />} />
-          <Route element={<PublicLayout />}>
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          </Route>
+        <ErrorBoundary>
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<LandingPage />} />
+            <Route element={<PublicLayout />}>
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            </Route>
 
-          {/* User app */}
-          <Route path="/app" element={<RequireRole role="USER"><UserLayout /></RequireRole>}>
-            <Route index element={<Navigate to="/app/home" replace />} />
-            <Route path="home" element={<UserHome />} />
-            <Route path="book" element={<UserHome />} />
-            <Route path="ride/:id" element={<LiveRidePage />} />
-            <Route path="trips" element={<TripsPage />} />
-            <Route path="trips/:id" element={<TripDetailPage />} />
-            <Route path="profile" element={<UserProfile />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+            {/* User app */}
+            <Route path="/app" element={<RequireRole role="USER"><UserLayout /></RequireRole>}>
+              <Route index element={<Navigate to="/app/home" replace />} />
+              <Route path="home" element={<UserHome />} />
+              <Route path="book" element={<UserHome />} />
+              <Route path="ride/:id" element={<LiveRidePage />} />
+              <Route path="trips" element={<TripsPage />} />
+              <Route path="trips/:id" element={<TripDetailPage />} />
+              <Route path="profile" element={<UserProfile />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
 
-          {/* Driver app */}
-          <Route path="/driver" element={<RequireRole role="DRIVER"><DriverLayout /></RequireRole>}>
-            <Route index element={<Navigate to="/driver/dashboard" replace />} />
-            <Route path="dashboard" element={<DriverDashboard />} />
-            <Route path="requests" element={<DriverRequests />} />
-            <Route path="ride/:id" element={<DriverRideActivePage />} />
-            <Route path="earnings" element={<DriverEarnings />} />
-            <Route path="profile" element={<DriverProfilePage />} />
-          </Route>
+            {/* Driver app */}
+            <Route path="/driver" element={<RequireRole role="DRIVER"><DriverLayout /></RequireRole>}>
+              <Route index element={<Navigate to="/driver/dashboard" replace />} />
+              <Route path="dashboard" element={<DriverDashboard />} />
+              <Route path="requests" element={<DriverRequests />} />
+              <Route path="ride/:id" element={<DriverRideActivePage />} />
+              <Route path="earnings" element={<DriverEarnings />} />
+              <Route path="profile" element={<DriverProfilePage />} />
+            </Route>
 
-          {/* Admin panel */}
-          <Route path="/admin" element={<RequireRole role="ADMIN"><AdminLayout /></RequireRole>}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="live-map" element={<AdminLiveMap />} />
-            <Route path="rides" element={<AdminRides />} />
-            <Route path="drivers" element={<AdminDrivers />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="pricing" element={<AdminPricing />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-            <Route path="incidents" element={<AdminIncidents />} />
-            <Route path="settings" element={<AdminSettingsPage />} />
-          </Route>
+            {/* Admin panel */}
+            <Route path="/admin" element={<RequireRole role="ADMIN"><AdminLayout /></RequireRole>}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="live-map" element={<AdminLiveMap />} />
+              <Route path="rides" element={<AdminRides />} />
+              <Route path="drivers" element={<AdminDrivers />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="pricing" element={<AdminPricing />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="incidents" element={<AdminIncidents />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+            </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
   );

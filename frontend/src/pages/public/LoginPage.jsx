@@ -43,20 +43,50 @@ const FEATURES = [
 ];
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('rahul@veloq.com');
+  const [password, setPassword] = useState('password123');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [role, setRole] = useState('USER');
-  const { login } = useAuthStore();
+  const { loginWithCredentials } = useAuthStore();
   const navigate = useNavigate();
+
+  const fillRoleCredentials = (selectedRole) => {
+    setRole(selectedRole);
+    setErrorMsg('');
+    if (selectedRole === 'ADMIN') {
+      setEmail('admin@veloq.com');
+      setPassword('admin123');
+    } else if (selectedRole === 'DRIVER') {
+      setEmail('rajesh@veloq.com');
+      setPassword('password123');
+    } else {
+      setEmail('rahul@veloq.com');
+      setPassword('password123');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    login(role);
-    navigate(role === 'ADMIN' ? '/admin/dashboard' : role === 'DRIVER' ? '/driver/dashboard' : '/?fromLogin=true&askLocation=true');
+    setErrorMsg('');
+
+    const targetEmail = email.trim() || (role === 'ADMIN' ? 'admin@veloq.com' : role === 'DRIVER' ? 'rajesh@veloq.com' : 'rahul@veloq.com');
+    const targetPassword = password || (role === 'ADMIN' ? 'admin123' : 'password123');
+
+    const result = await loginWithCredentials({
+      email: targetEmail,
+      password: targetPassword,
+      expectedRole: role,
+    });
+
+    setLoading(false);
+    if (result.success) {
+      navigate(result.redirectUrl || (role === 'ADMIN' ? '/admin/dashboard' : role === 'DRIVER' ? '/driver/dashboard' : '/app/home'));
+    } else {
+      setErrorMsg(result.error || 'Invalid credentials');
+    }
   };
 
   const activeRole = ROLES.find(r => r.id === role);
@@ -138,12 +168,12 @@ export default function LoginPage() {
           </div>
 
           {/* Role Selector */}
-          <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="grid grid-cols-3 gap-2 mb-4">
             {ROLES.map(r => (
               <button
                 key={r.id}
                 type="button"
-                onClick={() => setRole(r.id)}
+                onClick={() => fillRoleCredentials(r.id)}
                 className={clsx(
                   'flex flex-col items-center gap-1 p-3 rounded-2xl border text-xs font-bold transition-all duration-200',
                   role === r.id ? r.active : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50',
@@ -154,6 +184,20 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
+
+          {/* Quick Pre-fill Credentials Pill */}
+          <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-slate-600">
+            <span className="font-semibold text-slate-700">Pre-filled Account:</span>
+            <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-800 font-bold">
+              {role === 'ADMIN' ? 'admin@veloq.com' : role === 'DRIVER' ? 'rajesh@veloq.com' : 'rahul@veloq.com'}
+            </span>
+          </div>
+
+          {errorMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+              {errorMsg}
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -200,7 +244,7 @@ export default function LoginPage() {
               {loading ? (
                 <><Spinner size="sm" className="text-white" /> Signing in…</>
               ) : (
-                <>Sign in as {activeRole?.label}</>
+                <>Sign in as {activeRole?.label} →</>
               )}
             </button>
           </form>
@@ -212,7 +256,7 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-5 border-t border-slate-200">
             <p className="text-center text-xs text-slate-400">
-              🔒 Demo mode — any credentials work for all 3 roles
+              🔒 Connected to PostgreSQL backend · Role-isolated routes
             </p>
           </div>
         </div>
