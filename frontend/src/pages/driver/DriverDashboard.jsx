@@ -118,7 +118,7 @@ function RequestCountdown({ initialSeconds = 45, onExpire }) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+      <div className="w-16 bg-slate-200 h-1.5 rounded-full overflow-hidden">
         <div
           className={clsx(
             'h-full transition-all duration-1000',
@@ -252,8 +252,8 @@ export default function DriverDashboard() {
     : 0;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] relative overflow-hidden bg-slate-950 text-slate-100 font-sans select-none">
-      {/* ── State-of-the-Art Floating Driver Cockpit Bar ────────────────────────── */}
+    <div className="flex flex-col h-[calc(100vh-4rem)] relative overflow-hidden bg-slate-50 text-slate-900 font-sans select-none">
+      {/* ── State-of-the-Art Floating Driver Cockpit Bar (Pristine Light Theme) ─── */}
       <header className="absolute top-3 inset-x-3 z-30 pointer-events-auto flex items-center justify-between gap-2 flex-wrap">
         {/* Left Cluster: Status + Vehicle + Territory */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
@@ -261,37 +261,38 @@ export default function DriverDashboard() {
           <button
             onClick={status === 'OFFLINE' ? goOnline : goOffline}
             className={clsx(
-              'flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-lg active:scale-95 border',
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black transition-all shadow-sm active:scale-95 border cursor-pointer',
               status === 'OFFLINE'
-                ? 'bg-slate-900/90 backdrop-blur-md border-slate-700 text-slate-300 hover:border-emerald-500/60 hover:text-white'
-                : 'bg-emerald-600 border-emerald-400 text-white shadow-emerald-600/30'
+                ? 'bg-white/95 backdrop-blur-md border-slate-300 text-slate-700 hover:border-emerald-500 hover:text-emerald-700'
+                : 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-600/20'
             )}
             title="Click to toggle your availability"
           >
             <span
               className={clsx(
                 'w-2 h-2 rounded-full',
-                status !== 'OFFLINE' ? 'bg-white animate-ping' : 'bg-slate-500'
+                status !== 'OFFLINE' ? 'bg-white animate-ping' : 'bg-slate-400'
               )}
             />
             <span>{status === 'OFFLINE' ? 'Offline' : 'Online'}</span>
           </button>
 
           {/* Vehicle Mode Pill */}
-          <div className="bg-slate-900/90 backdrop-blur-xl p-1 rounded-full border border-slate-700/80 shadow-lg flex items-center gap-0.5">
+          <div className="bg-white/95 backdrop-blur-xl p-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-0.5">
             {[
               ['BIKE', '🏍️', 'Bike'],
               ['CAR', '🚗', 'Cab'],
               ['AUTO', '🛺', 'Auto'],
+              ['XL', '🚐', 'XL'],
             ].map(([type, emoji, label]) => (
               <button
                 key={type}
                 onClick={() => setVehicleType(type)}
                 className={clsx(
-                  'px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1',
+                  'px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer',
                   vehicleType === type
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 )}
               >
                 <span>{emoji}</span>
@@ -301,14 +302,14 @@ export default function DriverDashboard() {
           </div>
 
           {/* Operating Scope Pill */}
-          <div className="bg-slate-900/90 backdrop-blur-xl p-1 rounded-full border border-slate-700/80 shadow-lg flex items-center gap-0.5">
+          <div className="bg-white/95 backdrop-blur-xl p-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-0.5">
             <button
               onClick={() => handleScopeChange('IIT_KGP')}
               className={clsx(
-                'px-2.5 py-1 rounded-full text-xs font-bold transition-all',
+                'px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer',
                 operatingScope === 'IIT_KGP'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               )}
             >
               🎓 IIT KGP
@@ -316,10 +317,10 @@ export default function DriverDashboard() {
             <button
               onClick={() => handleScopeChange('PAN_INDIA')}
               className={clsx(
-                'px-2.5 py-1 rounded-full text-xs font-bold transition-all',
+                'px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer',
                 operatingScope === 'PAN_INDIA'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                  ? 'bg-indigo-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               )}
             >
               🇮🇳 All-India
@@ -330,17 +331,17 @@ export default function DriverDashboard() {
         {/* Right Cluster: Radius + GPS + Sound + Dispatch Simulator */}
         <div className="flex items-center gap-1.5 ml-auto">
           {/* Pickup Radius Selector */}
-          <div className="bg-slate-900/90 backdrop-blur-xl px-2 py-1 rounded-full border border-slate-700/80 shadow-lg flex items-center gap-1 text-xs">
-            <span className="text-[11px] text-slate-400 font-medium hidden md:inline">Radius:</span>
+          <div className="bg-white/95 backdrop-blur-xl px-2 py-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-1 text-xs">
+            <span className="text-[11px] text-slate-500 font-bold hidden md:inline">Radius:</span>
             {[3, 5, 10, 15].map((rad) => (
               <button
                 key={rad}
                 onClick={() => setPickupRadiusKm(rad)}
                 className={clsx(
-                  'px-1.5 py-0.5 rounded-full text-[11px] font-bold transition-all',
+                  'px-1.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer',
                   pickupRadiusKm === rad
                     ? 'bg-emerald-600 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 )}
               >
                 {rad}k
@@ -351,20 +352,20 @@ export default function DriverDashboard() {
           {/* GPS Recenter */}
           <button
             onClick={detectDriverGps}
-            className="bg-slate-900/90 backdrop-blur-xl px-2.5 py-1.5 rounded-full border border-slate-700/80 text-xs font-bold text-emerald-400 hover:text-white flex items-center gap-1.5 shadow-lg transition-all"
+            className="bg-white/95 backdrop-blur-xl px-2.5 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
             title="Center GPS on your vehicle"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="hidden sm:inline">GPS</span>
           </button>
 
           {/* Sound Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="bg-slate-900/90 backdrop-blur-xl p-1.5 rounded-full border border-slate-700/80 text-slate-400 hover:text-white shadow-lg transition-all"
+            className="bg-white/95 backdrop-blur-xl p-1.5 rounded-full border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-sm transition-all cursor-pointer"
             title={soundEnabled ? 'Audio alerts active' : 'Audio alerts muted'}
           >
-            {soundEnabled ? <Volume2 size={15} className="text-emerald-400" /> : <VolumeX size={15} />}
+            {soundEnabled ? <Volume2 size={15} className="text-emerald-600" /> : <VolumeX size={15} />}
           </button>
 
           {/* Simulation Dispatch Trigger */}
@@ -372,10 +373,10 @@ export default function DriverDashboard() {
             <button
               onClick={() => setShowSimMenu(!showSimMenu)}
               className={clsx(
-                'px-2.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg transition-all border',
+                'px-2.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm transition-all border cursor-pointer',
                 showSimMenu
-                  ? 'bg-amber-500 text-slate-950 border-amber-400'
-                  : 'bg-slate-900/90 backdrop-blur-xl border-slate-700/80 text-amber-400 hover:text-white'
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-white/95 backdrop-blur-xl border-slate-200 text-amber-600 hover:bg-amber-50'
               )}
               title="Test ride dispatch simulation"
             >
@@ -384,34 +385,34 @@ export default function DriverDashboard() {
             </button>
 
             {showSimMenu && (
-              <div className="absolute right-0 top-10 z-40 bg-slate-900/98 backdrop-blur-2xl border border-amber-500/40 rounded-2xl p-2 shadow-2xl w-64 animate-in fade-in-50 zoom-in-95">
-                <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-slate-800">
-                  <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
+              <div className="absolute right-0 top-10 z-40 bg-white border border-amber-300 rounded-2xl p-2 shadow-xl w-64 animate-in fade-in-50 zoom-in-95 text-slate-800">
+                <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-slate-100">
+                  <span className="text-[11px] font-black text-amber-700 uppercase tracking-wider flex items-center gap-1">
                     <Zap size={11} /> Instant Test Dispatches
                   </span>
-                  <button onClick={() => setShowSimMenu(false)} className="text-slate-500 hover:text-white">
+                  <button onClick={() => setShowSimMenu(false)} className="text-slate-400 hover:text-slate-700">
                     <X size={12} />
                   </button>
                 </div>
                 <button
                   onClick={() => handleTriggerSpecificRequest('100KM_OUTSTATION')}
-                  className="w-full text-left p-2 rounded-xl hover:bg-amber-500/20 text-slate-200 hover:text-amber-200 text-xs font-semibold transition-all flex items-center justify-between"
+                  className="w-full text-left p-2 rounded-xl hover:bg-amber-50 text-slate-700 hover:text-amber-900 text-xs font-semibold transition-all flex items-center justify-between cursor-pointer"
                 >
                   <div>
-                    <p className="font-bold text-white">🛣️ 100+ km Outstation</p>
-                    <p className="text-[10px] text-slate-400">₹2,680 fare · Kolkata Airport</p>
+                    <p className="font-bold text-slate-900">🛣️ 100+ km Outstation</p>
+                    <p className="text-[10px] text-slate-500">₹2,680 fare · Kolkata Airport</p>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-emerald-400">Net ₹2,358</span>
+                  <span className="text-[10px] font-mono font-bold text-emerald-700">Net ₹2,358</span>
                 </button>
                 <button
                   onClick={() => handleTriggerSpecificRequest('LOCAL')}
-                  className="w-full text-left p-2 rounded-xl hover:bg-blue-500/20 text-slate-200 hover:text-blue-200 text-xs font-semibold transition-all flex items-center justify-between mt-1"
+                  className="w-full text-left p-2 rounded-xl hover:bg-blue-50 text-slate-700 hover:text-blue-900 text-xs font-semibold transition-all flex items-center justify-between mt-1 cursor-pointer"
                 >
                   <div>
-                    <p className="font-bold text-white">⚡ Campus Local Ride</p>
-                    <p className="text-[10px] text-slate-400">₹28 fare · Tech Market</p>
+                    <p className="font-bold text-slate-900">⚡ Campus Local Ride</p>
+                    <p className="text-[10px] text-slate-500">₹28 fare · Tech Market</p>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-emerald-400">Net ₹25</span>
+                  <span className="text-[10px] font-mono font-bold text-emerald-700">Net ₹25</span>
                 </button>
               </div>
             )}
@@ -419,11 +420,37 @@ export default function DriverDashboard() {
         </div>
       </header>
 
+      {/* ── Active Ride In-Progress Banner ─────────────────────────────────── */}
+      {activeRide && (
+        <div className="absolute top-16 inset-x-3 z-30 pointer-events-auto max-w-xl mx-auto">
+          <Link
+            to="/driver/ride"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-2xl shadow-xl flex items-center justify-between border border-emerald-400/80 font-bold transition-all animate-pulse"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-white animate-ping" />
+              <div>
+                <p className="text-sm font-black text-white leading-tight">
+                  Active Ride in Progress: {activeRide.userName || 'Passenger'}
+                </p>
+                <p className="text-[11px] text-emerald-100 font-semibold mt-0.5">
+                  Heading to: {activeRide.destination?.name || activeRide.destination?.address || 'Destination'}
+                </p>
+              </div>
+            </div>
+            <span className="bg-white text-emerald-700 px-3.5 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-sm">
+              <span>Resume Trip</span>
+              <ArrowRight size={14} />
+            </span>
+          </Link>
+        </div>
+      )}
+
       {/* ── Main Map Canvas ─────────────────────────────────────────────────── */}
       <div className="absolute inset-0 z-0">
         <Suspense
           fallback={
-            <div className="bg-slate-950 w-full h-full flex items-center justify-center">
+            <div className="bg-slate-100 w-full h-full flex items-center justify-center">
               <Spinner size="lg" />
             </div>
           }
@@ -442,26 +469,26 @@ export default function DriverDashboard() {
       {/* ── Central Dispatch Modal (Single Source of Truth, Uber Driver Style) ─── */}
       {status === 'AVAILABLE' && !activeRide && currentRequest && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-3 pointer-events-auto animate-in slide-in-from-bottom-5 duration-300">
-          <div className="bg-slate-900/95 backdrop-blur-2xl rounded-3xl border-2 border-emerald-500/60 p-4 sm:p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] ring-1 ring-emerald-400/20">
+          <div className="bg-white/98 backdrop-blur-2xl rounded-3xl border-2 border-emerald-500 p-4 sm:p-5 shadow-2xl ring-1 ring-emerald-500/20 text-slate-900">
             {/* Header Badge + Countdown Timer */}
-            <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-800">
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-xl">
                   {currentRequest.category === 'BIKE' ? '🏍️' : '🚗'}
                 </span>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-700">
                       {currentRequest.category === 'BIKE' ? 'Bike Dispatch' : 'Cab Dispatch'}
                     </span>
                     {currentRequest.is100KmOutstation && (
-                      <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/40">
+                      <span className="text-[10px] bg-amber-50 text-amber-800 font-black px-2 py-0.5 rounded-full border border-amber-200">
                         100+ km Outstation
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    Pickup is <strong className="text-emerald-300 font-semibold">{currentRequest.pickupDistanceToDriver || 0.7} km</strong> from you (~{currentRequest.pickupEtaMins || 2} mins away)
+                  <p className="text-[11px] text-slate-500">
+                    Pickup is <strong className="text-emerald-700 font-bold">{currentRequest.pickupDistanceToDriver || 0.7} km</strong> from you (~{currentRequest.pickupEtaMins || 2} mins away)
                   </p>
                 </div>
               </div>
@@ -470,20 +497,20 @@ export default function DriverDashboard() {
             </div>
 
             {/* Earnings Spotlight */}
-            <div className="my-3.5 bg-slate-950/80 rounded-2xl p-3 border border-slate-800 flex items-center justify-between">
+            <div className="my-3.5 bg-emerald-50/70 rounded-2xl p-3 border border-emerald-200 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Net Earnings</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Your Net Earnings</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white tracking-tight">₹{netEarnings}</span>
-                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="text-3xl font-black text-emerald-700 tracking-tight">₹{netEarnings}</span>
+                  <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
                     Net (88%)
                   </span>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs font-mono text-slate-400">Gross: ₹{currentRequest.estimatedFare}</p>
-                <p className="text-[10px] text-slate-500">12% platform fee · Instant UPI</p>
-                <div className="flex items-center justify-end gap-1 text-[11px] font-bold text-blue-400 mt-0.5">
+                <p className="text-xs font-mono font-bold text-slate-600">Gross: ₹{currentRequest.estimatedFare}</p>
+                <p className="text-[10px] text-slate-500 font-medium">12% platform fee · Instant UPI</p>
+                <div className="flex items-center justify-end gap-1 text-[11px] font-bold text-blue-700 mt-0.5">
                   <span>{currentRequest.estimatedDistance} km</span>
                   <span>·</span>
                   <span>{currentRequest.estimatedDuration} mins</span>
@@ -495,37 +522,37 @@ export default function DriverDashboard() {
             <div className="space-y-2.5 my-3 pl-1">
               {/* Pickup */}
               <div className="flex items-start gap-2.5">
-                <div className="w-4 h-4 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <div className="w-4 h-4 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pickup</span>
-                  <p className="text-xs font-bold text-white truncate">{currentRequest.pickup?.name}</p>
+                  <p className="text-xs font-bold text-slate-900 truncate">{currentRequest.pickup?.name}</p>
                 </div>
               </div>
 
               {/* Destination */}
               <div className="flex items-start gap-2.5">
-                <div className="w-4 h-4 rounded-full bg-rose-500/20 border-2 border-rose-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                <div className="w-4 h-4 rounded-full bg-rose-100 border-2 border-rose-500 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-600" />
                 </div>
                 <div className="text-left flex-1 min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Destination</span>
-                  <p className="text-xs font-bold text-white truncate">{currentRequest.destination?.name}</p>
+                  <p className="text-xs font-bold text-slate-900 truncate">{currentRequest.destination?.name}</p>
                 </div>
               </div>
             </div>
 
             {/* Passenger & Proximity Pill */}
-            <div className="bg-slate-800/60 rounded-xl px-3 py-2 border border-slate-700/60 flex items-center justify-between text-xs text-slate-300 mb-4">
+            <div className="bg-slate-50 rounded-xl px-3 py-2 border border-slate-200 flex items-center justify-between text-xs text-slate-700 mb-4">
               <div className="flex items-center gap-2 truncate">
-                <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center font-bold text-[11px] text-white">
+                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center font-bold text-[11px] text-slate-700">
                   {currentRequest.userName?.charAt(0) || 'P'}
                 </div>
-                <span className="font-semibold text-white truncate">{currentRequest.userName}</span>
-                <span className="text-amber-400 font-bold shrink-0">★ {currentRequest.userRating || 4.9}</span>
+                <span className="font-bold text-slate-900 truncate">{currentRequest.userName}</span>
+                <span className="text-amber-600 font-bold shrink-0">★ {currentRequest.userRating || 4.9}</span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/80 shrink-0">
+              <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
                 ⚡ Proximity Match
               </span>
             </div>
@@ -534,13 +561,13 @@ export default function DriverDashboard() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => clearRequests()}
-                className="w-1/3 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white text-xs font-bold transition-all border border-slate-700"
+                className="w-1/3 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-bold transition-all border border-slate-200 cursor-pointer"
               >
                 Decline
               </button>
               <button
                 onClick={() => handleAcceptTrip(currentRequest)}
-                className="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
+                className="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-extrabold text-xs shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <CheckCircle2 size={16} />
                 <span>Accept & Start Trip</span>
@@ -554,27 +581,27 @@ export default function DriverDashboard() {
       {/* ── Idle Proximity Radar Card (When Online & No Request) ─────────────── */}
       {status === 'AVAILABLE' && !activeRide && !currentRequest && (
         <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto px-3 w-full max-w-md">
-          <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-3 shadow-2xl flex items-center justify-between gap-3">
+          <div className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl p-3 shadow-xl flex items-center justify-between gap-3 text-slate-800">
             <div className="flex items-center gap-2.5">
               <div className="relative flex items-center justify-center shrink-0">
                 <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping absolute" />
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 relative" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 relative" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white">Radar Active</span>
-                  <span className="text-[10px] text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded font-mono border border-emerald-800">
+                  <span className="text-xs font-black text-slate-900">Radar Active</span>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded font-mono font-bold border border-emerald-200">
                     {pickupRadiusKm} km range
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400">Listening for passenger requests near your GPS</p>
+                <p className="text-[10px] text-slate-500 font-medium">Listening for passenger requests near your GPS</p>
               </div>
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => handleTriggerSpecificRequest('LOCAL')}
-                className="px-2 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white text-[11px] font-bold transition-all border border-blue-500/30 flex items-center gap-0.5"
+                className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold transition-all border border-blue-200 flex items-center gap-0.5 cursor-pointer"
                 title="Simulate Local Trip (₹28)"
               >
                 <Zap size={11} />
@@ -582,7 +609,7 @@ export default function DriverDashboard() {
               </button>
               <button
                 onClick={() => handleTriggerSpecificRequest('100KM_OUTSTATION')}
-                className="px-2 py-1 rounded-lg bg-amber-500/30 hover:bg-amber-500 text-amber-300 hover:text-slate-950 text-[11px] font-bold transition-all border border-amber-500/30 flex items-center gap-0.5"
+                className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold transition-all border border-amber-200 flex items-center gap-0.5 cursor-pointer"
                 title="Simulate 100+ km Outstation (₹2,680)"
               >
                 <span>Outstation</span>
@@ -595,12 +622,12 @@ export default function DriverDashboard() {
       {/* ── Offline Prompt ───────────────────────────────────────────────────── */}
       {status === 'OFFLINE' && (
         <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-          <div className="bg-slate-900/95 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-slate-700 shadow-2xl flex items-center gap-3 text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-slate-500" />
+          <div className="bg-white/95 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-slate-200 shadow-xl flex items-center gap-3 text-xs text-slate-700 font-medium">
+            <span className="w-2 h-2 rounded-full bg-slate-400" />
             <span>Cockpit Offline · Dispatches Paused</span>
             <button
               onClick={goOnline}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
             >
               Go Online
             </button>
@@ -630,45 +657,45 @@ export default function DriverDashboard() {
         </div>
       )}
 
-      {/* ── Sleek Collapsible Bottom Metrics Bar ─────────────────────────────── */}
-      <footer className="absolute bottom-0 inset-x-0 z-30 pointer-events-auto bg-slate-950/95 backdrop-blur-2xl border-t border-slate-800 text-slate-200 transition-all duration-300">
+      {/* ── Sleek Collapsible Bottom Metrics Bar (Pristine Light Theme) ─────── */}
+      <footer className="absolute bottom-0 inset-x-0 z-30 pointer-events-auto bg-white/95 backdrop-blur-2xl border-t border-slate-200 text-slate-800 shadow-md transition-all duration-300">
         {/* Compact Strip Header (Always visible) */}
         <div
           onClick={() => setStatsExpanded(!statsExpanded)}
-          className="px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-900/60 transition-colors"
+          className="px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-4 text-xs font-bold">
-            <span className="flex items-center gap-1 text-emerald-400">
-              <span className="text-slate-400 text-[11px] font-normal">Today's Net:</span>
-              <span>₹{todayEarnings.toLocaleString()}</span>
+            <span className="flex items-center gap-1 text-emerald-700">
+              <span className="text-slate-500 text-[11px] font-semibold">Today's Net:</span>
+              <span className="font-black">₹{todayEarnings.toLocaleString()}</span>
             </span>
-            <span className="hidden sm:inline text-slate-600">|</span>
-            <span className="hidden sm:flex items-center gap-1 text-slate-300">
-              <span className="text-slate-400 text-[11px] font-normal">Trips:</span>
-              <span>{todayRides}</span>
+            <span className="hidden sm:inline text-slate-300">|</span>
+            <span className="hidden sm:flex items-center gap-1 text-slate-800">
+              <span className="text-slate-500 text-[11px] font-semibold">Trips:</span>
+              <span className="font-black">{todayRides}</span>
             </span>
-            <span className="hidden sm:inline text-slate-600">|</span>
-            <span className="hidden md:flex items-center gap-1 text-blue-400">
-              <span className="text-slate-400 text-[11px] font-normal">Online:</span>
-              <span>{Math.floor(onlineMinutes / 60)}h {onlineMinutes % 60}m</span>
+            <span className="hidden sm:inline text-slate-300">|</span>
+            <span className="hidden md:flex items-center gap-1 text-blue-700">
+              <span className="text-slate-500 text-[11px] font-semibold">Online:</span>
+              <span className="font-black">{Math.floor(onlineMinutes / 60)}h {onlineMinutes % 60}m</span>
             </span>
-            <span className="hidden md:inline text-slate-600">|</span>
-            <span className="flex items-center gap-1 text-amber-400">
+            <span className="hidden md:inline text-slate-300">|</span>
+            <span className="flex items-center gap-1 text-amber-600 font-black">
               ★ {rating}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold">
             <Link
               to="/driver/earnings"
               onClick={(e) => e.stopPropagation()}
-              className="text-emerald-400 hover:text-white font-semibold transition-colors flex items-center gap-1 mr-1"
+              className="text-emerald-700 hover:text-emerald-900 font-extrabold transition-colors flex items-center gap-1 mr-1"
             >
               <span>Wallet & UPI</span>
               <ArrowRight size={12} />
             </Link>
             <button
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
               aria-label="Toggle statistics drawer"
             >
               {statsExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -678,22 +705,22 @@ export default function DriverDashboard() {
 
         {/* Expanded Details Drawer */}
         {statsExpanded && (
-          <div className="px-4 pb-4 pt-1 border-t border-slate-900 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center animate-in fade-in-50 duration-200">
-            <div className="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
-              <p className="text-lg font-black text-emerald-400">₹{todayEarnings.toLocaleString()}</p>
-              <p className="text-[10px] text-slate-400">Guaranteed 88% Net</p>
+          <div className="px-4 pb-4 pt-1 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center animate-in fade-in-50 duration-200 bg-white">
+            <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200">
+              <p className="text-lg font-black text-emerald-700">₹{todayEarnings.toLocaleString()}</p>
+              <p className="text-[10px] text-emerald-800 font-bold">Guaranteed 88% Net</p>
             </div>
-            <div className="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
-              <p className="text-lg font-black text-white">{todayRides}</p>
-              <p className="text-[10px] text-slate-400">Completed Trips</p>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+              <p className="text-lg font-black text-slate-900">{todayRides}</p>
+              <p className="text-[10px] text-slate-500 font-bold">Completed Trips</p>
             </div>
-            <div className="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
-              <p className="text-lg font-black text-blue-400">{Math.floor(onlineMinutes / 60)}h {onlineMinutes % 60}m</p>
-              <p className="text-[10px] text-slate-400">Driver Shift Time</p>
+            <div className="bg-blue-50/60 p-2.5 rounded-xl border border-blue-200">
+              <p className="text-lg font-black text-blue-700">{Math.floor(onlineMinutes / 60)}h {onlineMinutes % 60}m</p>
+              <p className="text-[10px] text-blue-800 font-bold">Driver Shift Time</p>
             </div>
-            <div className="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
-              <p className="text-lg font-black text-amber-400">★ {rating}</p>
-              <p className="text-[10px] text-slate-400">Tier 1 Partner Rating</p>
+            <div className="bg-amber-50/60 p-2.5 rounded-xl border border-amber-200">
+              <p className="text-lg font-black text-amber-700">★ {rating}</p>
+              <p className="text-[10px] text-amber-800 font-bold">Tier 1 Partner Rating</p>
             </div>
           </div>
         )}

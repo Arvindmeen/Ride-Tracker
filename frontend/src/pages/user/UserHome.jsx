@@ -4,13 +4,12 @@ import {
   MapPin, Navigation, Clock, Search, X, Crosshair, ArrowRight,
   ShieldCheck, CheckCircle2, Sparkles, AlertCircle, Car,
   ArrowUpDown, Compass, Check, Layers, ChevronRight, CreditCard, Shield,
-  Eye, Radio, Zap, ChevronLeft
+  Eye, Radio, Zap, ChevronLeft, Pause, Play
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore, useBookingStore, useMapStore, useDriverStore } from '@/stores';
 import { locationService, pricingService, rideService, rideSync } from '@/services';
-import { VEHICLE_CATEGORIES } from '@/constants';
-import { Button, Spinner, Badge, Avatar, VehicleIcon } from '@/components/ui';
+import { Button, Spinner, Badge, Avatar } from '@/components/ui';
 import LiveDispatchTicker from '@/components/ui/LiveDispatchTicker';
 import { dispatchSimulation } from '@/services/dispatchSimulation';
 
@@ -92,6 +91,58 @@ const POPULAR_DESTINATIONS = [
   },
 ];
 
+// Unified Vehicle Services matching the clean card screenshot
+export const VEHICLE_SERVICES = [
+  {
+    id: 'toto',
+    name: 'Solar E-Toto',
+    category: 'AUTO',
+    icon: '🛺',
+    basePrice: 20,
+    pricePerKm: 8,
+    eta: '1 min',
+    tag: 'Campus & Micro-Mobility',
+    seats: 3,
+    model: 'Solar E-Toto #08',
+  },
+  {
+    id: 'bike',
+    name: 'Electric Bike',
+    category: 'MOTO',
+    icon: '🏍️',
+    basePrice: 15,
+    pricePerKm: 6,
+    eta: '2 mins',
+    tag: 'Fastest Solo Commute',
+    seats: 1,
+    model: 'Electric Bike (Ather EV)',
+  },
+  {
+    id: 'cab',
+    name: 'Prime EV Cab',
+    category: 'ECONOMY',
+    icon: '🚗',
+    basePrice: 60,
+    pricePerKm: 14,
+    eta: '4 mins',
+    tag: 'AC Executive Comfort',
+    seats: 4,
+    model: 'Prime EV Cab (Tata Tigor)',
+  },
+  {
+    id: 'transporter',
+    name: 'EV Transporter',
+    category: 'XL',
+    icon: '🚚',
+    basePrice: 80,
+    pricePerKm: 14,
+    eta: '3 mins',
+    tag: 'Luggage & Goods Cargo',
+    seats: 2,
+    model: 'EV Transporter (Tata Ace EV)',
+  },
+];
+
 export default function UserHome() {
   const { user } = useAuthStore();
   const {
@@ -112,15 +163,16 @@ export default function UserHome() {
   const { drivers, startSimulation, setCenter, setZoom, userLocation, setUserLocation } = useMapStore();
   const navigate = useNavigate();
 
-  // On-demand Map View: false by default (no permanent split screen!)
+  // On-demand Map View: false by default (clean, focused booking flow)
   const [showMap, setShowMap] = useState(false);
+
+  // Selected Vehicle Service (defaults to Solar E-Toto)
+  const [selectedService, setSelectedService] = useState(VEHICLE_SERVICES[0]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [activeField, setActiveField] = useState(null); // 'pickup' | 'destination'
-  const [estimating, setEstimating] = useState(false);
-  const [countdown, setCountdown] = useState(null);
   const [paymentMode, setPaymentMode] = useState('UPI'); // 'UPI' | 'CASH' | 'CARD'
   const [promoInput, setPromoInput] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -130,6 +182,11 @@ export default function UserHome() {
   const [routeInfo, setRouteInfo] = useState(null);
   const [matchingStatus, setMatchingStatus] = useState(null);
   const [corridorFilter, setCorridorFilter] = useState('All');
+
+  // Gentle, non-panicking countdown for driver acceptance
+  const [activeBookedRideId, setActiveBookedRideId] = useState(null);
+  const [autoRedirectTimer, setAutoRedirectTimer] = useState(null);
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
 
   // Initialize driver simulation
   useEffect(() => {
@@ -271,6 +328,23 @@ export default function UserHome() {
     return () => clearTimeout(t);
   }, [searchQuery, pickup, userLocation]);
 
+  // Gentle countdown timer when driver accepts (lets user stay on page or view map without panicking!)
+  useEffect(() => {
+    if (autoRedirectTimer === null || autoRedirectTimer <= 0 || isTimerPaused) return;
+    const timer = setInterval(() => {
+      setAutoRedirectTimer((prev) => {
+        if (prev <= 1) {
+          if (activeBookedRideId) {
+            navigate(`/app/ride/${activeBookedRideId}`);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [autoRedirectTimer, isTimerPaused, activeBookedRideId, navigate]);
+
   const selectPlace = (place) => {
     const lat = Number(place.location?.lat ?? place.lat);
     const lng = Number(place.location?.lng ?? place.lng);
@@ -340,6 +414,30 @@ export default function UserHome() {
     setDestination(temp);
   };
 
+  // Select Vehicle Service
+  const handleSelectVehicleService = (srv) => {
+    setSelectedService(srv);
+    setCategory(srv.category);
+    const dist = destination?.distanceKm || 4.2;
+    const base = srv.basePrice;
+    const distanceFare = Math.round(dist * srv.pricePerKm);
+    const tax = Math.round((base + distanceFare) * 0.05);
+    const total = base + distanceFare + tax;
+    setEstimatedFare({
+      base,
+      distance: dist,
+      distanceFare,
+      tax,
+      total,
+      currency: 'INR',
+    });
+  };
+
+  const handleProceedToConfirm = (srv) => {
+    handleSelectVehicleService(srv || selectedService);
+    setStep('CONFIRM');
+  };
+
   // Promo Code Validation
   const handleApplyPromo = (e) => {
     e?.preventDefault();
@@ -356,30 +454,21 @@ export default function UserHome() {
     }
   };
 
-  // Estimate Fare for selected category
-  const handleEstimateFare = async (catId) => {
-    if (!pickup || !destination) return;
-    setEstimating(true);
-    setCategory(catId);
-    const fare = await pricingService.estimateFare(pickup, destination, catId);
-    setEstimatedFare(fare);
-    setEstimating(false);
-    setStep('CONFIRM');
-  };
-
-  // Ride Booking & Real-Time Driver Proximity Match Simulation
+  // Ride Booking & Animated Real-Time Driver Proximity Match (No Panicking!)
   const handleBookRide = async () => {
     setStep('SEARCHING');
+    setAutoRedirectTimer(null);
+    setIsTimerPaused(false);
+
     setMatchingStatus({
       status: 'BROADCASTING',
-      message: 'Broadcasting request to nearby drivers in real-time...',
-      progress: 30,
+      message: 'Broadcasting request to nearby verified drivers in real-time...',
+      progress: 35,
     });
-    setCountdown(3);
 
     dispatchSimulation.simulateUserBookingAcceptance(
       pickup || userLocation,
-      category,
+      selectedService.category,
       (update) => {
         setMatchingStatus(update);
         if (update.driver) {
@@ -387,6 +476,8 @@ export default function UserHome() {
         }
         if (update.status === 'ACCEPTED') {
           const dynamicRideId = `RIDE-${Date.now().toString().slice(-6)}`;
+          setActiveBookedRideId(dynamicRideId);
+
           const currentPickup = pickup || userLocation || {
             lat: 22.3149,
             lng: 87.3105,
@@ -399,14 +490,22 @@ export default function UserHome() {
             name: 'Kharagpur Jn Railway Station',
             address: 'Station Road, Kharagpur',
           };
-          const totalFare = estimatedFare?.total || estimatedFare?.base || 42;
-          const totalDist = destination?.distanceKm || routeInfo?.distanceKm || estimatedFare?.distance || 1.4;
+          const dist = destination?.distanceKm || routeInfo?.distanceKm || 4.2;
+          const calculatedTotal = Math.round(selectedService.basePrice + dist * selectedService.pricePerKm);
+          const finalFare = estimatedFare?.total || calculatedTotal;
 
           const dynamicOtp = String(Math.floor(1000 + Math.random() * 9000));
-          const cLat = update.driver?.location?.lat || (currentPickup.lat + (currentDest.lat >= currentPickup.lat ? -0.0045 : 0.0045));
-          const cLng = update.driver?.location?.lng || (currentPickup.lng + (currentDest.lng >= currentPickup.lng ? -0.0038 : 0.0038));
-          const cName = update.driver?.location?.name || `${currentPickup.name.split(',')[0]} Transit Point`;
-          const cAddress = update.driver?.location?.address || `Corridor ~600m from ${currentPickup.name.split(',')[0]}`;
+          const isTotoOrLocal = String(selectedService?.category || '').toUpperCase().includes('AUTO') ||
+                                String(selectedService?.category || '').toUpperCase().includes('TOTO') ||
+                                String(currentPickup.name || '').toLowerCase().includes('kharagpur') ||
+                                String(currentPickup.name || '').toLowerCase().includes('tech mkt');
+          const latOffset = isTotoOrLocal ? 0.0016 : 0.0020;
+          const lngOffset = isTotoOrLocal ? -0.0015 : -0.0018;
+
+          const cLat = update.driver?.location?.lat || (currentPickup.lat + latOffset);
+          const cLng = update.driver?.location?.lng || (currentPickup.lng + lngOffset);
+          const cName = update.driver?.location?.name || `${currentPickup.name.split(',')[0]} Local Stand`;
+          const cAddress = update.driver?.location?.address || `Approach corridor ~250m from ${currentPickup.name.split(',')[0]}`;
 
           const driverLocationC = {
             lat: cLat,
@@ -422,13 +521,15 @@ export default function UserHome() {
             userPhone: user?.phone || '+91 99887 76655',
             status: 'DRIVER_APPROACHING',
             stage: 'HEADING_TO_PICKUP',
-            category: category || 'MOTO',
+            category: selectedService.category,
             pickup: currentPickup,
             destination: currentDest,
             driverStartLocation: driverLocationC,
-            fare: estimatedFare || { total: totalFare, base: 25, distance: 12, tax: 2, currency: 'INR' },
-            distance: totalDist,
-            payment: { method: paymentMode, status: 'PENDING', amount: totalFare },
+            fare: { total: finalFare, base: selectedService.basePrice, distance: dist, currency: 'INR' },
+            distance: dist,
+            duration: Math.max(2, Math.round(dist * 2.2)),
+            durationMinutes: Math.max(2, Math.round(dist * 2.2)),
+            payment: { method: paymentMode, status: 'PENDING', amount: finalFare },
             requestedAt: new Date().toISOString(),
             otp: dynamicOtp,
             driverInfo: {
@@ -436,34 +537,39 @@ export default function UserHome() {
               name: update.driver?.name || 'Subhash Mondal',
               phone: update.driver?.phone || '+91 94340 12891',
               rating: update.driver?.rating || 4.92,
-              vehicle: update.driver?.vehicleModel || (category === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Hero Splendor Plus (Bike)'),
+              vehicle: selectedService.model || update.driver?.vehicleModel || 'Solar E-Toto #08',
               plate: update.driver?.vehicleNumber || 'WB 26 Q 4921',
-              category: category || 'MOTO',
+              category: selectedService.category,
               currentLocation: driverLocationC,
             },
           };
           rideService.recordRide(bookedRide);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('veloq_active_booked_ride', JSON.stringify(bookedRide));
+          }
           rideSync.broadcast('RIDE_BOOKED', bookedRide);
           try {
             useDriverStore.getState().acceptRide(bookedRide);
           } catch (e) {}
 
-          setTimeout(() => {
-            navigate(`/app/ride/${dynamicRideId}`);
-          }, 1400);
+          // Start calm 10s countdown, giving user full control to watch map or proceed at their own pace
+          setAutoRedirectTimer(10);
         }
-      }
+      },
+      drivers
     );
   };
 
   const nearbyCount = drivers.filter((d) => d.status !== 'OFFLINE').length || 8;
-  const is100KmTrip = destination?.distanceKm >= 80 || (estimatedFare?.distance && estimatedFare?.distance >= 80);
 
   // Filtered corridor destinations
   const visibleCorridors = (nearbyHotspots.length > 0 ? nearbyHotspots : POPULAR_DESTINATIONS).filter((d) => {
     if (corridorFilter === 'All') return true;
     return d.filter === corridorFilter || d.badge === corridorFilter;
   });
+
+  const activeDistance = destination?.distanceKm || routeInfo?.distanceKm || 4.2;
+  const currentCalculatedFare = Math.max(10, Math.round(selectedService.basePrice + activeDistance * selectedService.pricePerKm) - appliedDiscount);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 via-slate-100/60 to-slate-200/50 font-sans pb-16">
@@ -489,7 +595,7 @@ export default function UserHome() {
                 Where are you heading, {user?.name?.split(' ')[0] || 'Rider'}? 🛺
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                Fast pickups across {userLocation?.city || 'campus corridors & transit hubs'} · Upfront transparent fares
+                Fast pickups across {userLocation?.city || 'campus corridors & transit hubs'} · Continuous live GPS tracking
               </p>
             </div>
 
@@ -520,7 +626,7 @@ export default function UserHome() {
         </div>
       </section>
 
-      {/* ── ON-DEMAND LIVE MAP DRAWER / MODAL (Appears smoothly when toggled) ── */}
+      {/* ── ON-DEMAND LIVE MAP (Allows free scrolling/panning without panicking user) ── */}
       {showMap && (
         <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-5 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl relative">
@@ -529,9 +635,9 @@ export default function UserHome() {
             <div className="absolute top-3 inset-x-3 z-30 flex items-center justify-between gap-2 pointer-events-auto">
               <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-700 text-xs font-bold text-white shadow-xl">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Live GPS Radar</span>
+                <span>Live Continuous Radar</span>
                 <span className="text-slate-400 text-[11px] font-normal hidden sm:inline">
-                  · {nearbyCount} active vehicles on radar
+                  · {nearbyCount} active vehicles gliding
                 </span>
               </div>
 
@@ -590,15 +696,15 @@ export default function UserHome() {
             {/* Map Bottom Route Banner */}
             <div className="bg-slate-900 border-t border-slate-800 p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-white text-xs">
               <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-base shrink-0">
-                  📍
+                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-lg shrink-0">
+                  {selectedService.icon}
                 </div>
                 <div className="min-w-0">
                   <p className="font-bold text-slate-200 truncate">
                     {pickup ? pickup.name : 'Select pickup point'}
                   </p>
                   <p className="text-[11px] text-slate-400 truncate">
-                    {destination ? `To: ${destination.name} (${destination.distanceKm || 4.2} km)` : 'Select destination to view route'}
+                    {destination ? `To: ${destination.name} (${destination.distanceKm || 4.2} km) · ${selectedService.name}` : 'Select destination to view route'}
                   </p>
                 </div>
               </div>
@@ -607,7 +713,7 @@ export default function UserHome() {
                 <Button
                   size="sm"
                   onClick={() => setShowMap(false)}
-                  className="rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white w-full sm:w-auto"
+                  className="rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white w-full sm:w-auto cursor-pointer"
                 >
                   Proceed with Booking →
                 </Button>
@@ -618,14 +724,14 @@ export default function UserHome() {
         </section>
       )}
 
-      {/* ── MAIN BOOKING EXPERIENCE (Clean, Ola/Uber Grade Form) ──────────────── */}
+      {/* ── MAIN BOOKING EXPERIENCE ───────────────────────────────────────────── */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
         
         {/* ── STEP 1: PICKUP & DROP-OFF SEARCH ───────────────────────────────── */}
         {(step === 'LOCATION' || step === 'ROUTE_PREVIEW') && (
           <div className="space-y-6">
             
-            {/* Input Card with modern route line */}
+            {/* Input Card with connected route timeline */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-5 sm:p-7 relative transition-all">
               
               <div className="relative space-y-3.5">
@@ -753,6 +859,38 @@ export default function UserHome() {
                   )}
                 </div>
 
+                {/* ── QUICK 1-TAP DESTINATION CHIPS (Instant 1-Click Routing) ── */}
+                <div className="pt-1 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>⚡ Quick 1-Tap Destinations</span>
+                    </span>
+                    <span className="text-[10px] text-blue-600 font-bold">Tap to route</span>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    {visibleCorridors.slice(0, 6).map((corridor) => (
+                      <button
+                        key={corridor.id || corridor.name}
+                        onClick={() => handleSelectPresetDestination(corridor)}
+                        className={clsx(
+                          'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer border shadow-2xs',
+                          destination?.name === corridor.name
+                            ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-500/20'
+                            : 'bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200'
+                        )}
+                      >
+                        <span>{corridor.icon || '📍'}</span>
+                        <span>{corridor.name.split(',')[0]}</span>
+                        {corridor.distanceKm && (
+                          <span className={clsx('text-[10px] font-mono font-normal', destination?.name === corridor.name ? 'text-blue-100' : 'text-slate-400')}>
+                            · {corridor.distanceKm} km
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
               </div>
 
               {/* Active Search Dropdown / Autocomplete Box */}
@@ -820,29 +958,142 @@ export default function UserHome() {
                 </div>
               )}
 
-              {/* Ready to view vehicles button */}
-              {pickup && destination && (
-                <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="text-xs text-slate-500">
-                    <span className="font-bold text-slate-800">{pickup.name.split(',')[0]}</span>
-                    {' → '}
-                    <span className="font-bold text-slate-800">{destination.name.split(',')[0]}</span>
-                    <span className="text-blue-600 font-black ml-1">({destination.distanceKm || 4.2} km)</span>
+              {/* ── INTEGRATED LIVE VEHICLE FLEET & DISPATCH HUB ────────────────── */}
+              <div className="mt-6 pt-5 border-t border-slate-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                      Available Rides Nearby
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      8 Online
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    {destination ? `Distance: ${activeDistance} km` : 'Guaranteed Upfront Fare'}
+                  </span>
+                </div>
+
+                {/* 4 Vehicle Matrix Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                  {VEHICLE_SERVICES.map((srv) => {
+                    const price = Math.round(srv.basePrice + (destination ? activeDistance * srv.pricePerKm : 0));
+                    const isSel = selectedService.id === srv.id;
+
+                    return (
+                      <button
+                        key={srv.id}
+                        type="button"
+                        onClick={() => handleSelectVehicleService(srv)}
+                        className={clsx(
+                          'p-3.5 rounded-2xl text-left border-2 transition-all relative cursor-pointer flex flex-col justify-between group',
+                          isSel
+                            ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-4 ring-blue-500/10'
+                            : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 shadow-2xs'
+                        )}
+                      >
+                        {isSel && (
+                          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white" />
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100/80 group-hover:bg-white flex items-center justify-center p-1 transition-colors">
+                            {srv.id === 'VELOQ_AUTO' ? (
+                              <img src="/toto-logo.svg" alt="Toto" className="w-8 h-8 object-contain" />
+                            ) : (
+                              <span className="text-2xl">{srv.icon}</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">
+                            {srv.eta}
+                          </span>
+                        </div>
+
+                        <div className="mt-2.5">
+                          <p className="text-xs font-black text-slate-900 leading-tight truncate">
+                            {srv.name}
+                          </p>
+                          <div className="flex items-baseline justify-between mt-1">
+                            <span className="text-sm font-black text-blue-600">
+                              ₹{price}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {destination ? 'total' : 'starts'}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Payment Method Selector Pill Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                      Payment:
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {[
+                        { id: 'UPI', label: '⚡ UPI AutoPay' },
+                        { id: 'CASH', label: '💵 Cash to Driver' },
+                        { id: 'WALLET', label: '👛 Wallet' },
+                      ].map((pm) => (
+                        <button
+                          key={pm.id}
+                          type="button"
+                          onClick={() => setPaymentMode(pm.id)}
+                          className={clsx(
+                            'px-2.5 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer',
+                            paymentMode === pm.id
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-white text-slate-700 hover:bg-slate-200/60 border border-slate-200'
+                          )}
+                        >
+                          {pm.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <Button
-                    className="w-full sm:w-auto px-6 py-3 text-xs sm:text-sm font-black rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer"
-                    onClick={() => setStep('VEHICLE_SELECT')}
-                  >
-                    <span>View Vehicles & Fares</span>
-                    <ArrowRight size={16} />
-                  </Button>
+                  <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                    <span>🛡️</span>
+                    <span>Zero Surge Guaranteed</span>
+                  </span>
                 </div>
-              )}
+
+                {/* Primary Booking / Dispatch CTA */}
+                <div className="pt-2">
+                  {destination ? (
+                    <Button
+                      className="w-full py-4 text-xs sm:text-sm font-black rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
+                      onClick={() => handleProceedToConfirm(selectedService)}
+                    >
+                      <span>Confirm & Dispatch {selectedService.name} • ₹{currentCalculatedFare}</span>
+                      <ArrowRight size={18} />
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full py-4 text-xs sm:text-sm font-black rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99]"
+                      onClick={() => {
+                        if (visibleCorridors && visibleCorridors.length > 0) {
+                          handleSelectPresetDestination(visibleCorridors[0]);
+                        } else {
+                          setActiveField('destination');
+                        }
+                      }}
+                    >
+                      <span>👉 Select Destination to Dispatch {selectedService.name} (from ₹{selectedService.basePrice})</span>
+                      <ArrowRight size={18} />
+                    </Button>
+                  )}
+                </div>
+
+              </div>
 
             </div>
 
-            {/* ── QUICK 1-TAP POPULAR CORRIDORS (Ola/Rapido style) ───────────── */}
+            {/* ── QUICK 1-TAP POPULAR CORRIDORS ───────────────────────────────── */}
             {!activeField && (
               <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-5 sm:p-6 space-y-4">
                 
@@ -921,7 +1172,7 @@ export default function UserHome() {
           </div>
         )}
 
-        {/* ── STEP 2: VEHICLE SELECTION (Authentic Ola/Uber Tier Cards) ──────── */}
+        {/* ── STEP 2: VEHICLE SELECTION (Matching the Image Exactly) ─────────── */}
         {step === 'VEHICLE_SELECT' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             
@@ -945,7 +1196,7 @@ export default function UserHome() {
 
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <span className="text-xs font-mono font-black text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-xl">
-                  {destination?.distanceKm || 4.2} km
+                  {activeDistance} km
                 </span>
                 
                 {/* Quick Map Peek Toggle */}
@@ -959,60 +1210,39 @@ export default function UserHome() {
               </div>
             </div>
 
-            {/* Vehicle Options Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {VEHICLE_CATEGORIES.map((cat) => {
-                const isCab = cat.id === 'ECONOMY' || cat.id === 'PREMIUM';
-                const dist = destination?.distanceKm || 4.2;
-                const estPrice = is100KmTrip && isCab
-                  ? Math.round(dist * 21 + 150)
-                  : Math.round(cat.basePrice + dist * (cat.pricePerKm || 12));
+            {/* Vehicle Type Card Grid (Matching Image Exactly) */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-md space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-slate-800 uppercase tracking-wider">Vehicle Type</label>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  ✓ Upfront Fare Guaranteed
+                </span>
+              </div>
 
-                const isSelected = category === cat.id;
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {VEHICLE_SERVICES.map((srv) => {
+                  const price = Math.round(srv.basePrice + activeDistance * srv.pricePerKm);
+                  const isSel = selectedService.id === srv.id;
 
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleEstimateFare(cat.id)}
-                    className={clsx(
-                      'w-full flex items-center justify-between p-4 sm:p-5 rounded-3xl border-2 text-left transition-all duration-200 cursor-pointer shadow-xs',
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50/60 shadow-lg ring-4 ring-blue-500/10'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70 hover:shadow-md'
-                    )}
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      {/* Scalable Vehicle Icon */}
-                      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center p-2 shrink-0 border border-slate-200/80 shadow-xs">
-                        <VehicleIcon category={cat.id} size="lg" />
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm sm:text-base font-black text-slate-900">
-                            {cat.label}
-                          </p>
-                          <span className="text-[11px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-lg">
-                            {cat.seats} seats
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">{cat.desc}</p>
-                        <p className="text-[11px] text-emerald-600 font-extrabold mt-1 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>{cat.eta} min away · Proximity match</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0 pl-3">
-                      <p className="text-base sm:text-lg font-black text-slate-900">
-                        ₹{estPrice}
-                      </p>
-                      <span className="text-[10px] text-slate-400 font-bold">Total Fare</span>
-                    </div>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={srv.id}
+                      onClick={() => handleSelectVehicleService(srv)}
+                      className={clsx(
+                        'p-3.5 rounded-2xl text-left border transition-all relative cursor-pointer',
+                        isSel
+                          ? 'border-blue-600 bg-blue-50/60 shadow-sm ring-2 ring-blue-600/20'
+                          : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 shadow-xs'
+                      )}
+                    >
+                      <div className="text-3xl mb-2">{srv.icon}</div>
+                      <p className="text-xs font-black text-slate-900 leading-tight">{srv.name}</p>
+                      <p className="text-sm font-black text-blue-600 mt-1">₹{price}</p>
+                      <p className="text-[10px] text-slate-500 font-bold mt-0.5">{srv.eta}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Payment Mode Selector */}
@@ -1021,7 +1251,7 @@ export default function UserHome() {
                 <span className="font-black text-slate-900 uppercase tracking-wider">
                   Payment Method
                 </span>
-                <span className="text-emerald-600 font-bold">Guaranteed Price</span>
+                <span className="text-emerald-600 font-bold">Zero Cash Surcharges</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -1050,13 +1280,24 @@ export default function UserHome() {
                   </button>
                 ))}
               </div>
+
+              {/* Proceed Action Button */}
+              <div className="pt-3 border-t border-slate-100 flex justify-end">
+                <Button
+                  className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-black rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => handleProceedToConfirm(selectedService)}
+                >
+                  <span>Review & Confirm {selectedService.name} (₹{currentCalculatedFare})</span>
+                  <ArrowRight size={16} />
+                </Button>
+              </div>
             </div>
 
           </div>
         )}
 
         {/* ── STEP 3: TRIP CONFIRMATION & FARE INVOICE ───────────────────────── */}
-        {step === 'CONFIRM' && estimatedFare && (
+        {step === 'CONFIRM' && (
           <div className="max-w-2xl mx-auto space-y-5 animate-in fade-in duration-200">
             
             {/* Header Card */}
@@ -1070,7 +1311,7 @@ export default function UserHome() {
                 </button>
                 <div>
                   <h2 className="text-base font-black text-slate-900">Review & Confirm Ride</h2>
-                  <p className="text-xs text-slate-500">Upfront price guarantee · No surge surprises</p>
+                  <p className="text-xs text-slate-500">Upfront price guarantee · Clean electric fleet</p>
                 </div>
               </div>
 
@@ -1083,22 +1324,22 @@ export default function UserHome() {
             <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-md space-y-4">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center p-2 shrink-0">
-                    <VehicleIcon category={category} size="md" />
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-2xl shrink-0 shadow-xs">
+                    {selectedService.icon}
                   </div>
                   <div>
                     <p className="text-sm font-black text-slate-900">
-                      {VEHICLE_CATEGORIES.find((c) => c.id === category)?.label || category}
+                      {selectedService.name}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {destination?.distanceKm || estimatedFare.distance || 4.2} km · ~12 mins ETA
+                      {activeDistance} km journey · ~{selectedService.eta} ETA
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right">
                   <p className="text-xl font-black text-blue-600">
-                    ₹{Math.max(10, (estimatedFare.total || 45) - appliedDiscount)}
+                    ₹{currentCalculatedFare}
                   </p>
                   <p className="text-[10px] text-slate-400">All Taxes Included</p>
                 </div>
@@ -1152,17 +1393,17 @@ export default function UserHome() {
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-md space-y-2 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Base Ride Fare:</span>
-                <span className="font-bold text-slate-900">₹{estimatedFare.base}</span>
+                <span className="font-bold text-slate-900">₹{selectedService.basePrice}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Distance Charge ({estimatedFare.distance} km):</span>
+                <span>Distance Charge ({activeDistance} km):</span>
                 <span className="font-bold text-slate-900">
-                  ₹{estimatedFare.distanceFare || Math.round(estimatedFare.distance * 12)}
+                  ₹{Math.round(activeDistance * selectedService.pricePerKm)}
                 </span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Taxes & Regulatory Surcharges (5%):</span>
-                <span className="font-bold text-slate-900">₹{estimatedFare.tax}</span>
+                <span>Taxes & Regulatory Levies (5%):</span>
+                <span className="font-bold text-slate-900">₹{Math.round((selectedService.basePrice + activeDistance * selectedService.pricePerKm) * 0.05)}</span>
               </div>
               {appliedDiscount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-bold">
@@ -1173,7 +1414,7 @@ export default function UserHome() {
               <div className="pt-3 border-t border-slate-100 flex justify-between items-baseline font-black text-slate-900">
                 <span className="text-sm">Final Payable Amount:</span>
                 <span className="text-2xl text-blue-600">
-                  ₹{Math.max(10, (estimatedFare.total || 45) - appliedDiscount)}
+                  ₹{currentCalculatedFare}
                 </span>
               </div>
             </div>
@@ -1200,7 +1441,7 @@ export default function UserHome() {
                 className="flex-1 py-4 text-sm font-black rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-600/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                 onClick={handleBookRide}
               >
-                <span>Confirm & Request Ride (₹{Math.max(10, (estimatedFare.total || 45) - appliedDiscount)})</span>
+                <span>Confirm & Request Ride (₹{currentCalculatedFare})</span>
                 <ArrowRight size={16} />
               </Button>
             </div>
@@ -1208,89 +1449,144 @@ export default function UserHome() {
           </div>
         )}
 
-        {/* ── STEP 4: RADAR DISPATCHING / CONNECTING ─────────────────────────── */}
+        {/* ── STEP 4: ANIMATED LIVE DISPATCH & RADAR (No-Panic Flow) ─────────── */}
         {step === 'SEARCHING' && (
-          <div className="max-w-md mx-auto py-10 text-center space-y-6">
-            <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
-              <div className="absolute -inset-4 rounded-full bg-blue-500/10 animate-pulse" />
-              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center text-4xl shadow-2xl z-10">
-                📡
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                {matchingStatus?.status === 'ACCEPTED' 
-                  ? '🎉 Driver Partner Assigned!' 
-                  : is100KmTrip 
-                  ? 'Dispatching Highway Cab' 
-                  : 'Finding Nearest Driver Partner'}
-              </h2>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                {matchingStatus?.message || 'Proximity Dispatch: Assigning the verified driver closest to your pickup spot'}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-lg text-left text-xs space-y-3.5 max-w-sm mx-auto w-full">
-              <div className="flex items-center justify-between text-slate-600 pb-2 border-b border-slate-100">
-                <span className="text-slate-500">📍 Pickup:</span>
-                <span className="font-bold text-slate-900 truncate max-w-[190px]">
-                  {pickup?.name || 'Current Spot'}
-                </span>
+          <div className="max-w-lg mx-auto py-6 sm:py-8 space-y-5 animate-in fade-in duration-300">
+            
+            <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xl space-y-6 text-center">
+              
+              {/* Animated Radar Beacon */}
+              <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
+                <div className="absolute -inset-3 rounded-full bg-blue-500/10 animate-pulse" />
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center text-3xl shadow-xl z-10">
+                  {selectedService.icon}
+                </div>
               </div>
 
-              {/* Animated Progress Bar */}
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              {/* Animated Text Updates */}
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight transition-all">
+                  {matchingStatus?.status === 'ACCEPTED' 
+                    ? '🎉 Driver Partner Confirmed!' 
+                    : matchingStatus?.status === 'DRIVER_NOTIFIED'
+                    ? '⚡ Driver Partner Reviewing...'
+                    : `Finding Nearest ${selectedService.name}`}
+                </h2>
+                
+                {/* Smooth Animated Message */}
+                <div className="h-10 flex items-center justify-center mt-1">
+                  <p className="text-xs sm:text-sm text-slate-600 font-semibold max-w-sm mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {matchingStatus?.message || `Broadcasting request to verified ${selectedService.name} drivers nearby...`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Progressive Progress Bar */}
+              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
-                  style={{ width: `${matchingStatus?.progress || 40}%` }}
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-700 ease-out shadow-xs" 
+                  style={{ width: `${matchingStatus?.progress || 35}%` }}
                 />
               </div>
 
+              {/* Status Details / Driver Partner Card */}
               {matchingStatus?.driver ? (
-                <div className="flex items-center justify-between bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                      {matchingStatus.driver.name.charAt(0)}
+                <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 text-left space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-emerald-200 flex items-center justify-center p-1 shrink-0 shadow-xs">
+                        {String(selectedService.category).toUpperCase().includes('AUTO') || String(selectedService.name).toLowerCase().includes('toto') ? (
+                          <img src="/toto-logo.svg" alt="Toto" className="w-7 h-7 object-contain" />
+                        ) : (
+                          <span className="text-xl">{selectedService.icon}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-black text-emerald-950 text-sm">{matchingStatus.driver.name}</p>
+                        <p className="text-xs text-emerald-700 font-semibold">
+                          ★ {matchingStatus.driver.rating || 4.9} · {selectedService.model || matchingStatus.driver.vehicleModel}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-emerald-950 text-xs">{matchingStatus.driver.name}</p>
-                      <p className="text-[11px] text-emerald-700">
-                        ★ {matchingStatus.driver.rating} · {matchingStatus.driver.vehicleModel}
-                      </p>
-                    </div>
+                    <span className="text-[10px] font-black text-emerald-800 bg-white px-2.5 py-1 rounded-xl border border-emerald-200 shadow-xs">
+                      ACCEPTED ✓
+                    </span>
                   </div>
-                  <span className="text-[10px] font-black text-emerald-700 bg-white px-2 py-1 rounded-lg border border-emerald-200 shadow-xs">
-                    {matchingStatus.status === 'ACCEPTED' ? 'ASSIGNED ✓' : 'PINGING...'}
-                  </span>
+
+                  <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between text-xs">
+                    <span className="text-emerald-900 font-bold">Plate: {matchingStatus.driver.vehicleNumber || 'WB 26 Q 4921'}</span>
+                    <span className="font-mono font-black text-emerald-900 bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                      OTP: {matchingStatus.otp || '4821'}
+                    </span>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                  <span>Connecting to {nearbyCount} active driver partners...</span>
+                  <span>Contacting {nearbyCount} verified drivers around your pickup spot...</span>
                 </div>
               )}
+
+              {/* Non-Panicking Control Actions */}
+              <div className="space-y-2.5 pt-2">
+                
+                {/* On-Demand Map Watch Button */}
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className="w-full py-3 px-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-black text-slate-800 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                >
+                  <span>🗺️</span>
+                  <span>{showMap ? 'Hide Map Radar' : 'Watch Live Driver on Map'}</span>
+                </button>
+
+                {/* When driver is confirmed: Calm action button with optional countdown pause */}
+                {matchingStatus?.status === 'ACCEPTED' && (
+                  <div className="space-y-2 pt-1 animate-in fade-in duration-300">
+                    <Button
+                      className="w-full py-4 text-sm font-black rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                      onClick={() => {
+                        if (activeBookedRideId) navigate(`/app/ride/${activeBookedRideId}`);
+                      }}
+                    >
+                      <span>Open Live Ride Tracking Cockpit</span>
+                      <ArrowRight size={16} />
+                    </Button>
+
+                    {/* Calm countdown notice that user can pause or cancel without panic */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                      <span>
+                        {isTimerPaused 
+                          ? 'Auto-tracking paused. Take your time.' 
+                          : `Opening tracking view in ${autoRedirectTimer || 10}s...`}
+                      </span>
+                      <button
+                        onClick={() => setIsTimerPaused(!isTimerPaused)}
+                        className="text-blue-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        {isTimerPaused ? <Play size={10} /> : <Pause size={10} />}
+                        <span>{isTimerPaused ? 'Resume' : 'Stay on this Screen'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cancel Booking option */}
+                <Button
+                  variant="ghost"
+                  className="text-xs font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
+                  onClick={() => {
+                    setAutoRedirectTimer(null);
+                    reset();
+                  }}
+                >
+                  Cancel Request
+                </Button>
+
+              </div>
+
             </div>
 
-            {/* Map Watch Button while Searching */}
-            <div>
-              <button
-                onClick={() => setShowMap(!showMap)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 shadow-xs text-xs font-black text-slate-800 hover:bg-slate-50 cursor-pointer"
-              >
-                <span>🗺️</span>
-                <span>{showMap ? 'Hide Map Radar' : 'Watch Live Dispatch on Map'}</span>
-              </button>
-            </div>
-
-            <Button
-              variant="ghost"
-              className="text-xs font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
-              onClick={reset}
-            >
-              Cancel Request
-            </Button>
           </div>
         )}
 

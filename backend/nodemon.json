@@ -1,0 +1,5 @@
+{
+  "watch": ["src"],
+  "ignore": ["data/**", "*.db", "*.sqlite", "data/store.json", "data/ridetracker.db*"],
+  "ext": "js,mjs"
+}

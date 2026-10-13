@@ -79,6 +79,86 @@ function interpolatePath(points, targetSteps = 30) {
   return result;
 }
 
+const DEMO_FALLBACKS = {
+  'REQ-LOC-02': {
+    id: 'REQ-LOC-02',
+    userId: 'U005',
+    userName: 'Sneha Mondal',
+    userRating: 4.92,
+    pickup: {
+      lat: 22.3195,
+      lng: 87.3082,
+      name: 'Nalanda Complex Gate',
+      address: 'Academic Complex, IIT KGP',
+    },
+    destination: {
+      lat: 22.3168,
+      lng: 87.3015,
+      name: 'Technology Market (Tech Mkt)',
+      address: 'Market Street, IIT Kharagpur',
+    },
+    estimatedFare: 28,
+    estimatedDistance: 2.2,
+    estimatedDuration: 6,
+    category: 'MOTO',
+    status: 'HEADING_TO_PICKUP',
+  },
+  'REQ-OUT-124': {
+    id: 'REQ-OUT-124',
+    userId: 'U002',
+    userName: 'Debanjan Chatterjee (IIT KGP PhD)',
+    userRating: 4.96,
+    pickup: {
+      lat: 22.3149,
+      lng: 87.3105,
+      name: 'Scholars Avenue, RK Hall Gate',
+      address: 'IIT Kharagpur Campus, WB',
+    },
+    destination: {
+      lat: 22.6547,
+      lng: 88.4467,
+      name: 'Kolkata Airport (CCU Terminal 2)',
+      address: 'NH16 Highway Outstation, Kolkata',
+    },
+    estimatedFare: 2680,
+    estimatedDistance: 124.0,
+    estimatedDuration: 135,
+    category: 'CAR',
+    status: 'HEADING_TO_PICKUP',
+  },
+};
+
+function normalizeRideData(ride) {
+  if (!ride) return null;
+  const rawPickup = ride.pickup || {};
+  const rawDest = ride.destination || {};
+  const isMbd = String(rawPickup.name || rawPickup.address || '').toLowerCase().includes('moradabad') ||
+                String(rawDest.name || rawDest.address || '').toLowerCase().includes('moradabad');
+
+  const pLat = Number.isFinite(Number(rawPickup.lat)) ? Number(rawPickup.lat) : (isMbd ? 28.8358 : 22.3195);
+  const pLng = Number.isFinite(Number(rawPickup.lng)) ? Number(rawPickup.lng) : (isMbd ? 78.7725 : 87.3082);
+  const dLat = Number.isFinite(Number(rawDest.lat)) ? Number(rawDest.lat) : (isMbd ? 28.8314 : 22.3168);
+  const dLng = Number.isFinite(Number(rawDest.lng)) ? Number(rawDest.lng) : (isMbd ? 78.7654 : 87.3015);
+
+  return {
+    ...ride,
+    pickup: {
+      ...rawPickup,
+      lat: pLat,
+      lng: pLng,
+      name: rawPickup.name || (isMbd ? 'Budh Bazaar Market, Moradabad' : 'Nalanda Complex Gate, IIT KGP'),
+      address: rawPickup.address || (isMbd ? 'Budhbazar Road, Moradabad' : 'Academic Complex, IIT Kharagpur'),
+    },
+    destination: {
+      ...rawDest,
+      lat: dLat,
+      lng: dLng,
+      name: rawDest.name || (isMbd ? 'Moradabad Junction Railway Station' : 'Technology Market (Tech Mkt)'),
+      address: rawDest.address || (isMbd ? 'Station Road, Moradabad' : 'Market Street, IIT Kharagpur'),
+    },
+  };
+}
+
 export default function DriverRideActivePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -90,7 +170,7 @@ export default function DriverRideActivePage() {
     activeRideStage,
   } = useDriverStore();
 
-  const [currentRide, setCurrentRide] = useState(activeRide || null);
+  const [currentRide, setCurrentRide] = useState(() => normalizeRideData(activeRide) || null);
   const [loading, setLoading] = useState(!activeRide);
   const [stage, setStage] = useState(activeRideStage || 'HEADING_TO_PICKUP');
   const [otpInput, setOtpInput] = useState('');
@@ -113,7 +193,7 @@ export default function DriverRideActivePage() {
   // 1. Resolve Dynamic Ride Data
   useEffect(() => {
     if (activeRide) {
-      setCurrentRide(activeRide);
+      setCurrentRide(normalizeRideData(activeRide));
       setLoading(false);
       return;
     }
@@ -121,11 +201,14 @@ export default function DriverRideActivePage() {
     const targetId = id || 'ACTIVE_RIDE';
     rideService.getRideById(targetId).then((found) => {
       if (found) {
-        setCurrentRide(found);
+        setCurrentRide(normalizeRideData(found));
       } else {
         rideService.getActiveRide().then((active) => {
           if (active) {
-            setCurrentRide(active);
+            setCurrentRide(normalizeRideData(active));
+          } else {
+            const fallback = DEMO_FALLBACKS[targetId] || DEMO_FALLBACKS['REQ-LOC-02'];
+            setCurrentRide(normalizeRideData(fallback));
           }
         });
       }
@@ -137,35 +220,39 @@ export default function DriverRideActivePage() {
   useEffect(() => {
     if (!currentRide) return;
 
-    const pickup = currentRide.pickup || {
-      lat: 28.8358,
-      lng: 78.7725,
-      name: 'Budh Bazaar Market, Moradabad',
-      address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
-    };
+    const safeRide = normalizeRideData(currentRide);
+    const pickup = safeRide.pickup;
+    const destination = safeRide.destination;
 
-    const destination = currentRide.destination || {
-      lat: 28.8314,
-      lng: 78.7654,
-      name: 'Moradabad Junction Railway Station',
-      address: 'Station Road (SH49), Moradabad Junction',
-    };
-
-    // Point C: Driver's starting position (~500m along road from Place A)
+    // Point C: Driver's starting position (~250m along road from Place A)
     const isMbd = Math.abs(pickup.lat - 28.835) < 0.09 && Math.abs(pickup.lng - 78.77) < 0.09;
-    const driverStart = currentRide.driverStartLocation?.lat
-      ? currentRide.driverStartLocation
-      : {
-          lat: isMbd ? 28.8395 : (pickup.lat + (destination.lat >= pickup.lat ? -0.0045 : 0.0045)),
-          lng: isMbd ? 78.7760 : (pickup.lng + (destination.lng >= pickup.lng ? -0.0038 : 0.0038)),
-          name: isMbd ? 'Civil Lines Taxi Stand, Moradabad' : `${pickup.name.split(',')[0]} Transit Point`,
-          address: isMbd ? 'Civil Lines Approach Road, Moradabad 244001' : `Road corridor ~600m from ${pickup.name.split(',')[0]}`,
-        };
+    const isTotoOrLocal = String(safeRide?.category || vehicleType || '').toUpperCase().includes('AUTO') ||
+                          String(safeRide?.category || vehicleType || '').toUpperCase().includes('TOTO') ||
+                          String(pickup?.name || '').toLowerCase().includes('kharagpur') ||
+                          String(pickup?.name || '').toLowerCase().includes('tech mkt');
+    const latOffset = isMbd ? 0.0020 : (isTotoOrLocal ? 0.0016 : 0.0022);
+    const lngOffset = isMbd ? -0.0018 : (isTotoOrLocal ? -0.0015 : -0.0020);
+
+    const rawDriverStart = safeRide.driverStartLocation;
+    const driverStartLat = Number.isFinite(Number(rawDriverStart?.lat))
+      ? Number(rawDriverStart.lat)
+      : (isMbd ? 28.8395 : (pickup.lat + latOffset));
+    const driverStartLng = Number.isFinite(Number(rawDriverStart?.lng))
+      ? Number(rawDriverStart.lng)
+      : (isMbd ? 78.7760 : (pickup.lng + lngOffset));
+
+    const pickupShortName = (pickup.name || 'Pickup Point').split(',')[0];
+    const driverStart = {
+      lat: driverStartLat,
+      lng: driverStartLng,
+      name: rawDriverStart?.name || (isMbd ? 'Civil Lines Taxi Stand, Moradabad' : `${pickupShortName} Transit Point`),
+      address: rawDriverStart?.address || (isMbd ? 'Civil Lines Approach Road, Moradabad 244001' : `Road corridor ~250m from ${pickupShortName}`),
+    };
 
     setDriverPos({
       lat: driverStart.lat,
       lng: driverStart.lng,
-      category: currentRide.category || vehicleType || 'MOTO',
+      category: safeRide.category || vehicleType || 'MOTO',
       heading: calculateBearing(driverStart.lat, driverStart.lng, pickup.lat, pickup.lng),
     });
 
@@ -174,14 +261,14 @@ export default function DriverRideActivePage() {
       [driverStart.lat, driverStart.lng],
       [driverStart.lat + (pickup.lat - driverStart.lat) * 0.5 + 0.0003, driverStart.lng + (pickup.lng - driverStart.lng) * 0.5 - 0.0003],
       [pickup.lat, pickup.lng],
-    ];
+    ].filter(([lt, lg]) => Number.isFinite(lt) && Number.isFinite(lg));
 
     const fallbackTrip = [
       [pickup.lat, pickup.lng],
       [pickup.lat + (destination.lat - pickup.lat) * 0.4 - 0.0004, pickup.lng + (destination.lng - pickup.lng) * 0.4 + 0.0004],
       [pickup.lat + (destination.lat - pickup.lat) * 0.75 + 0.0002, pickup.lng + (destination.lng - pickup.lng) * 0.75 - 0.0002],
       [destination.lat, destination.lng],
-    ];
+    ].filter(([lt, lg]) => Number.isFinite(lt) && Number.isFinite(lg));
 
     approachWaypoints.current = interpolatePath(fallbackApproach, 24);
     tripWaypoints.current = interpolatePath(fallbackTrip, 32);
@@ -192,10 +279,10 @@ export default function DriverRideActivePage() {
       locationService.getRoute(driverStart, pickup),
       locationService.getRoute(pickup, destination),
     ]).then(([approachRes, tripRes]) => {
-      const approachPoints = approachRes?.coordinates?.length > 2
+      const approachPoints = (approachRes?.coordinates?.length > 2 && approachRes.coordinates.every(([lt, lg]) => Number.isFinite(lt) && Number.isFinite(lg)))
         ? approachRes.coordinates
         : fallbackApproach;
-      const tripPoints = tripRes?.coordinates?.length > 2
+      const tripPoints = (tripRes?.coordinates?.length > 2 && tripRes.coordinates.every(([lt, lg]) => Number.isFinite(lt) && Number.isFinite(lg)))
         ? tripRes.coordinates
         : fallbackTrip;
 
@@ -273,7 +360,7 @@ export default function DriverRideActivePage() {
         const currentPt = waypoints[idx];
         const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
 
-        if (!currentPt) return;
+        if (!currentPt || !Number.isFinite(currentPt[0]) || !Number.isFinite(currentPt[1])) return;
 
         const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
         const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
@@ -314,7 +401,7 @@ export default function DriverRideActivePage() {
         const currentPt = waypoints[idx];
         const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
 
-        if (!currentPt) return;
+        if (!currentPt || !Number.isFinite(currentPt[0]) || !Number.isFinite(currentPt[1])) return;
 
         const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
         const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
@@ -435,24 +522,24 @@ export default function DriverRideActivePage() {
 
   if (loading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center font-sans bg-slate-950 text-white gap-3">
-        <Spinner size="lg" className="text-emerald-500" />
-        <p className="text-xs font-bold text-slate-400">Loading Active Cockpit Navigation...</p>
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center font-sans bg-slate-50 text-slate-900 gap-3">
+        <Spinner size="lg" className="text-emerald-600" />
+        <p className="text-xs font-bold text-slate-500">Loading Active Cockpit Navigation...</p>
       </div>
     );
   }
 
   if (!currentRide) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center font-sans bg-slate-950 text-white">
-        <div className="w-16 h-16 bg-slate-800 rounded-3xl flex items-center justify-center text-3xl mb-3 shadow-lg">
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center font-sans bg-slate-50 text-slate-900">
+        <div className="w-16 h-16 bg-white border border-slate-200 rounded-3xl flex items-center justify-center text-3xl mb-3 shadow-md">
           🚗
         </div>
-        <p className="text-base font-black text-white mb-1">No Active Ride in Progress</p>
-        <p className="text-xs text-slate-400 mb-4">Go to your cockpit to accept incoming proximity dispatches</p>
+        <p className="text-base font-black text-slate-900 mb-1">No Active Ride in Progress</p>
+        <p className="text-xs text-slate-500 mb-4">Go to your cockpit to accept incoming proximity dispatches</p>
         <button
           onClick={() => navigate('/driver/dashboard')}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-emerald-600/30 transition-all"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
         >
           Open Driver Cockpit
         </button>
@@ -469,18 +556,18 @@ export default function DriverRideActivePage() {
   const passengerName = currentRide.userName || currentRide.passengerName || 'Verified Passenger';
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] relative overflow-hidden bg-slate-950 text-slate-100 font-sans">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] relative overflow-hidden bg-slate-50 text-slate-900 font-sans">
       
       {/* ── Top Turn-by-Turn Telemetry HUD ───────────────────────────────────── */}
       <div className="absolute top-3 left-3 right-3 z-30 pointer-events-auto">
-        <div className="bg-slate-950/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-3xl border border-slate-800 shadow-2xl flex items-center justify-between gap-3">
+        <div className="bg-white/95 backdrop-blur-md text-slate-900 p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-xl flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-11 h-11 rounded-2xl bg-emerald-600 flex items-center justify-center text-white text-xl shrink-0 shadow-md">
               <Navigation size={22} className="animate-spin-slow" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
                   {stage === 'HEADING_TO_PICKUP'
                     ? 'Heading to Pickup Spot A'
                     : stage === 'ARRIVED'
@@ -490,26 +577,26 @@ export default function DriverRideActivePage() {
                     : 'Trip Completed'}
                 </span>
                 {stage === 'IN_TRANSIT' && (
-                  <span className="text-[10px] bg-emerald-900/60 text-emerald-400 px-1.5 py-0.2 rounded font-mono font-bold border border-emerald-700/60">
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-mono font-bold border border-emerald-300">
                     {speed} km/h
                   </span>
                 )}
               </div>
-              <h3 className="text-xs sm:text-sm font-black text-white truncate max-w-xs sm:max-w-md mt-0.5">
+              <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate max-w-xs sm:max-w-md mt-0.5">
                 {stage === 'IN_TRANSIT' ? (currentRide.destination?.name || 'Destination Dropoff') : (currentRide.pickup?.name || 'Pickup Point')}
               </h3>
             </div>
           </div>
 
           <div className="text-right shrink-0">
-            <span className="text-xs font-mono font-black text-emerald-400">
+            <span className="text-xs font-mono font-black text-emerald-700">
               {stage === 'IN_TRANSIT'
                 ? `${remainingDistance} km · ~${remainingEta} mins`
                 : stage === 'HEADING_TO_PICKUP'
                 ? `${remainingDistance} km · ~${remainingEta} mins`
                 : 'Arrived at Pickup'}
             </span>
-            <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+            <p className="text-[10px] text-slate-500 font-bold mt-0.5">
               {currentRide.category || vehicleType === 'BIKE' ? '🏍️ Rapido Mode' : '🚗 Cab Mode'}
             </p>
           </div>
@@ -519,7 +606,7 @@ export default function DriverRideActivePage() {
       {/* ── Arrival Push Notification Announcement Banner ─────────────────────── */}
       {arrivedAlert && (
         <div className="absolute top-20 left-4 right-4 z-40 pointer-events-auto animate-in slide-in-from-top-3 fade-in duration-300">
-          <div className="bg-emerald-600 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-between text-xs font-bold border border-emerald-400/50">
+          <div className="bg-emerald-600 text-white p-3.5 rounded-2xl shadow-xl flex items-center justify-between text-xs font-bold border border-emerald-400/50">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                 <CheckCircle2 size={20} className="text-white" />
@@ -541,7 +628,7 @@ export default function DriverRideActivePage() {
       {/* ── Main Live Map Canvas with moving vehicle marker & route ─────────────── */}
       <div className="absolute inset-0 z-0">
         <Suspense fallback={
-          <div className="bg-slate-950 w-full h-full flex items-center justify-center text-slate-500 font-bold text-xs">
+          <div className="bg-slate-50 w-full h-full flex items-center justify-center text-slate-400 font-bold text-xs">
             <Spinner size="lg" />
           </div>
         }>
@@ -803,7 +890,7 @@ export default function DriverRideActivePage() {
 
       {/* Private Masked Phone Call Simulation Modal */}
       {showCallModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
             <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
               <Phone size={28} className="animate-bounce" />

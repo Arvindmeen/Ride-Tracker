@@ -73,7 +73,9 @@ export default function Footer() {
                 <li><Link to="/contact" className="hover:text-slate-900 transition-colors">Dispatch Desk</Link></li>
               </>)}
               {!activeRole && (<>
-                <li><Link to="/login" className="hover:text-slate-900 transition-colors">Book a Ride</Link></li>
+                <li><Link to="/app/home" className="hover:text-slate-900 transition-colors">Book a Ride</Link></li>
+                <li><Link to="/drive" className="text-emerald-600 font-bold hover:text-emerald-700 transition-colors">Drive & Earn (Partner)</Link></li>
+                <li><Link to="/admin-portal" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">Admin Operations Portal</Link></li>
                 <li><Link to="/#places-to-go" className="hover:text-slate-900 transition-colors">Campus Routes</Link></li>
                 <li><Link to="/contact" className="hover:text-slate-900 transition-colors">24/7 Helpline</Link></li>
               </>)}

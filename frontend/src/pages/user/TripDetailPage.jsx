@@ -8,6 +8,7 @@ import { clsx } from 'clsx';
 import { rideService } from '@/services';
 import { VehicleIcon, Spinner, Badge, Button } from '@/components/ui';
 import { format } from 'date-fns';
+import { formatDuration } from '@/utils/formatters';
 
 export default function TripDetailPage() {
   const { id } = useParams();
@@ -124,7 +125,11 @@ export default function TripDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3.5">
             <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-              <VehicleIcon category={trip.category} size="md" />
+              {String(trip.category).toUpperCase().includes('AUTO') || String(trip.category).toUpperCase().includes('TOTO') ? (
+                <img src="/toto-logo.svg" alt="Toto" className="w-10 h-10 object-contain drop-shadow-sm" />
+              ) : (
+                <VehicleIcon category={trip.category} size="md" />
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -210,7 +215,7 @@ export default function TripDetailPage() {
           </div>
           <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
             <span className="text-[10px] font-bold text-slate-400 uppercase">Trip Time</span>
-            <p className="text-sm font-black text-slate-800 mt-0.5">{trip.durationMinutes || trip.duration || 6} mins</p>
+            <p className="text-sm font-black text-slate-800 mt-0.5">{formatDuration(trip.durationMinutes || trip.duration || 6)}</p>
           </div>
           <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
             <span className="text-[10px] font-bold text-slate-400 uppercase">Trip Rating</span>

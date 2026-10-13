@@ -65,32 +65,42 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── Company Earnings & Financial Highlights (User Requested) ─────────── */}
+      {/* ── Company Earnings & Financial Highlights (Cohesive Light SaaS Aesthetic) ── */}
       <div className="grid sm:grid-cols-3 gap-4">
         {/* Total Platform GMV */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Platform GMV</p>
-          <p className="text-3xl font-black text-slate-900 mt-1">₹{stats.totalGMV.toLocaleString()}</p>
-          <p className="text-xs text-slate-500 mt-1">Gross fares processed across all Indian zones</p>
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-blue-300 transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Total Platform GMV</p>
+            <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">
+              Gross Volume
+            </span>
+          </div>
+          <p className="text-3xl font-black text-slate-900 mt-2 tracking-tight">₹{stats.totalGMV.toLocaleString()}</p>
+          <p className="text-xs text-slate-500 mt-1.5 font-medium">Gross fares processed across all Indian zones</p>
         </div>
 
         {/* Company Commission (12% Pure Earnings) */}
-        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-3xl p-5 shadow-lg shadow-indigo-900/20">
+        <div className="bg-white rounded-2xl p-5 border border-emerald-200 shadow-xs hover:border-emerald-300 transition-all bg-gradient-to-br from-white via-white to-emerald-50/40">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Company Revenue (12% Cut)</p>
-            <span className="text-[10px] font-bold bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded border border-indigo-400/30">
+            <p className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider">Company Revenue (12% Cut)</p>
+            <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">
               Net Profit
             </span>
           </div>
-          <p className="text-3xl font-black text-emerald-400 mt-1">₹{stats.companyCommission.toLocaleString()}</p>
-          <p className="text-xs text-indigo-200 mt-1">Pure platform commission earnings collected</p>
+          <p className="text-3xl font-black text-emerald-600 mt-2 tracking-tight">₹{stats.companyCommission.toLocaleString()}</p>
+          <p className="text-xs text-slate-600 mt-1.5 font-medium">Pure platform commission earnings collected</p>
         </div>
 
         {/* Driver Net Payouts */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Driver Payouts (88%)</p>
-          <p className="text-3xl font-black text-emerald-600 mt-1">₹{stats.driverPayouts.toLocaleString()}</p>
-          <p className="text-xs text-slate-500 mt-1">Dispatched to partners via instant daily UPI</p>
+        <div className="bg-white rounded-2xl p-5 border border-indigo-200 shadow-xs hover:border-indigo-300 transition-all bg-gradient-to-br from-white via-white to-indigo-50/40">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-extrabold text-indigo-800 uppercase tracking-wider">Driver Payouts (88%)</p>
+            <span className="text-[10px] font-extrabold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full border border-indigo-300">
+              Instant UPI
+            </span>
+          </div>
+          <p className="text-3xl font-black text-indigo-600 mt-2 tracking-tight">₹{stats.driverPayouts.toLocaleString()}</p>
+          <p className="text-xs text-slate-600 mt-1.5 font-medium">Dispatched to partners via instant daily UPI</p>
         </div>
       </div>
 
@@ -210,14 +220,13 @@ export default function AdminDashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {drivers.slice(0, 6).map((driver) => {
-                const isBike = driver.vehicle.category === 'MOTO' || driver.vehicle.category === 'BIKE';
-                const isAuto = driver.vehicle.category === 'AUTO' || driver.vehicle.category === 'TOTO';
+                const category = driver.vehicle?.category || driver.category || 'MOTO';
                 return (
                   <tr key={driver.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center p-0.5">
-                          <VehicleIcon category={driver.vehicle.category} size="xs" />
+                          <VehicleIcon category={category} size="xs" />
                         </div>
                         <div>
                           <p className="font-bold text-slate-900">{driver.name}</p>
@@ -226,11 +235,11 @@ export default function AdminDashboard() {
                       </div>
                     </td>
                     <td className="py-3 px-3">
-                      <p className="font-semibold text-slate-800">{driver.vehicle.model}</p>
-                      <p className="text-[11px] font-mono text-slate-500">{driver.vehicle.plate || 'WB 29 AB 1042'}</p>
+                      <p className="font-semibold text-slate-800">{driver.vehicle?.model || driver.vehicleModel || 'Commercial Fleet'}</p>
+                      <p className="text-[11px] font-mono text-slate-500">{driver.vehicle?.plate || driver.vehiclePlate || 'WB 29 AB 1042'}</p>
                     </td>
                     <td className="py-3 px-3 font-medium text-slate-700">
-                      {driver.region || 'IIT Kharagpur'} · {driver.location.lat.toFixed(3)}° N
+                      {driver.region || 'IIT Kharagpur'} · {driver.location?.lat ? driver.location.lat.toFixed(3) : '22.314'}° N
                     </td>
                     <td className="py-3 px-3">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
@@ -274,7 +283,7 @@ export default function AdminDashboard() {
 
       {/* ── Private Contact Anonymized Modal ─────────────────────────────────── */}
       {privateContactTarget && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
             <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto">
               <Phone size={28} className="animate-bounce" />

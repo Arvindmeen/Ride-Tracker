@@ -334,11 +334,13 @@ router.get('/nearby', async (req, res, next) => {
     // If local matches are few, supplement with Photon OSM places within 100 KM
     if (closeMatches.length < 4) {
       try {
+        const queries = ['market', 'hospital', 'bus', 'station'];
+        const chosenQuery = queries[Math.floor(Math.random() * queries.length)];
         const photonUrl = new URL('https://photon.komoot.io/api/');
-        photonUrl.searchParams.set('q', 'station');
+        photonUrl.searchParams.set('q', chosenQuery);
         photonUrl.searchParams.set('lat', latitude.toString());
         photonUrl.searchParams.set('lon', longitude.toString());
-        photonUrl.searchParams.set('limit', '8');
+        photonUrl.searchParams.set('limit', '10');
 
         const osmRes = await fetch(photonUrl.toString(), {
           headers: { 'User-Agent': 'RidersMobility/1.0' },
@@ -348,15 +350,17 @@ router.get('/nearby', async (req, res, next) => {
         if (osmRes.ok) {
           const osmData = await osmRes.json();
           if (osmData.features && osmData.features.length > 0) {
+            const seenNames = new Set();
             const osmPlaces = osmData.features.map((f, i) => {
               const coords = f.geometry?.coordinates || [0, 0];
               const pLng = coords[0];
               const pLat = coords[1];
               const dist = Math.round(calculateDistance(latitude, longitude, pLat, pLng) * 10) / 10;
               const props = f.properties || {};
+              const placeName = props.name || props.street || `Nearby Transit Node ${i + 1}`;
               return {
                 id: `osm_near_${i}`,
-                name: props.name || props.street || `Nearby Transit Node ${i + 1}`,
+                name: placeName,
                 address: [props.street, props.district, props.city, props.state].filter(Boolean).join(', ') || props.name || 'Local Landmark',
                 city: props.city || props.district || 'Your Area',
                 state: props.state || '',
@@ -365,7 +369,14 @@ router.get('/nearby', async (req, res, next) => {
                 distanceKm: dist,
                 type: props.osm_value || 'transit',
               };
-            }).filter(p => p.distanceKm <= maxRangeKm && p.distanceKm > 0.3);
+            }).filter(p => {
+              // Strictly exclude places less than 0.8 km away (so origin/pickup is not returned as a destination)
+              if (p.distanceKm < 0.8 || p.distanceKm > maxRangeKm) return false;
+              const normName = p.name.toLowerCase().trim();
+              if (seenNames.has(normName)) return false;
+              seenNames.add(normName);
+              return true;
+            });
 
             closeMatches = [...closeMatches, ...osmPlaces].sort((a, b) => a.distanceKm - b.distanceKm);
           }

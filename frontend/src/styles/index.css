@@ -434,3 +434,19 @@ html, body {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* ── Continuous Smooth Gliding for All Vehicle Markers (Zero "tik tik" stutter) ── */
+.leaflet-marker-icon.custom-vehicle-marker,
+.leaflet-marker-icon.active-assigned-vehicle-marker,
+.custom-vehicle-marker,
+.active-assigned-vehicle-marker {
+  transition: transform 0.25s linear, top 0.25s linear, left 0.25s linear !important;
+  will-change: transform;
+}
+
+/* Ensure smooth rotation when heading updates */
+.custom-vehicle-marker div,
+.active-assigned-vehicle-marker div {
+  transition: transform 0.3s ease-out;
+}
+

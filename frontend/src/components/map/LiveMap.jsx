@@ -6,6 +6,7 @@ import {
   Navigation, Crosshair, Layers, Zap, Compass, Maximize2, ShieldCheck,
   TrendingUp, Radio
 } from 'lucide-react';
+import { formatDuration } from '@/utils/formatters';
 
 // Fix Leaflet default marker icons in Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -47,82 +48,109 @@ const TILE_PROVIDERS = {
   },
 };
 
-// ── High-Definition Realistic Vehicle SVGs (Cab, Bike, Auto/Toto) ───────────────
-const CAB_SVG = `
-  <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Cab Roof Taxi Sign -->
-    <rect x="11.5" y="5.2" width="5" height="2.2" rx="0.6" fill="#facc15" stroke="#ca8a04" stroke-width="0.5"/>
-    <!-- Cab Aerodynamic Body -->
-    <path d="M4 17.5C4 16.5 4.7 15.6 5.6 15.4L7.2 15L9 9.5C9.5 8 10.8 7 12.4 7H15.6C17.2 7 18.5 8 19 9.5L20.8 15L22.4 15.4C23.3 15.6 24 16.5 24 17.5V20.5C24 21.3 23.3 22 22.5 22H21.5C21.5 20.6 20.4 19.5 19 19.5C17.6 19.5 16.5 20.6 16.5 22H11.5C11.5 20.6 10.4 19.5 9 19.5C7.6 19.5 6.5 20.6 6.5 22H5.5C4.7 22 4 21.3 4 20.5V17.5Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.5"/>
-    <!-- Windshield and Tinted Windows -->
-    <path d="M9.8 14.5L11.2 9.8C11.4 9.3 11.8 9 12.3 9H15.7C16.2 9 16.6 9.3 16.8 9.8L18.2 14.5H9.8Z" fill="#1e293b"/>
-    <!-- Headlights Glow -->
-    <circle cx="6.5" cy="18" r="1.3" fill="#fef08a"/>
-    <circle cx="21.5" cy="18" r="1.3" fill="#fef08a"/>
-    <!-- Wheels with Rims -->
-    <circle cx="9" cy="22" r="2.6" fill="#0f172a" stroke="#ffffff" stroke-width="0.8"/>
-    <circle cx="9" cy="22" r="1" fill="#94a3b8"/>
-    <circle cx="19" cy="22" r="2.6" fill="#0f172a" stroke="#ffffff" stroke-width="0.8"/>
-    <circle cx="19" cy="22" r="1" fill="#94a3b8"/>
+// ── High-Definition Top-Down Navigation Vehicle SVGs (Head points UP at 0°) ──────
+const TOPDOWN_CAB_SVG = `
+  <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Sedan Body (Aerodynamic EV) -->
+    <path d="M22 10C22 7 25 5 32 5C39 5 42 7 42 10L45 20L46 44C46 50 43 54 32 54C21 54 18 50 18 44L19 20L22 10Z" fill="#F8FAFC" stroke="#0F172A" stroke-width="2.5"/>
+    <!-- Front Windshield -->
+    <path d="M23 18C25 15 28 14 32 14C36 14 39 15 41 18L42 25H22L23 18Z" fill="#1E293B"/>
+    <!-- Roof with EV / Taxi Beacon -->
+    <rect x="25" y="27" width="14" height="9" rx="2" fill="#3B82F6" stroke="#1D4ED8" stroke-width="1"/>
+    <rect x="28" y="30" width="8" height="3" rx="1" fill="#FACC15"/>
+    <!-- Rear Window -->
+    <path d="M23 42L24 38H40L41 42C39 44 36 45 32 45C28 45 25 44 23 42Z" fill="#1E293B"/>
+    <!-- Side Mirrors -->
+    <rect x="15" y="19" width="4" height="2.5" rx="1" fill="#F8FAFC" stroke="#0F172A" stroke-width="1"/>
+    <rect x="45" y="19" width="4" height="2.5" rx="1" fill="#F8FAFC" stroke="#0F172A" stroke-width="1"/>
+    <!-- Front Headlights (Pointing forward at top) -->
+    <rect x="22" y="6" width="5" height="3.5" rx="1.5" fill="#FEF08A" stroke="#FACC15" stroke-width="0.8"/>
+    <rect x="37" y="6" width="5" height="3.5" rx="1.5" fill="#FEF08A" stroke="#FACC15" stroke-width="0.8"/>
+    <!-- Dual Rear Taillights -->
+    <rect x="20" y="52" width="6" height="2.5" rx="1" fill="#EF4444"/>
+    <rect x="38" y="52" width="6" height="2.5" rx="1" fill="#EF4444"/>
   </svg>
 `;
 
-const BIKE_SVG = `
-  <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Rear Spoke Wheel -->
-    <circle cx="7" cy="19" r="4.2" fill="#0f172a" stroke="#ffffff" stroke-width="1.2"/>
-    <circle cx="7" cy="19" r="2" fill="#94a3b8"/>
-    <circle cx="7" cy="19" r="0.8" fill="#ffffff"/>
-    <!-- Front Spoke Wheel -->
-    <circle cx="21" cy="19" r="4.2" fill="#0f172a" stroke="#ffffff" stroke-width="1.2"/>
-    <circle cx="21" cy="19" r="2" fill="#94a3b8"/>
-    <circle cx="21" cy="19" r="0.8" fill="#ffffff"/>
-    <!-- Motorcycle Chassis -->
-    <path d="M7 19L11.5 13.5H16.5L21 19" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M12 13.5L14 8H16.5L18 13.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Aerodynamic Fuel Tank -->
-    <path d="M13 11.5C13 10.2 14.2 9.2 16 9.2H17.8L18.8 12.5H14.5C13.6 12.5 13 12 13 11.5Z" fill="#ffedd5" stroke="#ffffff" stroke-width="0.8"/>
-    <!-- Sport Handlebars -->
-    <path d="M15 7.5H19" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+const TOPDOWN_TOTO_SVG = `
+  <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- E-Toto Canopy Roof (Green EV) -->
+    <path d="M20 16C20 11 24 8 32 8C40 8 44 11 44 16L45 42C45 48 42 51 32 51C22 51 19 48 19 42L20 16Z" fill="#10B981" stroke="#064E3B" stroke-width="2.5"/>
+    <!-- Front Nose & Steering Extension -->
+    <path d="M28 8V4C28 2.5 29.5 1 32 1C34.5 1 36 2.5 36 4V8H28Z" fill="#047857" stroke="#064E3B" stroke-width="1.5"/>
+    <circle cx="32" cy="4" r="2" fill="#0F172A"/>
+    <!-- Front Windshield -->
+    <path d="M22 17C25 14 28 13.5 32 13.5C36 13.5 39 14 42 17L43 23H21L22 17Z" fill="#022C22"/>
+    <!-- Driver Seat -->
+    <rect x="27" y="25" width="10" height="5" rx="1.5" fill="#0F172A"/>
+    <!-- Passenger Bench -->
+    <rect x="22" y="38" width="20" height="8" rx="2" fill="#065F46" stroke="#047857" stroke-width="1"/>
+    <!-- Front Headlights (Pointing forward at top) -->
+    <circle cx="27" cy="8" r="2.2" fill="#FEF08A" stroke="#FACC15" stroke-width="0.8"/>
+    <circle cx="37" cy="8" r="2.2" fill="#FEF08A" stroke="#FACC15" stroke-width="0.8"/>
+    <!-- Chrome Grab Rails -->
+    <line x1="17" y1="22" x2="17" y2="44" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+    <line x1="47" y1="22" x2="47" y2="44" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+    <!-- Rear Taillights -->
+    <rect x="21" y="49.5" width="5" height="2" rx="1" fill="#EF4444"/>
+    <rect x="38" y="49.5" width="5" height="2" rx="1" fill="#EF4444"/>
+  </svg>
+`;
+
+const TOPDOWN_BIKE_SVG = `
+  <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Front Tire (Points forward at top) -->
+    <rect x="30" y="4" width="4" height="12" rx="2" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+    <!-- Wide Handlebars with Grips -->
+    <path d="M19 14L28 16L32 16L36 16L45 14" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Dual Side Mirrors -->
+    <circle cx="18" cy="13" r="2" fill="#94A3B8"/>
+    <circle cx="46" cy="13" r="2" fill="#94A3B8"/>
     <!-- Headlight Beam -->
-    <path d="M19 8.5L24 7.5V10.5L19 9.5" fill="#fef08a" opacity="0.9"/>
+    <circle cx="32" cy="14" r="3" fill="#FEF08A" stroke="#FACC15" stroke-width="1"/>
+    <!-- Bike Frame & Tank (Orange EV) -->
+    <path d="M26 20C26 18 28 17 32 17C36 17 38 18 38 20L39 34C39 37 36 39 32 39C28 39 25 37 25 34L26 20Z" fill="#F97316" stroke="#C2410C" stroke-width="2"/>
     <!-- Rider Cushion Seat -->
-    <path d="M10 12.5H13C13.6 12.5 14 13 14 13.5H9.5C9.5 13 9.7 12.5 10 12.5Z" fill="#0f172a"/>
+    <path d="M27 28C27 26 29 25 32 25C35 25 37 26 37 28L36 43C36 45 34 46 32 46C30 46 28 45 28 43L27 28Z" fill="#0F172A"/>
+    <!-- Rear Tire -->
+    <rect x="30" y="47" width="4" height="12" rx="2" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+    <!-- Rear Taillight -->
+    <rect x="29" y="45" width="6" height="2" rx="1" fill="#EF4444"/>
   </svg>
 `;
 
-const AUTO_SVG = `
-  <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Iconic Yellow Canopy Roof -->
-    <path d="M5.5 12.5C5.5 8.5 8.5 6 12.5 6H17.5C20.5 6 22.8 8 23.3 11L24.5 15.5H5.2L5.5 12.5Z" fill="#facc15" stroke="#ca8a04" stroke-width="0.8"/>
-    <!-- Curved Windshield -->
-    <path d="M20.5 11L22 15H17V11H20.5Z" fill="#38bdf8" opacity="0.8"/>
-    <!-- Classic Emerald Green Body (Indian Auto / Solar E-Toto) -->
-    <path d="M4.8 15.5H23.5L22.5 20.2C22.2 21.2 21.2 21.8 20.2 21.8H7.8C6.8 21.8 5.8 21.2 5.5 20.2L4.8 15.5Z" fill="#16a34a" stroke="#ffffff" stroke-width="0.8"/>
-    <!-- Open Passenger Door Cabin -->
-    <rect x="8.5" y="11.5" width="7" height="4" rx="0.8" fill="#0f172a" opacity="0.7"/>
-    <!-- 3-Wheeler Front Single Wheel -->
-    <circle cx="21.5" cy="22" r="2.8" fill="#0f172a" stroke="#ffffff" stroke-width="1"/>
-    <circle cx="21.5" cy="22" r="1.1" fill="#94a3b8"/>
-    <!-- 3-Wheeler Rear Wheel -->
-    <circle cx="8.5" cy="22" r="2.8" fill="#0f172a" stroke="#ffffff" stroke-width="1"/>
-    <circle cx="8.5" cy="22" r="1.1" fill="#94a3b8"/>
-    <!-- Single Round Headlight -->
-    <circle cx="24" cy="17.2" r="1.3" fill="#fef08a" stroke="#eab308" stroke-width="0.5"/>
+const TOPDOWN_TRANSPORTER_SVG = `
+  <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Front Cabin (Points forward at top) -->
+    <path d="M20 12C20 8 23 6 32 6C41 6 44 8 44 12L44 26H20L20 12Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="2"/>
+    <!-- Windshield -->
+    <path d="M22 16C25 14 28 13 32 13C36 13 39 14 42 16L42 22H22L22 16Z" fill="#1E293B"/>
+    <!-- Front Headlights -->
+    <rect x="21" y="7" width="5" height="3" rx="1" fill="#FEF08A" stroke="#FACC15" stroke-width="0.8"/>
+    <rect x="38" y="7" width="5" height="3" rx="1" fill="#FEF08A" stroke="#FACC15" stroke-width="0.8"/>
+    <!-- Cargo Bed Container (Blue) -->
+    <rect x="18" y="27" width="28" height="28" rx="2" fill="#0284C7" stroke="#0369A1" stroke-width="2"/>
+    <line x1="24" y1="27" x2="24" y2="55" stroke="#38BDF8" stroke-width="1.5"/>
+    <line x1="40" y1="27" x2="40" y2="55" stroke="#38BDF8" stroke-width="1.5"/>
+    <!-- Rear Taillights -->
+    <rect x="19" y="53" width="5" height="2" rx="1" fill="#EF4444"/>
+    <rect x="40" y="53" width="5" height="2" rx="1" fill="#EF4444"/>
   </svg>
 `;
 
-// Ultra-crisp SVG vector icons for Rider and Drivers (Bike, Cab, Auto/Toto)
+// Ultra-crisp vector icons for Ambient Fleet Drivers (Head points in direction of travel!)
 function createVehicleIcon(category, status, heading = 0) {
-  const isBike = category === 'MOTO' || category === 'BIKE' || category === 'CAMPUS_BIKE';
-  const isAuto = category === 'AUTO' || category === 'TOTO' || category === 'CAMPUS_AUTO';
+  const cat = String(category || '').toUpperCase();
+  const isBike = cat.includes('BIKE') || cat.includes('MOTO');
+  const isAuto = cat.includes('AUTO') || cat.includes('TOTO');
+  const isTransporter = cat.includes('TRANSPORTER') || cat.includes('XL');
 
   let discBg = 'linear-gradient(135deg, #1e40af, #0f172a)';
   let glowColor = 'rgba(37,99,235,0.45)';
   let badgeLabel = '🚗 CAB';
   let badgeText = '#60a5fa';
   let badgeBorder = 'rgba(96,165,250,0.35)';
-  let vehicleSvg = CAB_SVG;
+  let vehicleHtml = TOPDOWN_CAB_SVG;
 
   if (isBike) {
     discBg = 'linear-gradient(135deg, #ea580c, #7c2d12)';
@@ -130,27 +158,41 @@ function createVehicleIcon(category, status, heading = 0) {
     badgeLabel = '🏍️ BIKE';
     badgeText = '#fb923c';
     badgeBorder = 'rgba(251,146,60,0.35)';
-    vehicleSvg = BIKE_SVG;
+    vehicleHtml = TOPDOWN_BIKE_SVG;
   } else if (isAuto) {
     discBg = 'linear-gradient(135deg, #059669, #064e3b)';
     glowColor = 'rgba(16,185,129,0.45)';
-    badgeLabel = '🛺 AUTO';
+    badgeLabel = '🛺 TOTO';
     badgeText = '#34d399';
     badgeBorder = 'rgba(52,211,153,0.35)';
-    vehicleSvg = AUTO_SVG;
+    vehicleHtml = TOPDOWN_TOTO_SVG;
+  } else if (isTransporter) {
+    discBg = 'linear-gradient(135deg, #0284c7, #0369a1)';
+    glowColor = 'rgba(2,132,199,0.45)';
+    badgeLabel = '🚚 TRANSPORTER';
+    badgeText = '#38bdf8';
+    badgeBorder = 'rgba(56,189,248,0.35)';
+    vehicleHtml = TOPDOWN_TRANSPORTER_SVG;
   }
 
   const html = `
     <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate3d(0,0,0);">
       <div style="
-        width: 40px; height: 40px; border-radius: 50%;
+        width: 44px; height: 44px; border-radius: 50%;
         background: ${discBg};
-        border: 2.5px solid #ffffff;
+        border: 2px solid #ffffff;
         box-shadow: 0 4px 14px rgba(0,0,0,0.45), 0 0 0 3px ${glowColor};
         display: flex; align-items: center; justify-content: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       ">
-        ${vehicleSvg}
+        <!-- Vehicle Head points in direction of path! -->
+        <div style="
+          transform: rotate(${heading || 0}deg);
+          display: flex; align-items: center; justify-content: center;
+          transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        ">
+          ${vehicleHtml}
+        </div>
       </div>
       <div style="
         background: #090d16; color: ${badgeText}; font-size: 8px; font-weight: 900;
@@ -167,57 +209,99 @@ function createVehicleIcon(category, status, heading = 0) {
   return L.divIcon({
     html,
     className: 'custom-vehicle-marker',
-    iconSize: [46, 56],
-    iconAnchor: [23, 28],
-    popupAnchor: [0, -24],
+    iconSize: [48, 58],
+    iconAnchor: [24, 29],
+    popupAnchor: [0, -25],
   });
 }
 
-// Active Assigned Ride Vehicle Marker (supports smooth heading, speed badge, and passenger onboard)
-function createActiveRideVehicleIcon(category, heading = 0, isBoarded = false, driverName = 'Driver', speed = 0) {
-  const isBike = category === 'MOTO' || category === 'BIKE';
-  const isAuto = category === 'AUTO' || category === 'TOTO';
+// Active Assigned Ride Vehicle Marker (Vehicle head points in direction of path!)
+function createActiveRideVehicleIcon(category, heading = 0, isBoarded = false, driverName = 'Driver', speed = 0, isArrived = false) {
+  const cat = String(category || '').toUpperCase();
+  const isBike = cat.includes('BIKE') || cat.includes('MOTO');
+  const isAuto = cat.includes('AUTO') || cat.includes('TOTO');
+  const isTransporter = cat.includes('TRANSPORTER') || cat.includes('XL');
 
-  const themeColor = isBoarded ? '#2563eb' : '#f59e0b';
-  const glow = isBoarded ? 'rgba(37,99,235,0.6)' : 'rgba(245,158,11,0.6)';
-  const badgeText = isBoarded ? '🚗 + 👤 ON TRIP' : '🚖 APPROACHING';
+  const themeColor = isBoarded ? '#2563eb' : isArrived ? '#059669' : isAuto ? '#10b981' : isBike ? '#f97316' : '#3b82f6';
+  const glow = isBoarded ? 'rgba(37,99,235,0.65)' : isArrived ? 'rgba(5,150,105,0.7)' : isAuto ? 'rgba(16,185,129,0.65)' : isBike ? 'rgba(249,115,22,0.65)' : 'rgba(59,130,246,0.65)';
+  
+  const badgeText = isBoarded
+    ? (isAuto ? '🛺 ON TRIP' : isBike ? '🏍️ ON TRIP' : '🚗 ON TRIP')
+    : isArrived || speed === 0
+    ? (isAuto ? '🛺 TOTO AT PICKUP' : isBike ? '🏍️ BIKE AT PICKUP' : '🚗 CAB AT PICKUP')
+    : (isAuto ? '🛺 TOTO ARRIVING' : isBike ? '🏍️ BIKE ARRIVING' : '🚗 CAB ARRIVING');
 
-  const vehicleSvg = isBike ? BIKE_SVG : isAuto ? AUTO_SVG : CAB_SVG;
+  const vehicleHtml = isAuto
+    ? TOPDOWN_TOTO_SVG
+    : isBike
+    ? TOPDOWN_BIKE_SVG
+    : isTransporter
+    ? TOPDOWN_TRANSPORTER_SVG
+    : TOPDOWN_CAB_SVG;
 
   const html = `
     <div style="position: relative; display: flex; flex-direction: column; align-items: center; transform: translate3d(0,0,0); pointer-events: auto;">
       <!-- Pulsing Wave Beacon -->
       <div style="
-        position: absolute; width: 62px; height: 62px; border-radius: 50%;
-        background: ${glow}; opacity: 0.4;
+        position: absolute; width: 66px; height: 66px; border-radius: 50%;
+        background: ${glow}; opacity: 0.45;
         animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
         top: 2px;
       "></div>
 
       <!-- Main Vehicle Disc -->
       <div style="
-        position: relative; width: 48px; height: 48px; border-radius: 50%;
+        position: relative; width: 52px; height: 52px; border-radius: 50%;
         background: linear-gradient(135deg, ${themeColor}, #020617);
-        border: 3px solid #ffffff;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 0 3px ${glow};
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.55), 0 0 0 3px ${glow};
         display: flex; align-items: center; justify-content: center;
-        transition: transform 0.4s ease-out;
       ">
-        <div style="transform: rotate(${heading || 0}deg); display: flex; align-items: center; justify-content: center;">
-          ${vehicleSvg}
+        <!-- Directional Pointer Needle on Rim (Rotates 360° to point motion direction) -->
+        <div style="
+          position: absolute; inset: -4px; border-radius: 50%;
+          pointer-events: none;
+          transform: rotate(${heading || 0}deg);
+          transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        ">
+          <div style="
+            position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 9px solid #ffffff;
+            filter: drop-shadow(0 0 4px ${glow});
+          "></div>
+        </div>
+
+        <!-- Vehicle Head points in direction of path! (Smooth 360° rotation) -->
+        <div style="
+          transform: rotate(${heading || 0}deg);
+          display: flex; align-items: center; justify-content: center;
+          transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        ">
+          <!-- Forward Headlight Ray Beam (Emits forward from head) -->
+          <div style="
+            position: absolute; top: -14px; width: 28px; height: 18px;
+            background: radial-gradient(ellipse at bottom, rgba(254,240,138,0.7) 0%, rgba(254,240,138,0.15) 60%, transparent 100%);
+            clip-path: polygon(25% 100%, 75% 100%, 100% 0%, 0% 0%);
+            filter: blur(1px); pointer-events: none;
+          "></div>
+
+          ${vehicleHtml}
         </div>
       </div>
 
-      <!-- Status & Name Pill -->
+      <!-- Live Speed & Dispatch Status Pill (Always horizontal and legible) -->
       <div style="
         background: #090d16; color: #ffffff; font-size: 8.5px; font-weight: 900;
-        padding: 2.5px 7px; border-radius: 9999px; margin-top: 3px;
-        border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        padding: 2.5px 8px; border-radius: 9999px; margin-top: 4px;
+        border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         white-space: nowrap; display: flex; align-items: center; gap: 4px;
       ">
-        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${isBoarded ? '#60a5fa' : '#34d399'}; box-shadow: 0 0 6px ${isBoarded ? '#60a5fa' : '#34d399'};"></span>
+        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${isBoarded ? '#60a5fa' : isArrived ? '#10b981' : '#34d399'}; box-shadow: 0 0 6px ${isBoarded ? '#60a5fa' : isArrived ? '#10b981' : '#34d399'};"></span>
         <span>${badgeText}</span>
-        ${speed > 0 ? `<span style="color: #94a3b8; font-family: monospace;">· ${speed}km/h</span>` : ''}
+        ${speed > 0 ? `<span style="color: #94a3b8; font-family: monospace;">· ${speed}km/h</span>` : `<span style="color: #34d399; font-weight: bold;">· Parked</span>`}
       </div>
     </div>
   `;
@@ -225,9 +309,9 @@ function createActiveRideVehicleIcon(category, heading = 0, isBoarded = false, d
   return L.divIcon({
     html,
     className: 'active-assigned-vehicle-marker',
-    iconSize: [68, 70],
-    iconAnchor: [34, 28],
-    popupAnchor: [0, -28],
+    iconSize: [72, 74],
+    iconAnchor: [36, 30],
+    popupAnchor: [0, -30],
   });
 }
 
@@ -606,6 +690,7 @@ export default function LiveMap({
   destination,
   activeDriverLocation,
   routeCoordinates,
+  routePolyline,
   showSurgeZones = false,
   tileTheme = 'light', // 'light' (white clean default) | 'voyager' | 'dark' | 'osm'
   onDriverClick,
@@ -655,11 +740,12 @@ export default function LiveMap({
   }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, activeDriverLocation?.lat, activeDriverLocation?.lng]);
 
   // Route polyline points
+  const activeRoute = routeCoordinates || routePolyline;
   const polylinePositions = useMemo(() => {
-    if (routeCoordinates?.length > 1 && routeCoordinates.every(([lat, lng]) => (
+    if (activeRoute?.length > 1 && activeRoute.every(([lat, lng]) => (
       Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
     ))) {
-      return routeCoordinates.map(([lat, lng]) => [Number(lat), Number(lng)]);
+      return activeRoute.map(([lat, lng]) => [Number(lat), Number(lng)]);
     }
     if (isValidCoordinate(pickup) && isValidCoordinate(destination)) {
       // Create a smooth mid-point arc line between pickup & destination
@@ -716,14 +802,18 @@ export default function LiveMap({
                 </span>
               </div>
               <span className="text-[10px] font-mono bg-blue-900/60 text-blue-300 border border-blue-700/60 px-2 py-0.5 rounded-full font-bold">
-                {activeDriverSpeed || activeDriverLocation.speed || 32} km/h
+                {typeof activeDriverSpeed === 'number'
+                  ? (activeDriverSpeed > 0 ? `${activeDriverSpeed} km/h` : 'Parked')
+                  : typeof activeDriverLocation?.speed === 'number' && activeDriverLocation.speed > 0
+                  ? `${activeDriverLocation.speed} km/h`
+                  : 'Parked'}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-3 pt-2.5">
               <div>
                 <p className="text-lg font-black tracking-tight text-white leading-tight">
-                  {activeDriverEta ? `${activeDriverEta} mins` : isPassengerOnBoard ? '14 mins' : '3 mins'}
+                  {activeDriverEta ? formatDuration(activeDriverEta) : isPassengerOnBoard ? '14 mins' : '3 mins'}
                   <span className="text-xs font-medium text-slate-400 ml-1.5">
                     ({activeDriverDistance ? `${activeDriverDistance} km` : isPassengerOnBoard ? '4.8 km' : '1.2 km'})
                   </span>
@@ -798,10 +888,10 @@ export default function LiveMap({
         )}
 
         {/* Fleet Drivers on Map (Only when not in focused single active ride) */}
-        {(!activeDriverLocation || !isPassengerOnBoard) && drivers.filter(d => d.status !== 'OFFLINE').map(driver => (
+        {(!activeDriverLocation || !isPassengerOnBoard) && drivers.filter(d => d.status !== 'OFFLINE' && isValidCoordinate(d.location)).map(driver => (
           <Marker
             key={driver.id}
-            position={[driver.location.lat, driver.location.lng]}
+            position={[Number(driver.location.lat), Number(driver.location.lng)]}
             icon={createVehicleIcon(driver.vehicle?.category, driver.status, driver.heading)}
             eventHandlers={{
               click: () => { selectDriver(driver.id); onDriverClick?.(driver); },
@@ -814,15 +904,16 @@ export default function LiveMap({
         ))}
 
         {/* Active Assigned Driver in Motion (Animated marker with Heading & Passenger Onboard) */}
-        {activeDriverLocation && (
+        {isValidCoordinate(activeDriverLocation) && (
           <Marker
-            position={[activeDriverLocation.lat, activeDriverLocation.lng]}
+            position={[Number(activeDriverLocation.lat), Number(activeDriverLocation.lng)]}
             icon={createActiveRideVehicleIcon(
               activeDriverLocation.category || activeRide?.driverInfo?.category || 'MOTO',
               activeDriverLocation.heading || 45,
               isPassengerOnBoard,
               activeRide?.driverInfo?.name || 'Driver',
-              activeDriverSpeed || activeDriverLocation.speed || 30
+              typeof activeDriverSpeed === 'number' ? activeDriverSpeed : (activeDriverLocation.speed || 0),
+              rideStage === 'DRIVER_ARRIVED' || activeRide?.status === 'DRIVER_ARRIVED'
             )}
           >
             <Popup>
@@ -847,11 +938,11 @@ export default function LiveMap({
         )}
 
         {/* Pickup Marker: Shows live YOU beacon when waiting; transitions to start origin waypoint once in transit or completed */}
-        {pickup?.lat && pickup?.lng && (
+        {isValidCoordinate(pickup) && (
           <>
             {!isPassengerOnBoard && !isTripCompleted && (
               <Circle
-                center={[pickup.lat, pickup.lng]}
+                center={[Number(pickup.lat), Number(pickup.lng)]}
                 radius={40}
                 pathOptions={{
                   color: '#2563eb',
@@ -863,7 +954,7 @@ export default function LiveMap({
               />
             )}
             <Marker
-              position={[pickup.lat, pickup.lng]}
+              position={[Number(pickup.lat), Number(pickup.lng)]}
               icon={isPassengerOnBoard || isTripCompleted
                 ? createOriginWaypointIcon(pickup.name ? pickup.name.split(',')[0] : 'Origin')
                 : createPickupIcon(
@@ -894,10 +985,10 @@ export default function LiveMap({
         )}
 
         {/* Nearby Passengers on Campus / City Roads */}
-        {showNearbyPassengers && MOCK_PASSENGERS.map((passenger) => (
+        {showNearbyPassengers && MOCK_PASSENGERS.filter(p => isValidCoordinate(p.location)).map((passenger) => (
           <Marker
             key={passenger.id}
-            position={[passenger.location.lat, passenger.location.lng]}
+            position={[Number(passenger.location.lat), Number(passenger.location.lng)]}
             icon={createPassengerIcon(passenger)}
           >
             <Popup>
@@ -920,11 +1011,11 @@ export default function LiveMap({
         ))}
 
         {/* Destination Marker: Transitions to live YOU ARRIVED beacon once trip is completed! */}
-        {destination?.lat && destination?.lng && (
+        {isValidCoordinate(destination) && (
           <>
             {isTripCompleted && (
               <Circle
-                center={[destination.lat, destination.lng]}
+                center={[Number(destination.lat), Number(destination.lng)]}
                 radius={40}
                 pathOptions={{
                   color: '#2563eb',
@@ -936,7 +1027,7 @@ export default function LiveMap({
               />
             )}
             <Marker
-              position={[destination.lat, destination.lng]}
+              position={[Number(destination.lat), Number(destination.lng)]}
               icon={isTripCompleted
                 ? createPickupIcon(
                     destination.name ? `YOU (ARRIVED) · ${destination.name.split(',')[0]}` : 'YOU (ARRIVED)',

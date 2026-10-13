@@ -1,46 +1,77 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { userService } from '@/services';
 import { MOCK_USERS } from '@/mock/users.js';
-import { Avatar, Rating } from '@/components/ui';
-import { MapPin, Users, CheckCircle2, XCircle, ChevronDown } from 'lucide-react';
-
-const STATE_LIST = [...new Set(MOCK_USERS.map(u => u.state).filter(Boolean))].sort();
+import { Avatar, Rating, Spinner } from '@/components/ui';
+import { MapPin, Users, CheckCircle2, XCircle, ChevronDown, Database, Shield } from 'lucide-react';
 
 export default function AdminUsers() {
+  const [users, setUsers]           = useState(MOCK_USERS);
+  const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [stateFilter, setStateFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage]             = useState(0);
   const PAGE_SIZE = 100;
 
+  useEffect(() => {
+    userService.getUsers().then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        setUsers(data);
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const stateList = useMemo(() => {
+    return [...new Set(users.map(u => u.state).filter(Boolean))].sort();
+  }, [users]);
+
+  const toggleUserStatus = async (userId) => {
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const nextStatus = !u.isActive;
+        userService.updateUser(userId, { isActive: nextStatus }).catch(() => {});
+        return { ...u, isActive: nextStatus };
+      }
+      return u;
+    }));
+  };
+
   const filtered = useMemo(() => {
-    let list = MOCK_USERS;
+    let list = users;
     if (stateFilter !== 'ALL') list = list.filter(u => u.state === stateFilter);
     if (statusFilter === 'ACTIVE')   list = list.filter(u => u.isActive);
     if (statusFilter === 'INACTIVE') list = list.filter(u => !u.isActive);
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(u =>
-        u.name.toLowerCase().includes(q) ||
+        u.name?.toLowerCase().includes(q) ||
         u.email?.toLowerCase().includes(q) ||
         u.phone?.includes(q) ||
         u.city?.toLowerCase().includes(q),
       );
     }
     return list;
-  }, [search, stateFilter, statusFilter]);
+  }, [users, search, stateFilter, statusFilter]);
 
   const page_data = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">Passenger Management</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">Passenger Management</h1>
+            {users.some(u => u.isRealDb) && (
+              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Database size={10} /> Live SQLite DB Connected
+              </span>
+            )}
+          </div>
           <p className="text-sm text-slate-500 mt-0.5">
-            {MOCK_USERS.length.toLocaleString()} registered passengers · {MOCK_USERS.filter(u=>u.isActive).length.toLocaleString()} active
+            {users.length.toLocaleString()} registered passengers · {users.filter(u => u.isActive).length.toLocaleString()} active
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -59,7 +90,7 @@ export default function AdminUsers() {
               className="pl-3 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/25 appearance-none cursor-pointer"
             >
               <option value="ALL">All States</option>
-              {STATE_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+              {stateList.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <ChevronDown size={14} className="absolute right-2.5 top-3.5 text-slate-400 pointer-events-none" />
           </div>
@@ -67,7 +98,7 @@ export default function AdminUsers() {
           <div className="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 gap-0.5">
             {['ALL','ACTIVE','INACTIVE'].map(s => (
               <button key={s} onClick={() => { setStatusFilter(s); setPage(0); }}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${statusFilter===s ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
+                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${statusFilter===s ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}>
                 {s}
               </button>
             ))}
@@ -78,10 +109,10 @@ export default function AdminUsers() {
       {/* Summary pills */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: Users,        label: 'Total Users',    val: MOCK_USERS.length.toLocaleString(),                        cls: 'bg-blue-50 text-blue-700 border-blue-100' },
-          { icon: CheckCircle2, label: 'Active',          val: MOCK_USERS.filter(u=>u.isActive).length.toLocaleString(), cls: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-          { icon: MapPin,       label: 'States Covered', val: STATE_LIST.length,                                          cls: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
-          { icon: XCircle,      label: 'Filtered',        val: filtered.length.toLocaleString(),                          cls: 'bg-slate-50 text-slate-700 border-slate-100' },
+          { icon: Users,        label: 'Total Users',    val: users.length.toLocaleString(),                        cls: 'bg-blue-50 text-blue-700 border-blue-100' },
+          { icon: CheckCircle2, label: 'Active',          val: users.filter(u=>u.isActive).length.toLocaleString(), cls: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+          { icon: MapPin,       label: 'States Covered', val: stateList.length,                                    cls: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
+          { icon: XCircle,      label: 'Filtered',        val: filtered.length.toLocaleString(),                    cls: 'bg-slate-50 text-slate-700 border-slate-100' },
         ].map(({ icon: I, label, val, cls }) => (
           <div key={label} className={`flex items-center gap-3 p-3.5 rounded-2xl border ${cls}`}>
             <I size={18} className="flex-shrink-0" />
@@ -149,7 +180,14 @@ export default function AdminUsers() {
                       <div className="flex items-center gap-3">
                         <Avatar name={user.name} size="sm" ring />
                         <div>
-                          <p className="text-sm font-bold text-slate-900">{user.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-slate-900">{user.name}</p>
+                            {user.isRealDb && (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Live DB
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-400 font-mono flex items-center gap-1">
                             <span className="text-[10px] text-slate-300">🔒</span>
                             {maskedEmail}
@@ -177,16 +215,20 @@ export default function AdminUsers() {
                         </span>
                       ) : <span className="text-slate-300 text-xs">—</span>}
                     </td>
-                    <td><span className="font-bold text-slate-800 text-sm">{user.totalRides.toLocaleString()}</span></td>
-                    <td><span className="text-xs bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-lg">{user.preferredPayment}</span></td>
+                    <td><span className="font-bold text-slate-800 text-sm">{(user.totalRides ?? 0).toLocaleString()}</span></td>
+                    <td><span className="text-xs bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-lg">{user.preferredPayment || 'UPI'}</span></td>
                     <td>
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${
-                        user.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
-                      }`}>
+                      <button
+                        onClick={() => toggleUserStatus(user.id)}
+                        className={`text-[10px] font-black px-2 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity ${
+                          user.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
+                        }`}
+                        title="Click to toggle account status"
+                      >
                         {user.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </button>
                     </td>
-                    <td><span className="text-xs text-slate-400 font-mono">{user.joinedAt}</span></td>
+                    <td><span className="text-xs text-slate-400 font-mono">{user.joinedAt || 'Recently'}</span></td>
                   </tr>
                 );
               })}

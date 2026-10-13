@@ -136,7 +136,31 @@ export const useAuthStore = create((set, get) => ({
       }
     } catch (e) {}
     set((s) => ({ user: { ...s.user, ...updates } }));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('veloq_user', JSON.stringify(get().user));
+    }
     return { success: true };
+  },
+
+  changePassword: async ({ currentPassword, newPassword }) => {
+    const token = get().token;
+    try {
+      const res = await fetch('/api/v1/auth/password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update password');
+      }
+      return { success: true, message: data.message };
+    } catch (err) {
+      return { success: false, error: err.message || 'Unable to update password. Please try again.' };
+    }
   },
 
   logout: async () => {
@@ -235,6 +259,7 @@ export function generateDriversAround(centerLat, centerLng) {
       rating: Math.round((4.7 + Math.random() * 0.28) * 10) / 10,
       totalRides: 80 + idx * 35,
       status: 'AVAILABLE',
+      category: p.category,
       vehicle: {
         category: p.category,
         model: p.model,
@@ -418,7 +443,13 @@ export const useDriverStore = create((set, get) => ({
   addRequest: (req) => set((s) => ({
     pendingRequests: [req, ...s.pendingRequests.filter(r => r.id !== req.id)],
   })),
+  removeRequest: (id) => set((s) => ({
+    pendingRequests: s.pendingRequests.filter(r => r.id !== id),
+  })),
   clearRequests: () => set({ pendingRequests: [] }),
+  withdrawEarnings: (amount) => set((s) => ({
+    todayEarnings: Math.max(0, s.todayEarnings - (amount || s.todayEarnings)),
+  })),
 }));
 
 // ── Admin Store ───────────────────────────────────────────────────────────────

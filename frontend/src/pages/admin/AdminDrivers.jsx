@@ -131,34 +131,45 @@ export default function AdminDrivers() {
                       <div className="flex items-center gap-3">
                         <Avatar name={driver.name} size="sm" ring />
                         <div>
-                          <p className="text-sm font-bold text-slate-900">{driver.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-slate-900">{driver.name}</p>
+                            {driver.isRealDb && (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Live DB
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] font-mono text-slate-400">{driver.id}</p>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <p className="text-sm font-semibold text-slate-800">{driver.vehicle.make} {driver.vehicle.model}</p>
-                      <p className="text-xs font-mono text-slate-400 mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded-md inline-block">{driver.vehicle.plate}</p>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {driver.vehicle?.make ? `${driver.vehicle.make} ${driver.vehicle.model || ''}` : (driver.vehicle?.model || driver.vehicleModel || 'Commercial Fleet')}
+                      </p>
+                      <p className="text-xs font-mono text-slate-400 mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded-md inline-block">
+                        {driver.vehicle?.plate || driver.vehiclePlate || 'IND-LIVE'}
+                      </p>
                     </td>
                     <td>
                       <span className={clsx('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border', cfg.cls)}>
                         <span className={clsx('w-1.5 h-1.5 rounded-full', cfg.dot)} />
-                        {driver.status.replace('_', ' ')}
+                        {(driver.status || 'AVAILABLE').replace('_', ' ')}
                       </span>
                     </td>
                     <td>
-                      <span className="text-sm font-bold text-amber-500">★ {driver.rating?.toFixed(1)}</span>
+                      <span className="text-sm font-bold text-amber-500">★ {(driver.rating ?? 4.8).toFixed(1)}</span>
                     </td>
                     <td className="text-center">
-                      <span className="text-sm font-bold text-slate-800">{driver.todayRides}</span>
+                      <span className="text-sm font-bold text-slate-800">{driver.todayRides ?? 0}</span>
                     </td>
                     <td>
-                      <span className="text-sm font-black text-slate-900">₹{driver.todayEarnings?.toLocaleString()}</span>
+                      <span className="text-sm font-black text-slate-900">₹{(driver.todayEarnings || 0).toLocaleString()}</span>
                     </td>
                     <td>
                       <div className="flex items-center gap-2 min-w-[80px]">
-                        <ProgressBar value={driver.performanceScore} color={perfColor} className="w-16" />
-                        <span className="text-xs font-bold text-slate-600">{driver.performanceScore}</span>
+                        <ProgressBar value={driver.performanceScore ?? 95} color={perfColor} className="w-16" />
+                        <span className="text-xs font-bold text-slate-600">{driver.performanceScore ?? 95}</span>
                       </div>
                     </td>
                     <td>

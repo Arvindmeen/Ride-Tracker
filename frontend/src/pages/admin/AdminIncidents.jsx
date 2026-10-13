@@ -7,6 +7,12 @@ import { formatDistanceToNow } from 'date-fns';
 
 const SEVERITY_ORDER = { CRITICAL: 0, WARNING: 1, INFO: 2 };
 
+function safeTimeAgo(dateStr) {
+  if (!dateStr) return 'Recently';
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? 'Recently' : formatDistanceToNow(d, { addSuffix: true });
+}
+
 const SUMMARY_CARDS = [
   { key: 'critical', label: 'Critical',  gradient: 'from-rose-500 to-red-600',    bg: 'bg-rose-50 border-rose-200',   text: 'text-rose-600' },
   { key: 'warning',  label: 'Warning',   gradient: 'from-amber-400 to-orange-500', bg: 'bg-amber-50 border-amber-200', text: 'text-amber-600' },
@@ -133,7 +139,7 @@ export default function AdminIncidents() {
                     <span className="bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-lg font-semibold">Auto-detected</span>
                   )}
                   <Clock size={10} />
-                  <span>{formatDistanceToNow(new Date(inc.createdAt), { addSuffix: true })}</span>
+                  <span>{safeTimeAgo(inc.createdAt)}</span>
                 </div>
                 <div className="flex gap-1.5">
                   {inc.status === 'OPEN' && (
@@ -182,8 +188,8 @@ export default function AdminIncidents() {
                   { label: 'Grid Cell',   value: selected.affectedGridCell || '—' },
                   { label: 'Assigned to', value: selected.assignedTo || 'Unassigned' },
                   { label: 'Auto detected', value: selected.autoDetected ? 'Yes' : 'No' },
-                  { label: 'Created',     value: formatDistanceToNow(new Date(selected.createdAt), { addSuffix: true }) },
-                  { label: 'Updated',     value: formatDistanceToNow(new Date(selected.updatedAt), { addSuffix: true }) },
+                  { label: 'Created',     value: safeTimeAgo(selected.createdAt) },
+                  { label: 'Updated',     value: safeTimeAgo(selected.updatedAt) },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between">
                     <span className="text-slate-500 font-medium">{label}</span>

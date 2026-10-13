@@ -64,7 +64,7 @@ export default function LoginPage() {
   // If already logged in, redirect
   useEffect(() => {
     if (isAuthenticated && currentRole) {
-      const redirectMap = { ADMIN: '/admin/dashboard', DRIVER: '/driver/dashboard' };
+      const redirectMap = { ADMIN: '/admin/dashboard', DRIVER: '/' };
       navigate(redirectTo || redirectMap[currentRole] || '/app/home', { replace: true });
     }
   }, [isAuthenticated, currentRole, navigate, redirectTo]);
@@ -95,8 +95,9 @@ export default function LoginPage() {
 
     setLoading(false);
     if (result.success) {
-      const redirectMap = { ADMIN: '/admin/dashboard', DRIVER: '/driver/dashboard' };
-      navigate(redirectTo || result.redirectUrl || redirectMap[result.role] || '/app/home', { replace: true });
+      const redirectMap = { ADMIN: '/admin/dashboard', DRIVER: '/' };
+      const targetUrl = redirectTo || (result.role === 'DRIVER' ? '/' : result.redirectUrl) || redirectMap[result.role] || '/app/home';
+      navigate(targetUrl, { replace: true });
     } else {
       setErrorMsg(result.error || 'Invalid email or password. Please try again.');
     }
@@ -258,7 +259,12 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3 rounded-xl shadow-[0_4px_14px_rgba(79,70,229,0.35)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              className={clsx(
+                'w-full text-white font-bold py-3 rounded-xl shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed',
+                role === 'DRIVER' && 'bg-gradient-to-br from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 shadow-emerald-600/30',
+                role === 'ADMIN' && 'bg-gradient-to-br from-slate-800 to-slate-950 hover:from-slate-700 hover:to-slate-900 shadow-slate-900/40',
+                role === 'USER' && 'bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-indigo-600/30'
+              )}
             >
               {loading ? (
                 <><Loader2 size={16} className="animate-spin" /> Signing in…</>
@@ -270,7 +276,9 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-slate-500 mt-5">
             Don't have an account?{' '}
-            <Link to="/register" className="text-indigo-600 font-semibold hover:underline">Create one free</Link>
+            <Link to={`/register?role=${role}`} className="text-indigo-600 font-semibold hover:underline">
+              Create one free
+            </Link>
           </p>
 
           <div className="mt-6 pt-5 border-t border-slate-200">

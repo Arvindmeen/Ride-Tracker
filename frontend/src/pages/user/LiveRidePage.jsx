@@ -10,6 +10,7 @@ import { clsx } from 'clsx';
 import { rideService, locationService, rideSync } from '@/services';
 import { useMapStore, useBookingStore } from '@/stores';
 import { Spinner, Badge, Button, VehicleIcon } from '@/components/ui';
+import { formatDuration } from '@/utils/formatters';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
 
@@ -97,6 +98,15 @@ export default function LiveRidePage() {
   const [showSOS, setShowSOS] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [userRating, setUserRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [selectedCompliments, setSelectedCompliments] = useState(['🛺 Clean EV Toto', '🕒 On Time']);
+  const [feedbackNote, setFeedbackNote] = useState('');
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [inputOtp, setInputOtp] = useState('');
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
+  const pinInputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const [otpError, setOtpError] = useState('');
+  const [otpSuccess, setOtpSuccess] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessages, setChatMessages] = useState([
@@ -121,9 +131,21 @@ export default function LiveRidePage() {
   useEffect(() => {
     // Check if dynamic ride was pre-booked in store/localStorage
     let dynamicTrip = null;
-    if (id) {
-      const storedTrips = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('veloq_user_trips') || '[]') : [];
-      dynamicTrip = storedTrips.find((r) => r.id === id) || null;
+    if (typeof window !== 'undefined') {
+      try {
+        const rawActive = localStorage.getItem('veloq_active_booked_ride');
+        if (rawActive) {
+          const parsed = JSON.parse(rawActive);
+          if (parsed && (!id || id === 'active' || parsed.id === id)) {
+            dynamicTrip = parsed;
+          }
+        }
+      } catch (e) {}
+
+      if (!dynamicTrip && id) {
+        const storedTrips = JSON.parse(localStorage.getItem('veloq_user_trips') || '[]');
+        dynamicTrip = storedTrips.find((r) => r.id === id) || null;
+      }
     }
 
     const defaultPickup = dynamicTrip?.pickup?.lat
@@ -139,7 +161,7 @@ export default function LiveRidePage() {
           address: 'Budhbazar Road, Moradabad, Uttar Pradesh',
         };
 
-    const defaultDestination = dynamicTrip?.destination?.lat
+    let finalDestination = dynamicTrip?.destination?.lat
       ? dynamicTrip.destination
       : storeDestination?.lat
       ? storeDestination
@@ -149,6 +171,41 @@ export default function LiveRidePage() {
           name: 'Moradabad Junction Railway Station',
           address: 'Station Road (SH49), Moradabad Junction',
         };
+
+    // Guarantee that Destination is distinct from Pickup
+    if (
+      !finalDestination?.name ||
+      finalDestination.name.trim().toLowerCase() === defaultPickup.name.trim().toLowerCase() ||
+      (Math.abs((finalDestination.lat || 0) - (defaultPickup.lat || 0)) < 0.001 &&
+       Math.abs((finalDestination.lng || 0) - (defaultPickup.lng || 0)) < 0.001)
+    ) {
+      if (Math.abs(defaultPickup.lat - 22.319) < 0.06) {
+        // Kharagpur region
+        finalDestination = {
+          lat: 22.3396,
+          lng: 87.3225,
+          name: 'Kharagpur Jn Railway Station',
+          address: 'Station Rd, Railway Colony, Kharagpur 721301',
+        };
+      } else if (Math.abs(defaultPickup.lat - 28.835) < 0.08) {
+        // Moradabad region
+        finalDestination = {
+          lat: 28.8314,
+          lng: 78.7654,
+          name: 'Moradabad Junction Railway Station',
+          address: 'Station Rd (SH49), Moradabad 244001',
+        };
+      } else {
+        finalDestination = {
+          lat: defaultPickup.lat + 0.022,
+          lng: defaultPickup.lng + 0.022,
+          name: `${defaultPickup.name.split(' ')[0]} Central Transit Hub`,
+          address: 'Main Transit Corridor',
+        };
+      }
+    }
+
+    const defaultDestination = finalDestination;
 
     const isMoradabad = Math.abs(defaultPickup.lat - 28.835) < 0.08 && Math.abs(defaultPickup.lng - 78.77) < 0.08;
     const dynamicCategory = dynamicTrip?.category || storeCategory || 'MOTO';
@@ -165,9 +222,15 @@ export default function LiveRidePage() {
       plate: 'UP 21 AB 4921',
     };
 
+    const isToto = dynamicCategory === 'AUTO' || dynamicCategory === 'TOTO' || dynamicCategory === 'toto';
+    const isBike = dynamicCategory === 'MOTO' || dynamicCategory === 'BIKE' || dynamicCategory === 'bike';
+    const isCab = dynamicCategory === 'ECONOMY' || dynamicCategory === 'CAB' || dynamicCategory === 'cab';
+    const isTransporter = dynamicCategory === 'XL' || dynamicCategory === 'TRANSPORTER' || dynamicCategory === 'transporter';
+    const defaultModel = isToto ? 'Solar E-Toto #08' : isBike ? 'Electric Bike (Ather EV)' : isCab ? 'Prime EV Cab (Tata Tigor)' : isTransporter ? 'EV Transporter (Tata Ace EV)' : 'EV Transporter (Tata Ace EV)';
+
     const vehicleModel = typeof rawDriver.vehicle === 'object'
-      ? (rawDriver.vehicle?.model || rawDriver.vehicleModel || 'Hero Splendor Plus (Bike)')
-      : (rawDriver.vehicleModel || rawDriver.vehicle || 'Hero Splendor Plus (Bike)');
+      ? (rawDriver.vehicle?.model || rawDriver.vehicleModel || defaultModel)
+      : (rawDriver.vehicleModel || rawDriver.vehicle || defaultModel);
 
     const vehiclePlate = typeof rawDriver.vehicle === 'object'
       ? (rawDriver.vehicle?.plate || rawDriver.vehicleNumber || 'UP 21 AB 4921')
@@ -186,15 +249,45 @@ export default function LiveRidePage() {
       plate: vehiclePlate,
     };
 
-    // Sensible driver spawn at Point C: ~500-700m along road network from pickup Spot A
-    const startDriverLat = dynamicTrip?.driverStartLocation?.lat || 
-      (isMoradabad ? 28.8395 : defaultPickup.lat + (defaultDestination.lat >= defaultPickup.lat ? -0.0045 : 0.0045));
-    const startDriverLng = dynamicTrip?.driverStartLocation?.lng || 
-      (isMoradabad ? 78.7760 : defaultPickup.lng + (defaultDestination.lng >= defaultPickup.lng ? -0.0038 : 0.0038));
+    // Realistic driver spawn at Point C: Pick the absolute closest matching vehicle on the map!
+    const isTotoOrLocal = String(vehicleCategory).toUpperCase().includes('AUTO') ||
+                          String(vehicleCategory).toUpperCase().includes('TOTO') ||
+                          String(defaultPickup?.name || '').toLowerCase().includes('kharagpur') ||
+                          String(defaultPickup?.name || '').toLowerCase().includes('tech mkt');
+
+    // Look for the closest driver on the map matching this vehicle category
+    let nearestMapDriver = null;
+    if (drivers && drivers.length > 0) {
+      const isMatchingCat = (d) => {
+        const c = String(d.vehicle?.category || d.category || '').toUpperCase();
+        const m = String(d.vehicle?.model || d.vehicleModel || '').toUpperCase();
+        if (isToto) return c.includes('AUTO') || c.includes('TOTO') || m.includes('TOTO') || m.includes('AUTO');
+        if (isBike) return c.includes('MOTO') || c.includes('BIKE') || m.includes('BIKE') || m.includes('ACTIVA');
+        if (isTransporter) return c.includes('XL') || c.includes('TRANSPORTER');
+        return c.includes('ECONOMY') || c.includes('CAB') || c.includes('PREMIUM');
+      };
+
+      const matchPool = drivers.filter((d) => d.status !== 'OFFLINE' && isMatchingCat(d));
+      const poolToUse = matchPool.length > 0 ? matchPool : drivers.filter((d) => d.status !== 'OFFLINE');
+
+      if (poolToUse.length > 0) {
+        poolToUse.sort((a, b) => {
+          const distA = Math.hypot((a.location?.lat ?? a.lat) - defaultPickup.lat, (a.location?.lng ?? a.lng) - defaultPickup.lng);
+          const distB = Math.hypot((b.location?.lat ?? b.lat) - defaultPickup.lat, (b.location?.lng ?? b.lng) - defaultPickup.lng);
+          return distA - distB;
+        });
+        nearestMapDriver = poolToUse[0];
+      }
+    }
+
+    const startDriverLat = Number(dynamicTrip?.driverStartLocation?.lat || 
+      (nearestMapDriver ? (nearestMapDriver.location?.lat ?? nearestMapDriver.lat) : (isMoradabad ? 28.8375 : defaultPickup.lat + (isTotoOrLocal ? 0.0014 : 0.0018))));
+    const startDriverLng = Number(dynamicTrip?.driverStartLocation?.lng || 
+      (nearestMapDriver ? (nearestMapDriver.location?.lng ?? nearestMapDriver.lng) : (isMoradabad ? 78.7745 : defaultPickup.lng + (isTotoOrLocal ? -0.0013 : -0.0016))));
     const startDriverName = dynamicTrip?.driverStartLocation?.name ||
-      (isMoradabad ? 'Civil Lines Taxi Stand, Moradabad' : `${defaultPickup.name.split(',')[0]} Transit Point`);
+      (nearestMapDriver?.location?.name || `${defaultPickup.name.split(',')[0]} Transit Point`);
     const startDriverAddress = dynamicTrip?.driverStartLocation?.address ||
-      (isMoradabad ? 'Civil Lines Approach Road, Moradabad 244001' : `Road corridor ~600m from ${defaultPickup.name.split(',')[0]}`);
+      (nearestMapDriver?.location?.address || `Approach corridor ~200m from ${defaultPickup.name.split(',')[0]}`);
 
     const initialRide = {
       id: id || dynamicTrip?.id || `RIDE-${Date.now().toString().slice(-6)}`,
@@ -237,8 +330,9 @@ export default function LiveRidePage() {
       [defaultDestination.lat, defaultDestination.lng],
     ];
 
-    approachWaypoints.current = interpolatePath(fallbackApproach, 24);
-    tripWaypoints.current = interpolatePath(fallbackTrip, 32);
+    // High-density waypoints for continuous 60fps smooth movement (Zero 'tik tik' jumps)
+    approachWaypoints.current = interpolatePath(fallbackApproach, 120);
+    tripWaypoints.current = interpolatePath(fallbackTrip, 150);
     setRoutePolyline(fallbackApproach);
     setLoading(false);
 
@@ -254,8 +348,8 @@ export default function LiveRidePage() {
         ? tripRes.coordinates
         : fallbackTrip;
 
-      approachWaypoints.current = interpolatePath(approachPoints, 24);
-      tripWaypoints.current = interpolatePath(tripPoints, 32);
+      approachWaypoints.current = interpolatePath(approachPoints, 120);
+      tripWaypoints.current = interpolatePath(tripPoints, 150);
 
       setRoutePolyline(approachPoints);
     }).catch((err) => {
@@ -310,9 +404,19 @@ export default function LiveRidePage() {
 
         const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
         const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
+        
+        // Realistic approach metrics (~280m spawn)
+        const approachTotalKm = 0.28;
         const remainingEta = Math.max(1, Math.round((1 - progress) * 2));
-        const remainingDist = Math.max(0.1, Math.round((1 - progress) * 0.6 * 10) / 10);
-        const speed = Math.round(28 + Math.random() * 10);
+        const remainingDist = Math.max(0.02, Math.round((1 - progress) * approachTotalKm * 100) / 100);
+
+        // Realistic vehicle-category specific speeds (E-Toto 18-21 km/h, Bike 26-30 km/h, Cab 34-38 km/h)
+        const cat = String(ride.driverInfo?.category || '').toUpperCase();
+        const isToto = cat.includes('AUTO') || cat.includes('TOTO');
+        const isBike = cat.includes('BIKE') || cat.includes('MOTO');
+        const isCab = cat.includes('CAB') || cat.includes('PRIME');
+        const baseSpeed = isToto ? 19 : isBike ? 28 : isCab ? 36 : 22;
+        const speed = Math.max(12, Math.round(baseSpeed + Math.sin(idx * 0.4) * 2.2));
 
         setDriverLocation({
           lat: currentPt[0],
@@ -325,18 +429,21 @@ export default function LiveRidePage() {
         setActiveDriverDistance(remainingDist);
         setActiveDriverSpeed(speed);
 
-        // Reached pickup spot
+        // Reached pickup spot: Driver parks and waits for boarding!
         if (idx >= waypoints.length - 1) {
-          setRide((r) => ({ ...r, status: 'DRIVER_ARRIVED' }));
+          setRide((r) => ({ ...r, status: 'DRIVER_ARRIVED', stage: 'ARRIVED' }));
           rideSync.broadcast('DRIVER_ARRIVED', { rideId: ride.id });
           animIndexRef.current = 0;
+          setActiveDriverEta(0);
+          setActiveDriverDistance(0);
+          setActiveDriverSpeed(0);
           // Switch polyline to the trip destination leg
           if (tripWaypoints.current && tripWaypoints.current.length > 0) {
             setRoutePolyline(tripWaypoints.current);
           }
         }
       } else if (ride.status === 'DRIVER_ARRIVED') {
-        // Paused at pickup waiting for boarding, then automatically start ride
+        // Driver is safely parked at pickup spot waiting for passenger OTP verification
         setActiveDriverEta(0);
         setActiveDriverDistance(0);
         setActiveDriverSpeed(0);
@@ -357,8 +464,14 @@ export default function LiveRidePage() {
         const totalTripKm = ride.distance || 1.4;
         const totalTripMins = Math.max(2, Math.round(totalTripKm * 2.2));
         const remainingEta = Math.max(1, Math.round((1 - progress) * totalTripMins));
-        const remainingDist = Math.max(0.1, Math.round((1 - progress) * totalTripKm * 10) / 10);
-        const speed = Math.round(32 + Math.random() * 12);
+        const remainingDist = Math.max(0.05, Math.round((1 - progress) * totalTripKm * 10) / 10);
+        
+        const cat = String(ride.driverInfo?.category || '').toUpperCase();
+        const isToto = cat.includes('AUTO') || cat.includes('TOTO');
+        const isBike = cat.includes('BIKE') || cat.includes('MOTO');
+        const isCab = cat.includes('CAB') || cat.includes('PRIME');
+        const baseSpeed = isToto ? 20 : isBike ? 29 : isCab ? 37 : 24;
+        const speed = Math.max(14, Math.round(baseSpeed + Math.sin(idx * 0.3) * 2.5));
 
         setDriverLocation({
           lat: currentPt[0],
@@ -379,6 +492,7 @@ export default function LiveRidePage() {
           const completedRide = {
             ...ride,
             status: 'RIDE_COMPLETED',
+            stage: 'COMPLETED',
             completedAt: completedTimestamp,
             duration: tripDurationMins,
             durationMinutes: tripDurationMins,
@@ -401,7 +515,7 @@ export default function LiveRidePage() {
               lng: ride.destination.lng,
               name: ride.destination.name || 'Current Location',
               address: ride.destination.address || ride.destination.name,
-              city: ride.destination.city || 'Moradabad',
+              city: ride.destination.city || 'Kharagpur',
               isGpsDetected: true,
             });
             setPickup({
@@ -418,22 +532,80 @@ export default function LiveRidePage() {
           rideSync.broadcast('RIDE_COMPLETED', { rideId: ride.id, completedRide });
         }
       }
-    }, 850);
+    }, 220);
 
     return () => clearInterval(interval);
-  }, [ride, setUserLocation, setPickup, setDestination]);
+  }, [ride, setUserLocation, setPickup, setDestination, userRating]);
 
-  // Handle manual start ride from arrived state or timer
-  useEffect(() => {
-    if (ride?.status === 'DRIVER_ARRIVED') {
-      const t = setTimeout(() => {
-        setRide((r) => ({ ...r, status: 'RIDE_STARTED' }));
+  // Passenger & Driver Boarding OTP Verification Handler
+  const handleVerifyOtpAndStart = (overrideOtp = null) => {
+    const entered = (overrideOtp !== null ? overrideOtp : inputOtp).trim();
+    const actualOtp = String(ride?.otp || '4921').trim();
+    if (entered === actualOtp || entered.length === 4 || overrideOtp !== null) {
+      setOtpError('');
+      setOtpSuccess(true);
+      setTimeout(() => {
+        setRide((r) => ({ ...r, status: 'RIDE_STARTED', stage: 'IN_TRANSIT' }));
         rideSync.broadcast('RIDE_STARTED', { rideId: ride.id });
         animIndexRef.current = 0;
-      }, 3500);
-      return () => clearTimeout(t);
+        setOtpSuccess(false);
+      }, 600);
+    } else {
+      setOtpError(`Incorrect OTP. Please enter the 4-digit OTP: ${actualOtp}`);
     }
-  }, [ride?.status]);
+  };
+
+  const handleDigitChange = (idx, value) => {
+    const clean = value.replace(/\D/g, '');
+    const newDigits = [...otpDigits];
+
+    if (clean.length > 1) {
+      // Pasted full or partial OTP
+      const chars = clean.slice(0, 4).split('');
+      for (let i = 0; i < 4; i++) {
+        newDigits[i] = chars[i] || '';
+      }
+      setOtpDigits(newDigits);
+      const combined = newDigits.join('');
+      setInputOtp(combined);
+      setOtpError('');
+      if (clean.length >= 4) {
+        handleVerifyOtpAndStart(combined);
+      } else {
+        const nextIdx = Math.min(chars.length, 3);
+        pinInputRefs[nextIdx]?.current?.focus();
+      }
+      return;
+    }
+
+    newDigits[idx] = clean;
+    setOtpDigits(newDigits);
+    const combined = newDigits.join('');
+    setInputOtp(combined);
+    setOtpError('');
+
+    if (clean && idx < 3) {
+      pinInputRefs[idx + 1]?.current?.focus();
+    }
+
+    if (combined.length === 4) {
+      handleVerifyOtpAndStart(combined);
+    }
+  };
+
+  const handleDigitKeyDown = (idx, e) => {
+    if (e.key === 'Backspace' && !otpDigits[idx] && idx > 0) {
+      pinInputRefs[idx - 1]?.current?.focus();
+    }
+  };
+
+  const handleQuickFillOtp = () => {
+    const actualOtp = String(ride?.otp || '4921');
+    const chars = actualOtp.split('');
+    setOtpDigits(chars);
+    setInputOtp(actualOtp);
+    handleVerifyOtpAndStart(actualOtp);
+  };
 
   const handleSendChat = (e) => {
     e.preventDefault();
@@ -514,10 +686,10 @@ export default function LiveRidePage() {
                   {ride.status === 'RIDE_COMPLETED'
                     ? 'Arrived safely at destination'
                     : ride.status === 'RIDE_STARTED'
-                    ? `En route to destination · ${activeDriverEta} mins remaining (${activeDriverDistance} km)`
+                    ? `En route to destination · ${formatDuration(activeDriverEta)} remaining (${activeDriverDistance} km)`
                     : ride.status === 'DRIVER_ARRIVED'
                     ? 'Driver arrived at pickup! Board vehicle and share OTP.'
-                    : `Driver is ${activeDriverEta} mins away · ${activeDriverDistance} km`}
+                    : `Driver is ${formatDuration(activeDriverEta)} away · ${activeDriverDistance} km`}
                 </p>
               </div>
             </div>
@@ -560,6 +732,111 @@ export default function LiveRidePage() {
           </div>
         </div>
 
+        {/* ── DRIVER ARRIVED & BOARDING OTP CARD (Responsive, Animated & Compact) ── */}
+        {ride.status === 'DRIVER_ARRIVED' && (
+          <div className="mx-4 sm:mx-6 mt-4 p-4 sm:p-5 rounded-3xl bg-white border-2 border-emerald-500/80 shadow-lg shadow-emerald-600/10 space-y-3.5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header with live arrived status */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600" />
+                </span>
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-950">
+                  Driver Arrived at Pickup
+                </span>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                <span>Ready to Board</span>
+              </span>
+            </div>
+
+            {/* Clear Prompt & Interactive 4-Box PIN Input */}
+            <div className="text-center space-y-2.5">
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  Share this 4-digit Ride OTP with <span className="text-emerald-700 font-black">{driverName}</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Vehicle: <strong className="text-slate-800">{driverVehicle}</strong> ({driverPlate})
+                </p>
+              </div>
+
+              {/* 4 Interactive Segmented Digit Input Boxes */}
+              <div className="flex items-center justify-center gap-2 sm:gap-2.5 py-1">
+                {[0, 1, 2, 3].map((idx) => {
+                  const digit = otpDigits[idx] || '';
+                  return (
+                    <input
+                      key={idx}
+                      ref={pinInputRefs[idx]}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleDigitChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleDigitKeyDown(idx, e)}
+                      onFocus={(e) => e.target.select()}
+                      className={clsx(
+                        'w-11 h-12 sm:w-12 sm:h-12 rounded-xl text-center font-mono font-black text-xl sm:text-2xl transition-all duration-200 cursor-text shadow-2xs outline-none',
+                        otpSuccess
+                          ? 'bg-emerald-50 border-2 border-emerald-500 text-emerald-700 scale-105'
+                          : digit
+                          ? 'bg-emerald-50/70 border-2 border-emerald-500 text-slate-950 ring-2 ring-emerald-100 font-black'
+                          : 'bg-slate-50 border border-slate-200 text-slate-900 focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100'
+                      )}
+                      placeholder={(ride.otp || '4921')[idx]}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Validation & Helper Row */}
+              <div className="flex items-center justify-center gap-2 pt-0.5">
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Your Ride PIN: <strong className="font-mono font-bold text-slate-900">{ride.otp || '4921'}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.clipboard) navigator.clipboard.writeText(ride.otp || '4921');
+                    setCopiedOtp(true);
+                    setTimeout(() => setCopiedOtp(false), 2000);
+                  }}
+                  className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
+                  title="Copy OTP"
+                >
+                  {copiedOtp ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                  <span>{copiedOtp ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+
+              {otpError && (
+                <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl text-center text-xs font-bold text-rose-700 animate-shake">
+                  {otpError}
+                </div>
+              )}
+
+              {otpSuccess && (
+                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-xs font-black text-emerald-700 animate-bounce">
+                  ✓ OTP Verified! Boarding confirmed, journey starting...
+                </div>
+              )}
+
+              {/* 1-Tap Passenger Quick Boarding Action */}
+              <button
+                type="button"
+                onClick={handleQuickFillOtp}
+                disabled={otpSuccess}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-sm shadow-emerald-600/30 cursor-pointer disabled:opacity-60"
+              >
+                <span>⚡ 1-Tap Fill & Start Journey</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Driver Partner Details Card */}
         <div className="p-4 sm:p-6 space-y-4">
           <div className="bg-slate-50 border border-slate-200 rounded-3xl p-4 sm:p-5 space-y-3">
@@ -567,7 +844,11 @@ export default function LiveRidePage() {
               <div className="flex items-center gap-3">
                 {/* Real Vehicle Icon */}
                 <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-xs">
-                  <VehicleIcon category={driverCategory} size="lg" />
+                  {String(driverCategory).toUpperCase().includes('AUTO') || String(driverCategory).toUpperCase().includes('TOTO') || String(driverVehicle).toLowerCase().includes('toto') ? (
+                    <img src="/toto-logo.svg" alt="Toto" className="w-11 h-11 object-contain drop-shadow-sm" />
+                  ) : (
+                    <VehicleIcon category={driverCategory} size="lg" />
+                  )}
                 </div>
                 <div>
                   <h2 className="font-black text-slate-900 text-base">
@@ -819,51 +1100,193 @@ export default function LiveRidePage() {
 
       {/* ── Rating & Receipt Modal on Ride Completion ───────────────────────── */}
       {showRating && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl text-center space-y-4 animate-scale-in">
-            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle2 size={32} />
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl text-center space-y-4 my-auto animate-scale-in border border-slate-100">
+            
+            {/* Celebration Header */}
+            <div className="relative">
+              <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-teal-400 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
+                <CheckCircle2 size={36} />
+              </div>
+              <span className="absolute top-0 right-1/3 text-2xl animate-bounce">🎉</span>
+              <span className="absolute top-2 left-1/3 text-xl animate-pulse">✨</span>
             </div>
 
             <div>
-              <h3 className="text-xl font-black text-slate-900">You have arrived!</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Trip completed safely · ₹{getFareDisplay(ride.fare)}.00 paid via UPI
+              <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                Trip Safely Completed
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-2">
+                You have arrived at your destination!
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Thank you for commuting with Ride Tracker Kharagpur
               </p>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-700">
-                Rate your journey with {driverName}:
-              </p>
+            {/* Fare & Journey Receipt Pill */}
+            <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 text-left space-y-2">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Paid Fare</span>
+                  <p className="text-xl font-black text-slate-900">₹{getFareDisplay(ride.fare)}.00</p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-xl">
+                    <Check size={12} />
+                    <span>UPI AutoPay Success</span>
+                  </span>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">Txn #{ride.id?.slice(-6) || '894102'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                <div>
+                  <span className="text-[10px] text-slate-400 block">Distance Covered</span>
+                  <p className="font-bold text-slate-800">{ride.distance || 1.4} km</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block">Travel Duration</span>
+                  <p className="font-bold text-slate-800">{ride.durationMinutes || 6} mins</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive 5-Star Driver Rating */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">
+                  {driverName.charAt(0)}
+                </div>
+                <p className="text-xs font-black text-slate-800">
+                  How was your ride with {driverName}?
+                </p>
+              </div>
+
+              {/* Star Selection Row */}
               <div className="flex justify-center gap-2 text-amber-400 py-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
+                    type="button"
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
                     onClick={() => setUserRating(star)}
-                    className="text-2xl hover:scale-125 transition-transform"
+                    className="text-3xl transition-all hover:scale-125 focus:outline-none cursor-pointer"
+                    title={`Rate ${star} star`}
                   >
-                    {star <= userRating ? '★' : '☆'}
+                    {(hoverRating || userRating) >= star ? '★' : '☆'}
                   </button>
                 ))}
               </div>
+
+              {/* Dynamic Sentiment Text */}
+              <p className="text-xs font-extrabold text-amber-600 transition-all">
+                {(hoverRating || userRating) === 5 && '🌟 Exceptional! Outstanding Ride'}
+                {(hoverRating || userRating) === 4 && '👍 Very Good! Smooth & Pleasant Trip'}
+                {(hoverRating || userRating) === 3 && '🙂 Satisfactory Experience'}
+                {(hoverRating || userRating) === 2 && '😐 Needs Improvement'}
+                {(hoverRating || userRating) === 1 && '😞 Poor Service'}
+              </p>
             </div>
 
-            <Button
-              className="w-full py-3.5 rounded-2xl text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-md"
-              onClick={() => {
-                const finalRide = {
-                  ...ride,
-                  userRating,
-                  status: 'RIDE_COMPLETED',
-                };
-                rideService.updateRide(ride.id, finalRide);
-                setShowRating(false);
-                navigate(`/app/trips/${ride.id}`);
-              }}
-            >
-              Submit Rating & View Trip Receipt
-            </Button>
+            {/* Quick Compliment Chips (Multi-select) */}
+            <div className="space-y-1.5 pt-1 text-left">
+              <span className="text-[11px] font-black text-slate-700 block">Give compliments:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  '🛺 Clean EV Toto',
+                  '🕒 Punctual & On Time',
+                  '💬 Polite Driver',
+                  '🛣️ Smooth & Safe Driving',
+                  '⚡ Fast Route',
+                  '🌱 Zero Emissions',
+                ].map((tag) => {
+                  const isSelected = selectedCompliments.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCompliments((prev) =>
+                          isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]
+                        );
+                      }}
+                      className={clsx(
+                        'px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border',
+                        isSelected
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                      )}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Optional Written Feedback */}
+            <div className="text-left pt-1">
+              <label className="text-[11px] font-black text-slate-700 block mb-1">
+                Written Feedback & Suggestions (Optional):
+              </label>
+              <textarea
+                rows={2}
+                value={feedbackNote}
+                onChange={(e) => setFeedbackNote(e.target.value)}
+                placeholder={`Share your experience with ${driverName} or report any details...`}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none"
+              />
+            </div>
+
+            {/* Submit & Navigation CTAs */}
+            <div className="space-y-2 pt-2">
+              <Button
+                className="w-full py-3.5 rounded-2xl text-xs font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-600/25 cursor-pointer"
+                onClick={() => {
+                  const finalRide = {
+                    ...ride,
+                    userRating,
+                    feedbackNote,
+                    compliments: selectedCompliments,
+                    status: 'RIDE_COMPLETED',
+                  };
+                  rideService.updateRide(ride.id, finalRide);
+                  setRatingSubmitted(true);
+                  setTimeout(() => {
+                    setShowRating(false);
+                    navigate(`/app/trips/${ride.id}`);
+                  }, 500);
+                }}
+              >
+                {ratingSubmitted ? '✓ Rating Submitted!' : 'Submit Rating & View Full Invoice'}
+              </Button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRating(false);
+                    navigate('/app');
+                  }}
+                  className="flex-1 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Book Another Ride
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRating(false);
+                    navigate(`/app/trips/${ride.id}`);
+                  }}
+                  className="flex-1 py-2 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  View Receipt →
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

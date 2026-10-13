@@ -37,13 +37,13 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center font-sans">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto text-2xl">
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 text-center font-sans">
+          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto text-2xl">
               ⚠️
             </div>
-            <h2 className="text-lg font-black text-white">Something went wrong</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-lg font-black text-slate-900">Something went wrong</h2>
+            <p className="text-xs text-slate-500">
               {this.state.error?.message || 'An unexpected error occurred while loading this view.'}
             </p>
             <div className="flex gap-2">
@@ -52,7 +52,7 @@ class ErrorBoundary extends Component {
                   this.setState({ hasError: false });
                   window.location.reload();
                 }}
-                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-colors"
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Reload Page
               </button>
@@ -61,7 +61,7 @@ class ErrorBoundary extends Component {
                   this.setState({ hasError: false });
                   window.location.href = '/app/home';
                 }}
-                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-blue-600/30"
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-blue-600/30 cursor-pointer"
               >
                 Return to Ride
               </button>
@@ -82,6 +82,8 @@ import AdminLayout from '@/layouts/AdminLayout';
 
 // Public pages
 import LandingPage from '@/pages/public/LandingPage';
+import DriverLandingPage from '@/pages/public/DriverLandingPage';
+import AdminLandingPage from '@/pages/public/AdminLandingPage';
 import LoginPage from '@/pages/public/LoginPage';
 import RegisterPage from '@/pages/public/RegisterPage';
 import ContactPage from '@/pages/public/ContactPage';
@@ -134,6 +136,10 @@ export default function App() {
           <Routes>
             {/* Public */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/drive" element={<DriverLandingPage />} />
+            <Route path="/driver/landing" element={<DriverLandingPage />} />
+            <Route path="/admin-portal" element={<AdminLandingPage />} />
+            <Route path="/admin/landing" element={<AdminLandingPage />} />
             <Route element={<PublicLayout />}>
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/login" element={<LoginPage />} />

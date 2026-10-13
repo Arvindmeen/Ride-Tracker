@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Settings, Sliders, Shield, MapPin, DollarSign, Bell,
   Save, CheckCircle2, AlertTriangle, Database, RefreshCw, Key
@@ -8,6 +8,7 @@ import { REGIONS } from '@/constants';
 
 export default function AdminSettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [dbStatus, setDbStatus] = useState(null);
   const [config, setConfig] = useState({
     platformFeePercent: 12, // 12% transparent platform fee
     driverSharePercent: 88,
@@ -21,6 +22,15 @@ export default function AdminSettingsPage() {
     maintenanceMode: false,
     autoAcceptRadiusKm: 5,
   });
+
+  useEffect(() => {
+    fetch('/api/v1/auth/database-status')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.database) setDbStatus(data.database);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleChange = (key, value) => {
     setConfig((prev) => {
@@ -289,8 +299,24 @@ export default function AdminSettingsPage() {
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
             <div className="flex justify-between text-slate-600">
               <span>Database Engine:</span>
-              <strong className="text-slate-900 font-mono">PostgreSQL 16 (Resilient Fallback)</strong>
+              <strong className="text-slate-900 font-mono">
+                {dbStatus?.engine || 'SQLite 3 (Disk) + Persistent JSON Mirror'}
+              </strong>
             </div>
+            <div className="flex justify-between text-slate-600">
+              <span>DB Connection Status:</span>
+              <strong className="text-emerald-600 font-mono">
+                {dbStatus?.connected ? 'ONLINE (Disk Persistent)' : 'CONNECTED'}
+              </strong>
+            </div>
+            {dbStatus && (
+              <div className="flex justify-between text-slate-600">
+                <span>Database Records:</span>
+                <span className="font-mono text-slate-800 font-bold">
+                  {dbStatus.totalUsers || 0} users · {dbStatus.totalDrivers || 0} drivers · {dbStatus.totalRides || 0} rides
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-slate-600">
               <span>GPS Broadcast Channel:</span>
               <strong className="text-emerald-600 font-mono">WebRTC / BroadcastChannel v1</strong>

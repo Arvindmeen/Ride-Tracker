@@ -6,6 +6,7 @@ import { rideService } from '@/services';
 import { useAuthStore } from '@/stores';
 import { Spinner, EmptyState, Badge, Button, VehicleIcon } from '@/components/ui';
 import { format } from 'date-fns';
+import { formatDuration } from '@/utils/formatters';
 
 const STATUS_CONFIG = {
   RIDE_COMPLETED:     { label: 'Completed',   color: 'bg-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -151,7 +152,11 @@ export default function TripsPage() {
                     <div className="flex items-center gap-3">
                       {/* Scalable Real Vehicle SVG Icon */}
                       <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center p-1 shrink-0 group-hover:border-blue-200 transition-colors">
-                        <VehicleIcon category={ride.category} size="md" />
+                        {String(ride.category).toUpperCase().includes('AUTO') || String(ride.category).toUpperCase().includes('TOTO') ? (
+                          <img src="/toto-logo.svg" alt="Toto" className="w-8 h-8 object-contain drop-shadow-sm" />
+                        ) : (
+                          <VehicleIcon category={ride.category} size="md" />
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -219,7 +224,7 @@ export default function TripsPage() {
                       {ride.durationMinutes && (
                         <>
                           <span>·</span>
-                          <span>{ride.durationMinutes} mins</span>
+                          <span>{formatDuration(ride.durationMinutes)}</span>
                         </>
                       )}
                     </div>

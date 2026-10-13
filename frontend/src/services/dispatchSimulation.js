@@ -9,6 +9,7 @@
  */
 
 import { INDIAN_REGIONS, getDriversNearLocation } from './fleetGenerator';
+import { useMapStore } from '@/stores';
 
 // Production toggle: in production, set to false to listen to real WebSockets
 export const isSimulationEnabled = true;
@@ -164,38 +165,121 @@ class DispatchSimulationEngine {
 
   /**
    * Dedicated real-time matcher when the real end-user books a ride.
-   * Finds the closest driver, triggers instant animated acceptance.
+   * Guarantees selecting the absolute CLOSEST visible driver of the same vehicle icon type!
    */
-  simulateUserBookingAcceptance(pickupLocation, category = 'ECONOMY', onStatusUpdate) {
+  simulateUserBookingAcceptance(pickupLocation, category = 'ECONOMY', onStatusUpdate, mapDrivers = null) {
     if (!pickupLocation || !pickupLocation.lat || !pickupLocation.lng) {
       return null;
     }
 
+    const pLat = Number(pickupLocation.lat);
+    const pLng = Number(pickupLocation.lng);
+    const targetCategory = String(category || 'ECONOMY').toUpperCase();
+
     // Step 1: Broadcasting to nearby drivers
     onStatusUpdate?.({
       status: 'BROADCASTING',
-      message: 'Broadcasting request to nearby drivers in real-time...',
+      message: `Broadcasting request to nearest verified ${category} drivers...`,
       progress: 30,
     });
 
-    const nearby = getDriversNearLocation(pickupLocation.lat, pickupLocation.lng, 5);
-    const matchingDrivers = nearby.filter((d) => !category || d.category === category);
-    const assignedDriver = matchingDrivers[0] || nearby[0] || {
-      id: 'drv-match-assigned',
-      name: 'Manoj Kumar',
-      rating: 4.92,
-      category: category || 'ECONOMY',
-      vehicleModel: 'Maruti Suzuki Dzire VXI',
-      vehicleNumber: 'DL 01 AZ 7842',
-      phone: '+91 98765 43210',
-      tripsCompleted: 1420,
+    // Pool of drivers: First look at live visible drivers on the map, then proximity generator
+    let pool = [];
+    if (Array.isArray(mapDrivers) && mapDrivers.length > 0) {
+      pool = [...mapDrivers];
+    } else {
+      try {
+        const storeDrivers = useMapStore.getState()?.drivers;
+        if (Array.isArray(storeDrivers) && storeDrivers.length > 0) {
+          pool = [...storeDrivers];
+        }
+      } catch (e) {}
+    }
+
+    if (pool.length === 0) {
+      pool = getDriversNearLocation(pLat, pLng, 12, 50);
+    }
+
+    // Helper functions for driver normalization
+    const getDriverCategory = (d) => {
+      const c = String(d.vehicle?.category || d.category || d.vehicleCategory || '').toUpperCase();
+      const m = String(d.vehicle?.model || d.vehicleModel || '').toUpperCase();
+      if (c.includes('TOTO') || c.includes('AUTO') || m.includes('TOTO') || m.includes('AUTO') || m.includes('RICKSHAW')) return 'AUTO';
+      if (c.includes('BIKE') || c.includes('MOTO') || m.includes('ACTIVA') || m.includes('SPLENDOR') || m.includes('PULSAR') || m.includes('BIKE')) return 'MOTO';
+      if (c.includes('XL') || c.includes('TRANSPORTER') || m.includes('INNOVA') || m.includes('SCORPIO') || m.includes('TRANSPORTER')) return 'XL';
+      return 'ECONOMY';
+    };
+
+    const isCategoryMatch = (d) => {
+      const dCat = getDriverCategory(d);
+      if (targetCategory.includes('TOTO') || targetCategory.includes('AUTO')) return dCat === 'AUTO';
+      if (targetCategory.includes('BIKE') || targetCategory.includes('MOTO')) return dCat === 'MOTO';
+      if (targetCategory.includes('XL') || targetCategory.includes('TRANSPORTER')) return dCat === 'XL';
+      return dCat === 'ECONOMY';
+    };
+
+    const getDriverDistance = (d) => {
+      const dLat = Number(d.location?.lat ?? d.lat ?? 0);
+      const dLng = Number(d.location?.lng ?? d.lng ?? 0);
+      return Math.hypot(dLat - pLat, dLng - pLng);
+    };
+
+    // Filter available matching drivers
+    const matchingDrivers = pool.filter((d) => d.status !== 'OFFLINE' && isCategoryMatch(d));
+
+    // Sort strictly by distance to pickup spot ascending so the closest one is index 0!
+    matchingDrivers.sort((a, b) => getDriverDistance(a) - getDriverDistance(b));
+
+    let chosenDriver = matchingDrivers[0];
+
+    // If no matching vehicle exists on the map, take the closest available driver and assign target category!
+    if (!chosenDriver) {
+      const allActive = pool.filter((d) => d.status !== 'OFFLINE');
+      allActive.sort((a, b) => getDriverDistance(a) - getDriverDistance(b));
+      chosenDriver = allActive[0];
+    }
+
+    // If still no driver or distance is unrealistically large (> 2km = ~0.018 deg), position realistically close (~200m)
+    let chosenLat = chosenDriver?.location?.lat ?? chosenDriver?.lat;
+    let chosenLng = chosenDriver?.location?.lng ?? chosenDriver?.lng;
+
+    if (!chosenLat || !chosenLng || Math.hypot(chosenLat - pLat, chosenLng - pLng) > 0.02) {
+      const isTotoOrLocal = targetCategory === 'AUTO' || String(pickupLocation.name || '').toLowerCase().includes('kharagpur');
+      const offsetLat = isTotoOrLocal ? 0.0015 : 0.0020;
+      const offsetLng = isTotoOrLocal ? -0.0014 : -0.0018;
+      chosenLat = pLat + offsetLat;
+      chosenLng = pLng + offsetLng;
+    }
+
+    const distKm = Math.max(0.2, Number((Math.hypot(chosenLat - pLat, chosenLng - pLng) * 111).toFixed(2)));
+    const etaMinutes = Math.max(1, Math.min(4, Math.round(distKm / 0.35)));
+
+    const defaultModel = targetCategory === 'AUTO'
+      ? 'Solar E-Toto #08'
+      : targetCategory === 'MOTO'
+      ? 'Electric Bike (Ather EV)'
+      : targetCategory === 'XL'
+      ? 'EV Transporter (Tata Ace EV)'
+      : 'Prime EV Cab (Tata Tigor)';
+
+    const assignedDriver = {
+      id: chosenDriver?.id || `drv-nearest-${Date.now()}`,
+      name: chosenDriver?.name || 'Subhash Mondal',
+      rating: chosenDriver?.rating || 4.92,
+      category: targetCategory,
+      vehicleModel: chosenDriver?.vehicle?.model || chosenDriver?.vehicleModel || defaultModel,
+      vehicleNumber: chosenDriver?.vehicle?.plate || chosenDriver?.vehicleNumber || 'WB 26 Q 4921',
+      phone: chosenDriver?.phone || '+91 94340 12891',
+      tripsCompleted: chosenDriver?.totalRides || chosenDriver?.tripsCompleted || 1420,
       location: {
-        lat: pickupLocation.lat + 0.005,
-        lng: pickupLocation.lng + 0.004,
+        lat: Number(chosenLat),
+        lng: Number(chosenLng),
+        name: chosenDriver?.location?.name || `${pickupLocation.name?.split(',')[0] || 'Pickup'} Approach Corridor`,
+        address: chosenDriver?.location?.address || `~${Math.round(distKm * 1000)}m from pickup point`,
       },
     };
 
-    // Step 2: Driver received notification (800ms)
+    // Step 2: Driver received notification (850ms)
     setTimeout(() => {
       onStatusUpdate?.({
         status: 'DRIVER_NOTIFIED',
@@ -203,19 +287,19 @@ class DispatchSimulationEngine {
         driver: assignedDriver,
         progress: 65,
       });
-    }, 900);
+    }, 850);
 
     // Step 3: Driver accepted! (1800ms)
     setTimeout(() => {
       onStatusUpdate?.({
         status: 'ACCEPTED',
-        message: `${assignedDriver.name} accepted your booking! Arriving in 3 mins.`,
+        message: `${assignedDriver.name} accepted your booking! Arriving in ${etaMinutes} min${etaMinutes > 1 ? 's' : ''}.`,
         driver: assignedDriver,
-        etaMinutes: 3,
+        etaMinutes,
         otp: Math.floor(1000 + Math.random() * 9000).toString(),
         progress: 100,
       });
-    }, 2000);
+    }, 1800);
 
     return assignedDriver;
   }

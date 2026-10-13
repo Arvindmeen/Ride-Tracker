@@ -116,6 +116,7 @@ export function generatePanIndiaFleet() {
         status,
         regionName: region.name,
         state: region.state,
+        category: veh.category,
         vehicle: {
           category: veh.category,
           model: veh.model,
@@ -188,15 +189,17 @@ export function getVisibleDriversInBounds(bounds, maxLimit = 100) {
 }
 
 /**
- * Proximity helper: returns drivers within radiusKm of given lat/lng
+ * Proximity helper: returns drivers within radiusKm of given lat/lng,
+ * strictly sorted by distance ascending so the absolute closest driver is index 0!
  */
 export function getDriversNearLocation(lat, lng, radiusKm = 15, maxLimit = 80) {
   const all = getAllIndiaFleet();
   const radiusDeg = radiusKm / 111;
   const minLat = lat - radiusDeg;
   const maxLat = lat + radiusDeg;
-  const minLng = lng - radiusDeg / Math.cos((lat * Math.PI) / 180);
-  const maxLng = lng + radiusDeg / Math.cos((lat * Math.PI) / 180);
+  const cosLat = Math.cos((lat * Math.PI) / 180) || 1;
+  const minLng = lng - radiusDeg / cosLat;
+  const maxLng = lng + radiusDeg / cosLat;
 
   const matches = [];
   for (let i = 0; i < all.length; i++) {
@@ -205,10 +208,16 @@ export function getDriversNearLocation(lat, lng, radiusKm = 15, maxLimit = 80) {
       if (d.location.lat >= minLat && d.location.lat <= maxLat &&
           d.location.lng >= minLng && d.location.lng <= maxLng) {
         matches.push(d);
-        if (matches.length >= maxLimit) break;
       }
     }
   }
 
-  return matches;
+  // Sort strictly ascending by distance to (lat, lng)
+  matches.sort((a, b) => {
+    const distA = Math.hypot(a.location.lat - lat, a.location.lng - lng);
+    const distB = Math.hypot(b.location.lat - lat, b.location.lng - lng);
+    return distA - distB;
+  });
+
+  return matches.slice(0, maxLimit);
 }
