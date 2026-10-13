@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Canopy Roof Gradient -->
+    <linearGradient id="roofGrad" x1="16" y1="16" x2="74" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="35%" stop-color="#10B981" />
+      <stop offset="85%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+
+    <!-- Body / Cowl Gradient -->
+    <linearGradient id="bodyGrad" x1="20" y1="44" x2="78" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="50%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#065F46" />
+    </linearGradient>
+
+    <!-- Windshield Cyan Glass Gradient -->
+    <linearGradient id="glassGrad" x1="56" y1="26" x2="74" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#BAE6FD" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#38BDF8" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0.85" />
+    </linearGradient>
+
+    <!-- Alloy Wheel Rim Gradient -->
+    <linearGradient id="rimGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="50%" stop-color="#CBD5E1" />
+      <stop offset="100%" stop-color="#64748B" />
+    </linearGradient>
+
+    <!-- Headlight Glow -->
+    <radialGradient id="headlightGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#FEF08A" />
+      <stop offset="70%" stop-color="#FACC15" />
+      <stop offset="100%" stop-color="#EAB308" />
+    </radialGradient>
+
+    <!-- Drop Shadow Filter for realism -->
+    <filter id="totoShadow" x="-10%" y="-10%" width="120%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#047857" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <g filter="url(#totoShadow)">
+    <!-- Road Surface Subtle Contact Shadow -->
+    <ellipse cx="50" cy="86" rx="38" ry="4" fill="#0F172A" fill-opacity="0.18" />
+
+    <!-- ── REAR WHEEL (Back Left) ── -->
+    <circle cx="27" cy="73" r="13" fill="#1E293B" stroke="#0F172A" stroke-width="2.5" />
+    <circle cx="27" cy="73" r="8" fill="url(#rimGrad)" stroke="#475569" stroke-width="1.8" />
+    <!-- Wheel spokes -->
+    <line x1="27" y1="67" x2="27" y2="79" stroke="#334155" stroke-width="1.6" />
+    <line x1="21" y1="73" x2="33" y2="73" stroke="#334155" stroke-width="1.6" />
+    <circle cx="27" cy="73" r="3.2" fill="#059669" stroke="#047857" stroke-width="1" />
+
+    <!-- ── FRONT WHEEL ── -->
+    <circle cx="73" cy="74" r="11.5" fill="#1E293B" stroke="#0F172A" stroke-width="2.5" />
+    <circle cx="73" cy="74" r="7" fill="url(#rimGrad)" stroke="#475569" stroke-width="1.8" />
+    <!-- Wheel spokes -->
+    <line x1="73" y1="68.5" x2="73" y2="79.5" stroke="#334155" stroke-width="1.6" />
+    <line x1="67.5" y1="74" x2="78.5" y2="74" stroke="#334155" stroke-width="1.6" />
+    <circle cx="73" cy="74" r="2.8" fill="#059669" stroke="#047857" stroke-width="1" />
+
+    <!-- ── REAR FENDER & CHASSIS ── -->
+    <path d="M15 68 C15 57 23 54 35 54 L44 54 L44 71 L38 71 C36 64 30 62 25 64 C20 66 18 70 17 73 L15 73 Z" fill="url(#bodyGrad)" />
+    <!-- Rear Mudguard Arch -->
+    <path d="M16 71 C18 63 24 59 34 60 C37 60 39 61 40 63" stroke="#34D399" stroke-width="1.8" stroke-linecap="round" />
+
+    <!-- ── PASSENGER CABIN FLOOR & BATTERY BOX ── -->
+    <rect x="24" y="58" width="32" height="15" rx="3" fill="#047857" stroke="#065F46" stroke-width="1.2" />
+    <rect x="26" y="60" width="14" height="11" rx="2" fill="#064E3B" />
+    
+    <!-- Passenger Bench Seat Cushion -->
+    <path d="M22 51 C22 49 24 48 26 48 L39 48 C41 48 42 49 42 51 L42 58 L22 58 Z" fill="#1E293B" />
+    <!-- Passenger Backrest -->
+    <path d="M19 36 C19 34 21 33 23 33 L25 33 C27 33 28 34 28 36 L28 50 L19 50 Z" fill="#334155" />
+
+    <!-- ── DRIVER SEAT & CONSOLE ── -->
+    <rect x="44" y="54" width="12" height="6" rx="2" fill="#1E293B" />
+    <!-- Driver Seat Backrest -->
+    <rect x="42" y="44" width="4" height="11" rx="2" fill="#334155" />
+
+    <!-- ── FRONT FORK & STEERING HANDLEBAR ── -->
+    <path d="M72 73 L67 52 L59 52" stroke="#0F172A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="58" cy="52" r="2.2" fill="#FACC15" />
+    <!-- Front Mudguard -->
+    <path d="M62 67 C62 61 67 58 75 59 L80 66 L78 69 C74 65 67 64 64 68 Z" fill="#059669" />
+
+    <!-- ── FRONT COWL & APRON ── -->
+    <path d="M60 48 L73 48 C77 48 80 51 81 55 L81 61 C81 64 78 67 74 67 L60 67 Z" fill="url(#bodyGrad)" stroke="#065F46" stroke-width="1.2" />
+
+    <!-- Front Headlight 💡 -->
+    <ellipse cx="80" cy="57" rx="3" ry="3.5" fill="url(#headlightGlow)" stroke="#FEF08A" stroke-width="1" />
+    <!-- Light Beam Rays -->
+    <line x1="84" y1="55" x2="89" y2="53" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="85" y1="57" x2="91" y2="57" stroke="#FACC15" stroke-width="1.8" stroke-linecap="round" />
+    <line x1="84" y1="59" x2="89" y2="61" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round" />
+
+    <!-- ── WINDSHIELD & PILLAR ── -->
+    <path d="M57 28 L68 28 C70 28 72 30 73 32 L78 48 L60 48 Z" fill="url(#glassGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round" />
+    <!-- Glass Light Reflection Streak -->
+    <line x1="62" y1="31" x2="71" y2="45" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.75" />
+    <line x1="66" y1="31" x2="74" y2="43" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" stroke-opacity="0.4" />
+
+    <!-- Front Windshield Pillar -->
+    <line x1="58" y1="26" x2="61" y2="48" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- ── CABIN STRUCTURAL SAFETY PILLARS (Yellow Roll-Cage) ── -->
+    <!-- Center Pillar -->
+    <line x1="42" y1="24" x2="42" y2="54" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round" />
+    <!-- Rear Pillar -->
+    <path d="M16 26 C15 32 15 42 16 52" stroke="#FACC15" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- ── AERODYNAMIC TOTO CANOPY ROOF ── -->
+    <!-- Main curved canopy -->
+    <path d="M14 26 C14 18 20 14 32 14 L62 14 C69 14 74 18 76 24 L76 27 C76 29 74 30 72 30 L16 30 C14.5 30 14 28.5 14 26 Z" fill="url(#roofGrad)" />
+    
+    <!-- Top Roof Aerodynamic Highlight Reflection -->
+    <path d="M18 20 C24 16 34 16 60 16 C67 16 71 18 73 22" stroke="#A7F3D0" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.8" />
+    
+    <!-- Roof Lower Edge Trim -->
+    <line x1="15" y1="29.5" x2="74" y2="29.5" stroke="#047857" stroke-width="1.5" stroke-linecap="round" />
+
+    <!-- ── SIGNATURE ELECTRIC EMBLEM & STRIPES ── -->
+    <!-- Yellow Waistline Stripe -->
+    <line x1="16" y1="56" x2="60" y2="56" stroke="#FACC15" stroke-width="2" stroke-linecap="round" />
+
+    <!-- Battery Compartment Lightning Bolt ⚡ (Electric Toto) -->
+    <polygon points="34,62 31,67 34,67 32,72 37,66 34,66" fill="#FACC15" stroke="#FEF08A" stroke-width="0.5" />
+    <polygon points="50,56 48,59 50,59 49,62 52,58 50,58" fill="#FACC15" />
+  </g>
+</svg>

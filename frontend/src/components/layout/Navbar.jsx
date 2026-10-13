@@ -24,7 +24,7 @@ const POPULAR_CITIES = [
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated, logout, login } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const { userLocation, setUserLocation, currentRegion, setRegion } = useMapStore();
   const { todayEarnings, status: driverStatus } = useDriverStore();
 
@@ -137,48 +137,56 @@ export default function Navbar() {
 
   const displayLocationName = userLocation?.city || userLocation?.name || 'Set Location';
 
+  const handleScrollToSection = (e, sectionId) => {
+    e?.preventDefault();
+    if (location.pathname === '/') {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+    navigate(`/#${sectionId}`);
+    setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
   return (
-    <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans flex justify-center">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans">
+      <div className="w-full max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-18 gap-4">
           
-          {/* ── Left: Brand Identity + Dynamic Location Selector ─────────────────── */}
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            <Link
-              to={role === 'DRIVER' ? '/driver/dashboard' : role === 'ADMIN' ? '/admin/dashboard' : '/'}
-              className="flex items-center gap-2.5 group shrink-0"
-            >
-              <img
-                src="/logo.png"
-                alt="Riders Logo"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover shadow-sm border border-slate-200 transition-transform group-hover:scale-105"
-              />
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 leading-none">
-                    Riders India
-                  </span>
-                  <span className={`text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full border shrink-0 ${
-                    role === 'DRIVER'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : role === 'ADMIN'
-                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                      : 'bg-blue-50 text-blue-700 border-blue-200'
-                  }`}>
-                    {role === 'DRIVER' ? 'Driver' : role === 'ADMIN' ? 'Operations' : 'Passenger'}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-500 font-semibold tracking-tight hidden sm:inline mt-0.5">
-                  Pan-India Mobility
-                </span>
-              </div>
-            </Link>
+          {/* ── Left: Brand Identity (Clicking ALWAYS returns to Home "/") ───────── */}
+          <Link
+            to="/"
+            className="flex items-center gap-3 group shrink-0 transition-transform duration-200 active:scale-98"
+            title="Ride Tracker - Home"
+          >
+            <img
+              src="/toto-logo.svg"
+              alt="Ride Tracker Toto"
+              className="w-10 h-10 sm:w-11 sm:h-11 object-contain transition-all duration-300 group-hover:scale-110 drop-shadow-sm group-hover:drop-shadow-md"
+            />
+            <div className="flex flex-col">
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 leading-none group-hover:text-blue-600 transition-colors">
+                Ride Tracker
+              </span>
+              <span className="text-[10px] text-slate-500 font-bold tracking-tight hidden sm:inline mt-1">
+                Mobility Platform
+              </span>
+            </div>
+          </Link>
 
-            {/* Dynamic Live Location Popover */}
+          {/* ── Right: All Controls & Navigation Grouped on the Right Side ─────── */}
+          <div className="flex items-center gap-2 sm:gap-2.5 lg:gap-3 shrink-0">
+
+            {/* Dynamic Live Location Popover (Kharagpur) */}
             <div className="relative shrink-0 max-[479px]:hidden" ref={locationRef}>
               <button
                 onClick={() => setLocationMenuOpen(!locationMenuOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-800 transition-colors whitespace-nowrap shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 text-xs font-bold text-slate-800 transition-all duration-200 whitespace-nowrap shadow-xs hover:shadow-sm active:scale-95 cursor-pointer"
                 title="Change or Detect Your Location"
               >
                 <span className="relative flex h-2 w-2">
@@ -188,14 +196,14 @@ export default function Navbar() {
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${userLocation?.isGpsDetected ? 'bg-emerald-500' : 'bg-blue-600'}`}></span>
                 </span>
                 <MapPin size={13} className="text-blue-600 shrink-0" />
-                <span className="max-w-[110px] sm:max-w-[160px] truncate">
+                <span className="max-w-[100px] sm:max-w-[140px] truncate">
                   {displayLocationName}
                 </span>
-                <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${locationMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={13} className={`text-slate-500 transition-transform duration-200 shrink-0 ${locationMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {locationMenuOpen && (
-                <div className="absolute left-0 mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2.5">
                     <p className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
                       <MapPin size={12} className="text-blue-600" />
@@ -210,7 +218,7 @@ export default function Navbar() {
                   <button
                     onClick={handleDetectGPS}
                     disabled={isDetectingGps}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold text-xs border border-blue-200 transition-all active:scale-[0.99] mb-3"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold text-xs border border-blue-200 transition-all duration-200 active:scale-[0.99] mb-3 cursor-pointer"
                   >
                     {isDetectingGps ? (
                       <>
@@ -253,7 +261,7 @@ export default function Navbar() {
                         <button
                           key={place.id}
                           onClick={() => handleSelectSearchedPlace(place)}
-                          className="w-full text-left p-2 rounded-xl text-xs hover:bg-blue-50/80 transition-colors flex items-start gap-2 group"
+                          className="w-full text-left p-2 rounded-xl text-xs hover:bg-blue-50/80 transition-colors flex items-start gap-2 group cursor-pointer"
                         >
                           <MapPin size={13} className="text-slate-400 group-hover:text-blue-600 shrink-0 mt-0.5" />
                           <div className="truncate">
@@ -277,9 +285,9 @@ export default function Navbar() {
                           <button
                             key={city.name}
                             onClick={() => handleSelectCity(city)}
-                            className={`text-left px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between border transition-colors ${
+                            className={`text-left px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between border transition-all duration-150 cursor-pointer ${
                               isCurrent
-                                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs'
                                 : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100'
                             }`}
                           >
@@ -296,98 +304,106 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-          </div>
 
-          {/* ── Center: Clean Navigation (Never wraps, hides gracefully on narrow laptops) ── */}
-          <nav className="hidden xl:flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap shrink-0">
-            {isAuthenticated && role === 'USER' ? (
-              <Link
-                to="/app/home"
-                className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
+            {/* Clean Navigation Links: Book Ride, My Bookings, Corridors, Safety */}
+            <nav className="hidden xl:flex items-center gap-1 text-xs font-bold whitespace-nowrap shrink-0">
+              <button
+                onClick={(e) => {
+                  if (isAuthenticated) {
+                    navigate(role === 'DRIVER' ? '/driver/dashboard' : role === 'ADMIN' ? '/admin/dashboard' : '/app/home');
+                  } else {
+                    handleScrollToSection(e, 'booking');
+                  }
+                }}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer ${
+                  location.pathname === '/app/home'
+                    ? 'text-blue-700 bg-blue-50 border border-blue-200 shadow-xs'
+                    : 'text-slate-700 hover:text-blue-600 hover:bg-slate-100/80'
+                }`}
               >
                 Book Ride
-              </Link>
-            ) : (
-              <a
-                href="/#booking"
-                className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
-              >
-                Book Ride
-              </a>
-            )}
+              </button>
 
-            {/* Dynamic Radar / My Bookings / My Rides based on auth & role */}
-            {isAuthenticated ? (
-              role === 'DRIVER' ? (
-                <Link
-                  to="/driver/dashboard"
-                  className="px-3 py-2 rounded-xl transition-colors text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 hover:text-emerald-800 flex items-center gap-1.5 whitespace-nowrap border border-emerald-200/60 shadow-xs"
+              {/* Dynamic Radar / My Bookings / My Rides based on auth & role */}
+              {isAuthenticated ? (
+                role === 'DRIVER' ? (
+                  <Link
+                    to="/driver/dashboard"
+                    className={`px-3 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                      location.pathname === '/driver/dashboard'
+                        ? 'text-emerald-700 bg-emerald-50 border border-emerald-200 shadow-xs font-bold'
+                        : 'text-slate-700 hover:text-emerald-700 hover:bg-slate-100/80 font-bold'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${location.pathname === '/driver/dashboard' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'} shrink-0`} />
+                    My Rides
+                  </Link>
+                ) : role === 'ADMIN' ? (
+                  <Link
+                    to="/admin/rides"
+                    className={`px-3 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                      location.pathname === '/admin/rides'
+                        ? 'text-indigo-700 bg-indigo-50 border border-indigo-200 shadow-xs font-bold'
+                        : 'text-slate-700 hover:text-indigo-700 hover:bg-slate-100/80 font-bold'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${location.pathname === '/admin/rides' ? 'bg-indigo-500 animate-pulse' : 'bg-slate-400'} shrink-0`} />
+                    Fleet Radar
+                  </Link>
+                ) : (
+                  <Link
+                    to="/app/trips"
+                    className={`px-3 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                      location.pathname === '/app/trips'
+                        ? 'text-blue-700 bg-blue-50 border border-blue-200 shadow-xs font-bold'
+                        : 'text-slate-700 hover:text-blue-600 hover:bg-slate-100/80 font-bold'
+                    }`}
+                  >
+                    {location.pathname === '/app/trips' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                    )}
+                    My Bookings
+                  </Link>
+                )
+              ) : (
+                <button
+                  onClick={(e) => handleScrollToSection(e, 'booking')}
+                  className="px-3 py-2 rounded-xl transition-all duration-200 hover:text-blue-600 hover:bg-slate-100/80 flex items-center gap-1.5 whitespace-nowrap cursor-pointer active:scale-95 text-slate-700"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  My Rides
-                </Link>
-              ) : role === 'ADMIN' ? (
-                <Link
-                  to="/admin/rides"
-                  className="px-3 py-2 rounded-xl transition-colors text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 hover:text-indigo-800 flex items-center gap-1.5 whitespace-nowrap border border-indigo-200/60 shadow-xs"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shrink-0" />
-                  Fleet Radar
-                </Link>
-              ) : (
-                <Link
-                  to="/app/trips"
-                  className="px-3 py-2 rounded-xl transition-colors text-blue-700 bg-blue-50/80 hover:bg-blue-100 hover:text-blue-800 flex items-center gap-1.5 whitespace-nowrap border border-blue-200/60 shadow-xs"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
-                  My Bookings
-                </Link>
-              )
-            ) : (
-              <a
-                href="/#booking"
-                className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 flex items-center gap-1.5 whitespace-nowrap"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                Live Radar
-              </a>
-            )}
+                  Live Radar
+                </button>
+              )}
 
-            <a
-              href="/#places-to-go"
-              className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
-            >
-              Corridors
-            </a>
-            <a
-              href="/#safety"
-              className="px-3 py-2 rounded-xl transition-colors hover:text-blue-600 hover:bg-slate-100 whitespace-nowrap"
-            >
-              Safety
-            </a>
-            {!isAuthenticated && (
               <button
-                onClick={() => {
-                  login('DRIVER');
-                  navigate('/driver/dashboard');
-                }}
-                className="px-3 py-2 rounded-xl transition-colors text-emerald-700 hover:bg-emerald-50 font-bold whitespace-nowrap"
+                onClick={(e) => handleScrollToSection(e, 'places-to-go')}
+                className="px-3 py-2 rounded-xl transition-all duration-200 hover:text-blue-600 hover:bg-slate-100/80 active:scale-95 whitespace-nowrap cursor-pointer text-slate-700"
               >
-                Drive & Earn
+                Corridors
               </button>
-            )}
-          </nav>
+              <button
+                onClick={(e) => handleScrollToSection(e, 'safety')}
+                className="px-3 py-2 rounded-xl transition-all duration-200 hover:text-blue-600 hover:bg-slate-100/80 active:scale-95 whitespace-nowrap cursor-pointer text-slate-700"
+              >
+                Safety
+              </button>
+              {!isAuthenticated && (
+                <Link
+                  to="/register"
+                  className="px-3 py-2 rounded-xl transition-all duration-200 text-emerald-700 hover:bg-emerald-50 active:scale-95 font-bold whitespace-nowrap"
+                >
+                  Drive & Earn
+                </Link>
+              )}
+            </nav>
 
-          {/* ── Right: 112 SOS + Console CTA + Profile ─────────────────────────── */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            
             {/* National Emergency 112 SOS Pill */}
             <a
               href="tel:112"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-extrabold transition-all shadow-xs whitespace-nowrap shrink-0"
+              className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100/90 border border-rose-200 hover:border-rose-300 text-rose-700 text-xs font-extrabold transition-all duration-200 shadow-xs hover:shadow-sm active:scale-95 whitespace-nowrap shrink-0"
               title="National Emergency 112"
             >
-              <Shield size={13} className="text-rose-600 animate-pulse shrink-0" />
+              <Shield size={13} className="text-rose-600 animate-pulse group-hover:scale-110 transition-transform shrink-0" />
               <span className="hidden sm:inline">112 SOS</span>
             </a>
 
@@ -399,7 +415,7 @@ export default function Navbar() {
                   else if (role === 'ADMIN') navigate('/admin/dashboard');
                   else navigate('/app/home');
                 }}
-                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs transition-all whitespace-nowrap shrink-0 ${
+                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 whitespace-nowrap shrink-0 group cursor-pointer ${
                   role === 'DRIVER'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
                     : role === 'ADMIN'
@@ -408,32 +424,32 @@ export default function Navbar() {
                 }`}
               >
                 <span>{role === 'DRIVER' ? 'Cockpit' : role === 'ADMIN' ? 'Operations' : 'Console'}</span>
-                <ArrowRight size={12} className="shrink-0" />
+                <ArrowRight size={12} className="shrink-0 group-hover:translate-x-0.5 transition-transform" />
               </button>
             )}
 
-            {/* Profile Pill */}
+            {/* Profile Pill (e.g. Arvind Meena) */}
             {isAuthenticated ? (
-              <div className="relative shrink-0 max-lg:hidden" ref={profileRef}>
+              <div className="relative shrink-0" ref={profileRef}>
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold transition-all shadow-xs whitespace-nowrap shrink-0"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold transition-all duration-200 shadow-xs hover:shadow-sm active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 ${
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs ${
                     role === 'DRIVER' ? 'bg-emerald-600' : role === 'ADMIN' ? 'bg-indigo-600' : 'bg-blue-600'
                   }`}>
                     {role === 'DRIVER' ? '🚗' : role === 'ADMIN' ? '🖥️' : '👤'}
                   </div>
                   <span className="font-bold text-slate-900 truncate max-w-[90px] sm:max-w-[120px] hidden sm:inline">
-                    {user?.name || 'Rahul Mehra'}
+                    {user?.name || 'Arvind Meena'}
                   </span>
-                  <ChevronDown size={13} className={`text-slate-400 transition-transform shrink-0 ${profileMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={13} className={`text-slate-400 transition-transform duration-200 shrink-0 ${profileMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {profileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                     <div className="px-3 py-2 border-b border-slate-100 mb-2">
-                      <p className="text-xs font-black text-slate-900">{user?.name || 'Rahul Mehra'}</p>
+                      <p className="text-xs font-black text-slate-900">{user?.name || 'Arvind Meena'}</p>
                       <p className="text-[11px] text-slate-500">
                         {role === 'DRIVER' ? 'Verified Driver Partner' : role === 'ADMIN' ? 'Operations Controller' : 'Verified Passenger'}
                       </p>
@@ -454,33 +470,9 @@ export default function Navbar() {
                       </Link>
 
                       <div className="pt-2 border-t border-slate-100">
-                        <p className="text-[10px] uppercase font-extrabold text-slate-400 px-3 py-1">Switch Role Cockpit</p>
-                        <button
-                          onClick={() => { login('USER'); navigate('/app/home'); setProfileMenuOpen(false); }}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between ${role === 'USER' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
-                          <span>Passenger App</span>
-                          {role === 'USER' && <CheckCircle2 size={13} />}
-                        </button>
-                        {role !== 'USER' && (
-                          <button
-                            onClick={() => { login('DRIVER'); navigate('/driver/dashboard'); setProfileMenuOpen(false); }}
-                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between ${role === 'DRIVER' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 hover:bg-slate-50'}`}>
-                            <span>Driver Cockpit</span>
-                            {role === 'DRIVER' && <CheckCircle2 size={13} />}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => { login('ADMIN'); navigate('/admin/dashboard'); setProfileMenuOpen(false); }}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between ${role === 'ADMIN' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-50'}`}>
-                          <span>Operations Radar</span>
-                          {role === 'ADMIN' && <CheckCircle2 size={13} />}
-                        </button>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-100">
                         <button
                           onClick={handleLogout}
-                          className="w-full text-left px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
                         >
                           <LogOut size={14} className="shrink-0" />
                           <span>Sign Out</span>
@@ -500,7 +492,7 @@ export default function Navbar() {
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-xs transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap active:scale-95"
                 >
                   <span>Register</span>
                   <ArrowRight size={12} className="shrink-0" />
@@ -567,7 +559,11 @@ export default function Navbar() {
                 {Object.values(REGIONS).slice(0, 4).map((reg) => (
                   <button
                     key={reg.id}
-                    onClick={() => handleSelectRegion(reg.id)}
+                    onClick={() => {
+                      const r = REGIONS[reg.id];
+                      if (r) setRegion(reg.id, r.center, r.zoom);
+                      setMobileMenuOpen(false);
+                    }}
                     className={`px-3 py-2 rounded-xl text-xs font-bold text-left border ${
                       reg.id === (currentRegion || 'IIT_KGP')
                         ? 'bg-blue-50 border-blue-200 text-blue-700'
@@ -599,13 +595,19 @@ export default function Navbar() {
                   <Link
                     to="/app/trips"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-blue-700 bg-blue-50 font-bold"
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl font-bold transition-colors ${
+                      location.pathname === '/app/trips'
+                        ? 'text-blue-700 bg-blue-50 border border-blue-200'
+                        : 'text-slate-800 hover:bg-slate-100'
+                    }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      {location.pathname === '/app/trips' && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      )}
                       <span>My Bookings</span>
                     </div>
-                    <ChevronRight size={15} className="text-blue-500" />
+                    <ChevronRight size={15} className={location.pathname === '/app/trips' ? 'text-blue-500' : 'text-slate-400'} />
                   </Link>
                 )
               ) : (
@@ -622,41 +624,40 @@ export default function Navbar() {
                 </a>
               )}
 
-              {isAuthenticated && role === 'USER' ? (
-                <Link
-                  to="/app/home"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
-                >
-                  <span>Book a Ride</span>
-                  <ChevronRight size={15} className="text-slate-400" />
-                </Link>
-              ) : (
-                <a
-                  href="/#booking"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
-                >
-                  <span>Book a Ride</span>
-                  <ChevronRight size={15} className="text-slate-400" />
-                </a>
-              )}
-              <a
-                href="/#places-to-go"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
+              <button
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  if (isAuthenticated) {
+                    navigate(role === 'DRIVER' ? '/driver/dashboard' : role === 'ADMIN' ? '/admin/dashboard' : '/app/home');
+                  } else {
+                    handleScrollToSection(e, 'booking');
+                  }
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left"
+              >
+                <span>Book a Ride</span>
+                <ChevronRight size={15} className="text-slate-400" />
+              </button>
+              <button
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleScrollToSection(e, 'places-to-go');
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left"
               >
                 <span>Popular Corridors</span>
                 <ChevronRight size={15} className="text-slate-400" />
-              </a>
-              <a
-                href="/#safety"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100"
+              </button>
+              <button
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleScrollToSection(e, 'safety');
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left"
               >
                 <span>Safety & Standards</span>
                 <ChevronRight size={15} className="text-slate-400" />
-              </a>
+              </button>
               <Link
                 to="/contact"
                 onClick={() => setMobileMenuOpen(false)}

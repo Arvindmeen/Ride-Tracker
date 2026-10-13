@@ -24,7 +24,7 @@ const NAV_ITEMS = [
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout, login } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { stats } = useAdminStore();
   const { currentRegion, setRegion } = useMapStore();
   const navigate = useNavigate();
@@ -32,15 +32,6 @@ export default function AdminLayout() {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  // Admin "Test Portal" — switch to user/driver view to preview how the app looks
-  const [previewRole, setPreviewRole] = useState(null);
-  const handleSwitchRole = (role) => {
-    setPreviewRole(role);
-    login(role);
-    if (role === 'USER') navigate('/app/home');
-    else if (role === 'DRIVER') navigate('/driver/dashboard');
   };
 
   const handleRegionChange = (regKey) => {
@@ -67,18 +58,15 @@ export default function AdminLayout() {
       >
         {/* Brand Header */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-slate-800 flex-shrink-0">
-          <Link to="/admin/dashboard" className="flex items-center gap-2.5" onClick={() => setSidebarOpen(false)}>
+          <Link to="/" className="flex items-center gap-2.5 group" onClick={() => setSidebarOpen(false)} title="Ride Tracker - Home">
             <img
-              src="/logo.png"
+              src="/toto-logo.svg"
               alt="Ride Tracker Logo"
-              className="w-7 h-7 rounded-lg object-cover shadow-sm border border-indigo-400/40"
+              className="w-7 h-7 object-contain drop-shadow-xs transition-transform duration-200 group-hover:scale-110"
             />
             <div>
               <div className="flex items-center gap-1">
-                <span className="font-extrabold text-white text-sm leading-none">Ride Tracker</span>
-                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-900 text-blue-300 border border-blue-700">
-                  Ops
-                </span>
+                <span className="font-extrabold text-white text-sm leading-none group-hover:text-indigo-400 transition-colors">Ride Tracker</span>
               </div>
               <span className="text-[9px] text-slate-400 font-medium">Fleet Operations</span>
             </div>
@@ -235,7 +223,7 @@ export default function AdminLayout() {
           <footer className="bg-white border-t border-slate-200 py-4 px-6 text-xs text-slate-500 mt-8">
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <img src="/logo.png" alt="Ride Tracker" className="w-5 h-5 rounded-md object-cover" />
+                <img src="/toto-logo.svg" alt="Ride Tracker" className="w-5 h-5 object-contain" />
                 <div>
                   <p className="font-bold text-slate-900 text-xs">Ride Tracker Telemetry & Dispatch</p>
                   <p className="text-[10px] text-slate-400">SLA 99.98% · Redis GEO · Apache Kafka</p>

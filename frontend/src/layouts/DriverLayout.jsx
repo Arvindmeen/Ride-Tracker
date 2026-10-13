@@ -74,17 +74,14 @@ export default function DriverLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           {/* Logo + Online Toggle */}
           <div className="flex items-center gap-4">
-            <Link to="/driver/dashboard" className="flex items-center gap-2.5 group shrink-0">
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0" title="Ride Tracker - Home">
               <img
-                src="/logo.png"
+                src="/toto-logo.svg"
                 alt="Ride Tracker Logo"
-                className="w-8 h-8 rounded-xl object-cover shadow-sm border border-emerald-500/40 transition-transform group-hover:scale-105"
+                className="w-8 h-8 object-contain transition-transform duration-200 group-hover:scale-110 drop-shadow-xs"
               />
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-lg text-white leading-none">Ride Tracker</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 border border-emerald-700 hidden sm:inline">
-                  Partner
-                </span>
+                <span className="font-extrabold text-lg text-white leading-none group-hover:text-emerald-400 transition-colors">Ride Tracker</span>
               </div>
             </Link>
 

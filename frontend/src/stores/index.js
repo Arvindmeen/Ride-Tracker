@@ -7,15 +7,7 @@ const savedToken = typeof window !== 'undefined' ? localStorage.getItem('veloq_t
 const savedUserStr = typeof window !== 'undefined' ? localStorage.getItem('veloq_user') : null;
 const savedRole = typeof window !== 'undefined' ? localStorage.getItem('veloq_role') : null;
 
-let initialUser = {
-  id: 'USR-PASSENGER-01',
-  name: 'Rahul Mehra',
-  email: 'rahul@ridetracker.in',
-  phone: '+91 99887 76655',
-  role: 'USER',
-  rating: 4.88,
-  totalRides: 87,
-};
+let initialUser = null;
 
 if (savedUserStr) {
   try {
@@ -24,10 +16,10 @@ if (savedUserStr) {
 }
 
 export const useAuthStore = create((set, get) => ({
-  isAuthenticated: true,
+  isAuthenticated: !!(savedToken && initialUser),
   user: initialUser,
-  role: savedRole || initialUser?.role || 'USER',
-  token: savedToken || 'mock-jwt-user',
+  role: savedRole || initialUser?.role || null,
+  token: savedToken || null,
   authLoading: false,
   authError: null,
 
@@ -61,14 +53,9 @@ export const useAuthStore = create((set, get) => ({
 
       return { success: true, redirectUrl: data.redirectUrl, role: data.role };
     } catch (err) {
-      console.warn('Backend login fallback active:', err.message);
-      const fallbackRole = expectedRole || 'USER';
-      get().login(fallbackRole);
-      return {
-        success: true,
-        redirectUrl: fallbackRole === 'ADMIN' ? '/admin/dashboard' : fallbackRole === 'DRIVER' ? '/driver/dashboard' : '/app/home',
-        role: fallbackRole,
-      };
+      const errorMsg = err.message || 'Unable to connect to server. Please try again.';
+      set({ authLoading: false, authError: errorMsg });
+      return { success: false, error: errorMsg };
     }
   },
 
@@ -102,14 +89,9 @@ export const useAuthStore = create((set, get) => ({
 
       return { success: true, redirectUrl: data.redirectUrl, role: data.role };
     } catch (err) {
-      console.warn('Backend signup fallback active:', err.message);
-      const fallbackRole = signupData.role || 'USER';
-      get().login(fallbackRole);
-      return {
-        success: true,
-        redirectUrl: fallbackRole === 'DRIVER' ? '/driver/dashboard' : '/app/home',
-        role: fallbackRole,
-      };
+      const errorMsg = err.message || 'Unable to connect to server. Please try again.';
+      set({ authLoading: false, authError: errorMsg });
+      return { success: false, error: errorMsg };
     }
   },
 
@@ -127,6 +109,8 @@ export const useAuthStore = create((set, get) => ({
           localStorage.setItem('veloq_user', JSON.stringify(data.user));
           localStorage.setItem('veloq_role', data.role);
         }
+      } else if (res.status === 401 || res.status === 403) {
+        get().logout();
       }
     } catch (e) {}
   },
@@ -155,38 +139,22 @@ export const useAuthStore = create((set, get) => ({
     return { success: true };
   },
 
-  login: (role) => {
-    const defaultUsers = {
-      ADMIN: { id: 'USR-ADMIN-01', name: 'Operations Command Admin', email: 'admin@ridetracker.in', role: 'ADMIN', phone: '+91 98111 22334', rating: 5.0 },
-      DRIVER: { id: 'USR-DRIVER-01', name: 'Rajesh Kumar', email: 'rajesh@ridetracker.in', role: 'DRIVER', phone: '+91 98765 43210', rating: 4.92, totalRides: 412 },
-      USER: { id: 'USR-PASSENGER-01', name: 'Rahul Mehra', email: 'rahul@ridetracker.in', role: 'USER', phone: '+91 99887 76655', rating: 4.88, totalRides: 87 },
-    };
-    const user = defaultUsers[role] || defaultUsers.USER;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('veloq_token', `jwt-${role.toLowerCase()}`);
-      localStorage.setItem('veloq_user', JSON.stringify(user));
-      localStorage.setItem('veloq_role', role);
+  logout: async () => {
+    const token = get().token;
+    if (token) {
+      try {
+        await fetch('/api/v1/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (e) {}
     }
-    set({
-      isAuthenticated: true,
-      role,
-      token: `jwt-${role.toLowerCase()}`,
-      user,
-    });
-  },
-
-  logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('veloq_token');
       localStorage.removeItem('veloq_user');
       localStorage.removeItem('veloq_role');
     }
-    set({ isAuthenticated: false, user: null, role: null, token: null });
-  },
-
-  setRole: (role) => {
-    if (typeof window !== 'undefined') localStorage.setItem('veloq_role', role);
-    set({ role });
+    set({ isAuthenticated: false, user: null, role: null, token: null, authError: null });
   },
 }));
 

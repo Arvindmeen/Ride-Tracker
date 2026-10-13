@@ -187,11 +187,11 @@ function HeroRideShowcase({
   onConfirmBooking 
 }) {
   return (
-    <div className="relative bg-white rounded-3xl p-6 sm:p-8 text-slate-900 shadow-sm border border-slate-200 flex flex-col justify-between h-full min-h-[500px] overflow-hidden">
+    <div className="relative bg-white rounded-3xl p-6 sm:p-7 text-slate-900 shadow-sm border border-slate-200 flex flex-col justify-between h-full min-h-[500px] overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 pointer-events-none" />
 
       {/* Top Status Strip */}
-      <div className="relative z-10 flex items-center justify-between pb-4 border-b border-slate-100">
+      <div className="relative z-10 flex items-center justify-between pb-3.5 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -214,27 +214,27 @@ function HeroRideShowcase({
         </div>
       </div>
 
-      {/* Center Route & Trip Simulation Visualizer */}
-      <div className="relative z-10 my-auto py-5 space-y-4">
+      {/* Center Route & Trip Simulation Visualizer — Fills Space Gracefully */}
+      <div className="relative z-10 flex-1 flex flex-col justify-between py-3.5 space-y-3">
         
         {/* Route Card */}
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 shadow-sm space-y-2.5">
           <div className="flex items-start gap-3">
             {/* Route Pins */}
             <div className="flex flex-col items-center pt-1">
               <div className="w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-500/20" />
-              <div className="w-0.5 h-10 bg-gradient-to-b from-blue-500 via-slate-600 to-emerald-500 my-1" />
+              <div className="w-0.5 h-10 bg-gradient-to-b from-blue-500 via-slate-400 to-emerald-500 my-1" />
               <div className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
             </div>
 
             {/* From & To Details */}
-            <div className="flex-1 space-y-2.5 min-w-0">
+            <div className="flex-1 space-y-2 min-w-0">
               <div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Pickup Location</p>
                 <p className="text-xs font-bold text-slate-900 truncate">{pickupText.replace('📍 ', '')}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Destination Drop</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-600">Destination Drop</p>
                 <p className="text-xs font-bold text-slate-900 truncate">{selectedHotspot.name}</p>
                 <p className="text-[11px] text-slate-500 truncate">{selectedHotspot.drop}</p>
               </div>
@@ -250,7 +250,7 @@ function HeroRideShowcase({
         </div>
 
         {/* Assigned Driver Preview Pill */}
-        <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center justify-between gap-3">
+        <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl shrink-0">
               {selectedService.icon}
@@ -276,31 +276,74 @@ function HeroRideShowcase({
         </div>
 
         {/* 3 Core Trust Pillars */}
-        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+        <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-blue-50/70 rounded-xl p-2 border border-blue-100">
             <p className="text-xs font-black text-slate-900">&lt; 30s</p>
             <p className="text-[10px] text-slate-500 font-medium mt-0.5">Match Speed</p>
           </div>
           <div className="bg-emerald-50/70 rounded-xl p-2 border border-emerald-100">
-            <p className="text-xs font-black text-emerald-400">0% Surge</p>
+            <p className="text-xs font-black text-emerald-600">0% Surge</p>
             <p className="text-[10px] text-slate-500 font-medium mt-0.5">Fixed Upfront</p>
           </div>
           <div className="bg-amber-50/70 rounded-xl p-2 border border-amber-100">
-            <p className="text-xs font-black text-blue-400">112 SOS</p>
+            <p className="text-xs font-black text-blue-600">112 SOS</p>
             <p className="text-[10px] text-slate-500 font-medium mt-0.5">Police Linked</p>
+          </div>
+        </div>
+
+        {/* Transparent Fare Breakdown & Platform Guarantee (Fills Gap with High-Value Message) */}
+        <div className="bg-slate-50/90 rounded-2xl p-3 border border-slate-200/80 space-y-2">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-600 font-semibold flex items-center gap-1.5">
+              <DollarSign size={13} className="text-emerald-600 shrink-0" />
+              Upfront Transparent Fare
+            </span>
+            <span className="font-extrabold text-slate-900">₹{estFare} (No Hidden Charges)</span>
+          </div>
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-600 font-semibold flex items-center gap-1.5">
+              <Zap size={13} className="text-amber-500 shrink-0" />
+              Surge Pricing Policy
+            </span>
+            <span className="font-bold text-emerald-600">₹0 · 0% (Always Capped)</span>
+          </div>
+          <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+            <span className="flex items-center gap-1 text-slate-700">
+              <Check size={12} className="text-emerald-500 shrink-0" />
+              100% Direct Driver Partner Payout
+            </span>
+            <span className="text-blue-600 font-bold">Free 3-Min Cancellation</span>
+          </div>
+        </div>
+
+        {/* Live Safety & Eco-Impact Protections */}
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <ShieldCheck size={15} className="text-emerald-600 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900 leading-tight">4-Digit Start OTP</p>
+              <p className="text-[10px] text-slate-500 truncate">Safe ride verification</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <Leaf size={15} className="text-emerald-600 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900 leading-tight">~0.4 kg CO₂ Saved</p>
+              <p className="text-[10px] text-slate-500 truncate">Clean Solar Toto EV</p>
+            </div>
           </div>
         </div>
 
       </div>
 
       {/* Bottom Dispatch Trigger */}
-      <div className="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+      <div className="relative z-10 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
         <div className="text-xs text-slate-500">
           <span className="text-slate-900 font-bold">Fast & transparent</span> pricing
         </div>
         <button
           onClick={onConfirmBooking}
-          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition-all"
+          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
         >
           <span>Book Ride Now</span>
           <ArrowRight size={14} />
@@ -314,7 +357,7 @@ function HeroRideShowcase({
 export default function LandingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, role: userRole, isAuthenticated, login } = useAuthStore();
+  const { user, role: userRole, isAuthenticated } = useAuthStore();
   const { setPickup, setDestination, setCategory, setEstimatedFare, setStep } = useBookingStore();
   const { userLocation, setUserLocation, setCenter, setRegion, startSimulation } = useMapStore();
   const activeRole = isAuthenticated ? (userRole || user?.role || 'USER') : null;
@@ -334,6 +377,25 @@ export default function LandingPage() {
     isLive: false,
     loading: false,
   });
+
+  // Sort hubs by distance to user's live position if permission granted; keep default order otherwise
+  const sortedHubs = useMemo(() => {
+    const lat = userLocation?.isGpsDetected ? userLocation.lat : (liveLocation.isLive ? liveLocation.lat : null);
+    const lng = userLocation?.isGpsDetected ? userLocation.lng : (liveLocation.isLive ? liveLocation.lng : null);
+
+    if (lat != null && lng != null) {
+      // User has allowed location: calculate distance to each place and sort ascending (nearest first)
+      return [...REGIONAL_HUBS]
+        .map(hub => ({
+          ...hub,
+          distKm: Math.round(calculateDistance(lat, lng, hub.lat, hub.lng) * 10) / 10,
+        }))
+        .sort((a, b) => a.distKm - b.distKm);
+    }
+
+    // Permission not allowed or no GPS: keep default order
+    return REGIONAL_HUBS;
+  }, [userLocation?.isGpsDetected, userLocation?.lat, userLocation?.lng, liveLocation.isLive, liveLocation.lat, liveLocation.lng]);
 
   const [pickupText, setPickupText] = useState(REGIONAL_HUBS[0].locality);
   const [destText, setDestText] = useState(REGIONAL_HUBS[0].hotspots[0].name || REGIONAL_HUBS[0].hotspots[0].drop);
@@ -715,17 +777,7 @@ export default function LandingPage() {
 
   const estFare = Math.round(selectedService.basePrice + selectedHotspot.dist * selectedService.pricePerKm);
 
-  const handleLaunchRole = role => {
-    login(role);
-    if (role === 'ADMIN') navigate('/admin/dashboard');
-    else if (role === 'DRIVER') navigate('/driver/dashboard');
-    else navigate('/app/home');
-  };
-
   const handleConfirmBooking = () => {
-    // ALWAYS switch active persona to USER for passenger booking flow
-    login('USER');
-
     const pLat = pickupCoords.lat || liveLocation.lat;
     const pLng = pickupCoords.lng || liveLocation.lng;
     const pName = pickupText.replace(/^📍\s*/, '') || 'Selected Pickup';
@@ -773,7 +825,12 @@ export default function LandingPage() {
       distance: distKm,
     });
     setStep('CONFIRM');
-    navigate('/app/home');
+
+    if (isAuthenticated) {
+      navigate('/app/home');
+    } else {
+      navigate('/login?redirect=/app/home');
+    }
   };
 
   const handleContactSubmit = e => {
@@ -798,7 +855,7 @@ export default function LandingPage() {
               Pan-India Urban & Campus Mobility Network
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight leading-[1.15]">
-              India moves with <span className="text-blue-600">Riders.</span>
+              India moves with <span className="text-blue-600">Ride Tracker.</span>
             </h1>
             <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
               Book verified bikes, autos, and cabs with upfront fares, live tracking, and dependable support wherever the road takes you.
@@ -810,17 +867,28 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Centered Regional Sector Segment Tabs */}
-          <div className="flex justify-center mb-8 sm:mb-10">
-            <div className="flex w-full min-w-0 max-w-4xl flex-wrap items-center justify-center p-1.5 bg-slate-200/70 rounded-2xl gap-1">
-              {REGIONAL_HUBS.map(hub => {
+          {/* Centered Regional Sector Segment Tabs — STRICTLY ONE LINE & FULLY RESPONSIVE */}
+          <div className="w-full max-w-6xl mx-auto mb-8 sm:mb-10 px-2 sm:px-4">
+            <div className="flex w-full items-center justify-start lg:justify-center p-1.5 bg-slate-200/80 rounded-2xl gap-1 sm:gap-1.5 overflow-x-auto scroll-smooth flex-nowrap scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {sortedHubs.map((hub, idx) => {
                 const isSel = selectedHub.id === hub.id;
+                const isNearest = idx === 0 && hub.distKm != null;
                 return (
-                  <button key={hub.id} onClick={() => handleHubSelect(hub)}
-                    className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                      isSel ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                    }`}>
-                    {hub.name}
+                  <button
+                    key={hub.id}
+                    onClick={() => handleHubSelect(hub)}
+                    className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 whitespace-nowrap active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+                      isSel
+                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <span>{hub.name}</span>
+                    {isNearest && (
+                      <span className="text-[10px] font-black text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded-full border border-emerald-200 leading-none">
+                        {hub.distKm < 5 ? 'Near you' : `${hub.distKm} km`}
+                      </span>
+                    )}
                   </button>
                 );
               })}

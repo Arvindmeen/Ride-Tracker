@@ -16,14 +16,14 @@ export default function Footer() {
 
           {/* Brand column */}
           <div className="sm:col-span-2 space-y-4">
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt={`${APP_NAME} Logo`}
-                className="w-10 h-10 rounded-2xl object-cover shadow-lg shadow-sky-500/20 border border-sky-500/30" />
+            <Link to="/" className="flex items-center gap-3 group" title="Ride Tracker - Home">
+              <img src="/toto-logo.svg" alt={`${APP_NAME} Logo`}
+                className="w-10 h-10 object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-110" />
               <div>
-                <span className="font-black text-xl text-slate-900 tracking-tight block leading-none">{APP_NAME}</span>
+                <span className="font-black text-xl text-slate-900 tracking-tight block leading-none group-hover:text-blue-600 transition-colors">{APP_NAME}</span>
                 <span className="text-[10px] text-slate-500 font-semibold">Real-Time Mobility Network</span>
               </div>
-            </div>
+            </Link>
             <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
               India's campus and metropolitan mobility network connecting students, city commuters, bike drivers, and operations centers with sub-second GPS telemetry.
             </p>
@@ -55,27 +55,27 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 text-xs">
               {activeRole === 'USER' && (<>
-                <li><Link to="/app/home" className="hover:text-white transition-colors hover:translate-x-0.5 inline-block">Book a Ride</Link></li>
-                <li><Link to="/app/trips" className="hover:text-white transition-colors hover:translate-x-0.5 inline-block">My Past Trips</Link></li>
-                <li><Link to="/app/profile" className="hover:text-white transition-colors hover:translate-x-0.5 inline-block">Passenger Profile</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors hover:translate-x-0.5 inline-block">24/7 SOS Helpline</Link></li>
+                <li><Link to="/app/home" className="hover:text-slate-900 transition-colors hover:translate-x-0.5 inline-block">Book a Ride</Link></li>
+                <li><Link to="/app/trips" className="hover:text-slate-900 transition-colors hover:translate-x-0.5 inline-block">My Past Trips</Link></li>
+                <li><Link to="/app/profile" className="hover:text-slate-900 transition-colors hover:translate-x-0.5 inline-block">Passenger Profile</Link></li>
+                <li><Link to="/contact" className="hover:text-slate-900 transition-colors hover:translate-x-0.5 inline-block">24/7 SOS Helpline</Link></li>
               </>)}
               {activeRole === 'DRIVER' && (<>
-                <li><Link to="/driver/dashboard" className="hover:text-white transition-colors">Driver Cockpit</Link></li>
-                <li><Link to="/driver/earnings" className="hover:text-white transition-colors">Daily Earnings &amp; UPI</Link></li>
-                <li><Link to="/driver/requests" className="hover:text-white transition-colors">Incoming Dispatches</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Welfare &amp; Support</Link></li>
+                <li><Link to="/driver/dashboard" className="hover:text-slate-900 transition-colors">Driver Cockpit</Link></li>
+                <li><Link to="/driver/earnings" className="hover:text-slate-900 transition-colors">Daily Earnings &amp; UPI</Link></li>
+                <li><Link to="/driver/requests" className="hover:text-slate-900 transition-colors">Incoming Dispatches</Link></li>
+                <li><Link to="/contact" className="hover:text-slate-900 transition-colors">Welfare &amp; Support</Link></li>
               </>)}
               {activeRole === 'ADMIN' && (<>
-                <li><Link to="/admin/dashboard" className="hover:text-white transition-colors">Operations Radar</Link></li>
-                <li><Link to="/admin/live-map" className="hover:text-white transition-colors">Fleet Live Map</Link></li>
-                <li><Link to="/admin/drivers" className="hover:text-white transition-colors">Drivers Audit</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Dispatch Desk</Link></li>
+                <li><Link to="/admin/dashboard" className="hover:text-slate-900 transition-colors">Operations Radar</Link></li>
+                <li><Link to="/admin/live-map" className="hover:text-slate-900 transition-colors">Fleet Live Map</Link></li>
+                <li><Link to="/admin/drivers" className="hover:text-slate-900 transition-colors">Drivers Audit</Link></li>
+                <li><Link to="/contact" className="hover:text-slate-900 transition-colors">Dispatch Desk</Link></li>
               </>)}
               {!activeRole && (<>
-                <li><Link to="/login" className="hover:text-white transition-colors">Book a Ride</Link></li>
-                <li><Link to="/#places-to-go" className="hover:text-white transition-colors">Campus Routes</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">24/7 Helpline</Link></li>
+                <li><Link to="/login" className="hover:text-slate-900 transition-colors">Book a Ride</Link></li>
+                <li><Link to="/#places-to-go" className="hover:text-slate-900 transition-colors">Campus Routes</Link></li>
+                <li><Link to="/contact" className="hover:text-slate-900 transition-colors">24/7 Helpline</Link></li>
               </>)}
             </ul>
           </div>
@@ -110,9 +110,9 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-600">
-          <p>© 2026 Riders Technologies India Pvt. Ltd. All rights reserved.</p>
+          <p>© 2026 Ride Tracker Technologies Pvt. Ltd. All rights reserved.</p>
           <div className="flex items-center gap-4 sm:gap-5 flex-wrap justify-center">
-            <Link to="/contact" className="hover:text-slate-300 transition-colors">Contact</Link>
+            <Link to="/contact" className="hover:text-slate-900 transition-colors">Contact</Link>
             <span>UPI Settlements</span>
             <span>Fastag Ready</span>
             <span className="flex items-center gap-1"><Phone size={10} /> SOS Active</span>

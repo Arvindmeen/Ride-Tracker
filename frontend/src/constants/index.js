@@ -1,4 +1,4 @@
-export const APP_NAME = 'Riders India';
+export const APP_NAME = 'Ride Tracker';
 
 export const ROUTES = {
   HOME: '/',
