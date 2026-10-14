@@ -34,8 +34,27 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true }));
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'https://ride-tracker-ruddy.vercel.app',
+  ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : [])
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const clean = origin.replace(/\/$/, '');
+    if (allowedOrigins.some(o => o.replace(/\/$/, '') === clean) || clean.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
