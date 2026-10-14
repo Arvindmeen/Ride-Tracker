@@ -166,8 +166,36 @@ export default function UserHome() {
   // On-demand Map View: false by default (clean, focused booking flow)
   const [showMap, setShowMap] = useState(false);
 
-  // Selected Vehicle Service (defaults to Solar E-Toto)
-  const [selectedService, setSelectedService] = useState(VEHICLE_SERVICES[0]);
+  // Selected Vehicle Service (auto-synced with store category and persistent storage)
+  const [selectedService, setSelectedService] = useState(() => {
+    const savedId = typeof window !== 'undefined' ? localStorage.getItem('veloq_selected_vehicle_id') : null;
+    const savedCat = typeof window !== 'undefined' ? localStorage.getItem('veloq_selected_vehicle_category') : null;
+    const targetCat = category || savedCat;
+
+    if (targetCat) {
+      const match = VEHICLE_SERVICES.find(
+        (s) => s.category === targetCat || s.id === String(targetCat).toLowerCase()
+      );
+      if (match) return match;
+    }
+    if (savedId) {
+      const matchId = VEHICLE_SERVICES.find((s) => s.id === savedId);
+      if (matchId) return matchId;
+    }
+    return VEHICLE_SERVICES[0];
+  });
+
+  // Keep selectedService synchronized whenever store category changes
+  useEffect(() => {
+    if (category) {
+      const match = VEHICLE_SERVICES.find(
+        (s) => s.category === category || s.id === String(category).toLowerCase()
+      );
+      if (match && match.id !== selectedService.id) {
+        setSelectedService(match);
+      }
+    }
+  }, [category, selectedService.id]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -403,6 +431,21 @@ export default function UserHome() {
     if (!pickup && setCenter) {
       setCenter({ lat: formatted.lat, lng: formatted.lng });
     }
+
+    const dist = formatted.distanceKm || 3.5;
+    const base = selectedService.basePrice;
+    const distanceFare = Math.round(dist * selectedService.pricePerKm);
+    const tax = Math.round((base + distanceFare) * 0.05);
+    const total = base + distanceFare + tax;
+    setEstimatedFare({
+      base,
+      distance: dist,
+      distanceFare,
+      tax,
+      total,
+      currency: 'INR',
+    });
+    setCategory(selectedService.category);
     setStep('VEHICLE_SELECT');
   };
 
@@ -416,8 +459,13 @@ export default function UserHome() {
 
   // Select Vehicle Service
   const handleSelectVehicleService = (srv) => {
+    if (!srv) return;
     setSelectedService(srv);
     setCategory(srv.category);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('veloq_selected_vehicle_id', srv.id);
+      localStorage.setItem('veloq_selected_vehicle_category', srv.category);
+    }
     const dist = destination?.distanceKm || 4.2;
     const base = srv.basePrice;
     const distanceFare = Math.round(dist * srv.pricePerKm);
@@ -434,7 +482,8 @@ export default function UserHome() {
   };
 
   const handleProceedToConfirm = (srv) => {
-    handleSelectVehicleService(srv || selectedService);
+    const target = srv || selectedService;
+    handleSelectVehicleService(target);
     setStep('CONFIRM');
   };
 
@@ -572,7 +621,7 @@ export default function UserHome() {
   const currentCalculatedFare = Math.max(10, Math.round(selectedService.basePrice + activeDistance * selectedService.pricePerKm) - appliedDiscount);
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 via-slate-100/60 to-slate-200/50 font-sans pb-16">
+    <div className="relative w-full max-w-full overflow-x-hidden min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 via-slate-100/60 to-slate-200/50 font-sans pb-16">
       
       {/* ── TOP HERO BANNER: Ola/Uber Grade Title & Live Telemetry ─────────────── */}
       <section className="bg-white border-b border-slate-200 shadow-xs">
@@ -684,7 +733,7 @@ export default function UserHome() {
                   destination={destination}
                   routeCoordinates={routeInfo?.coordinates}
                   showSurgeZones={true}
-                  tileTheme="light"
+                  tileTheme="osm"
                   height="100%"
                   user={user}
                   showNearbyPassengers={true}
@@ -732,165 +781,181 @@ export default function UserHome() {
           <div className="space-y-6">
             
             {/* Input Card with connected route timeline */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-5 sm:p-7 relative transition-all">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-lg p-4 sm:p-5 relative transition-all">
               
-              <div className="relative space-y-3.5">
+              {/* Connected Route Inputs (Compact, Animated & User-Friendly) */}
+              <div className="relative bg-slate-50/80 border border-slate-200/90 rounded-2xl p-1.5 sm:p-2 transition-all">
                 
-                {/* Connecting timeline dot track */}
-                <div className="absolute left-[23px] top-[26px] bottom-[26px] w-0.5 bg-gradient-to-b from-blue-600 via-indigo-400 to-rose-500 rounded-full" />
-
-                {/* Pickup Field */}
-                <div
-                  className={clsx(
-                    'relative flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all bg-slate-50/70 hover:bg-slate-50',
-                    activeField === 'pickup'
-                      ? 'border-blue-600 bg-white ring-4 ring-blue-500/10 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300'
-                  )}
-                  onClick={() => {
-                    setActiveField('pickup');
-                    setSearchQuery(pickup?.name || '');
-                  }}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs z-10">
-                    📍
+                {/* Visual Journey Left Spine */}
+                <div className="absolute left-[17px] sm:left-[19px] top-[22px] bottom-[22px] w-[2px] flex flex-col items-center pointer-events-none z-10">
+                  {/* Pickup Spot Marker (Animated pulsing circle) */}
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-blue-100 shadow-xs shrink-0" />
+                  
+                  {/* Flowing Gradient Route Spine */}
+                  <div className="flex-1 w-[2px] bg-gradient-to-b from-blue-500 via-indigo-400 to-rose-500 my-1 relative overflow-hidden opacity-80">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/80 to-transparent animate-shimmer-flow" />
                   </div>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        Pickup Spot
-                      </p>
-                      {pickup?.lat && (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                          Verified Spot
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs sm:text-sm font-black text-slate-900 truncate mt-0.5">
-                      {pickup?.name || 'Enter pickup point or tap to detect...'}
-                    </p>
-                  </div>
+                  {/* Destination Dropoff Marker (Crisp beacon square) */}
+                  <div className="w-2.5 h-2.5 rounded-[3px] bg-rose-600 ring-4 ring-rose-100 shadow-xs shrink-0" />
+                </div>
 
-                  {/* 1-Tap Quick GPS Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      detectLiveGps();
+                <div className="space-y-0.5">
+                  {/* Pickup Field */}
+                  <div
+                    className={clsx(
+                      'group relative flex items-center gap-2.5 pl-8 sm:pl-9 pr-2 py-2 sm:py-2.5 rounded-xl cursor-pointer transition-all duration-200',
+                      activeField === 'pickup'
+                        ? 'bg-white shadow-xs ring-1 ring-blue-500/20'
+                        : 'hover:bg-white/70'
+                    )}
+                    onClick={() => {
+                      setActiveField('pickup');
+                      setSearchQuery(pickup?.name || '');
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-black border border-blue-200 transition-colors shrink-0 cursor-pointer"
-                    title="Use exact GPS"
                   >
-                    <Crosshair size={13} />
-                    <span className="hidden sm:inline">Use GPS</span>
-                  </button>
-
-                  {pickup && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPickup(null);
-                        setStep('LOCATION');
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/50 transition-colors"
-                      title="Clear Pickup"
-                    >
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Swap Pickup & Destination Button */}
-                {pickup && destination && (
-                  <div className="flex justify-center -my-2 relative z-10">
-                    <button
-                      onClick={handleSwapLocations}
-                      className="p-2 rounded-full bg-white border border-slate-300 shadow-md text-slate-600 hover:text-blue-600 hover:border-blue-400 hover:scale-105 transition-all cursor-pointer"
-                      title="Swap pickup and destination"
-                    >
-                      <ArrowUpDown size={15} />
-                    </button>
-                  </div>
-                )}
-
-                {/* Destination Dropoff Field */}
-                <div
-                  className={clsx(
-                    'relative flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all bg-slate-50/70 hover:bg-slate-50',
-                    activeField === 'destination'
-                      ? 'border-rose-600 bg-white ring-4 ring-rose-500/10 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300'
-                  )}
-                  onClick={() => {
-                    setActiveField('destination');
-                    setSearchQuery(destination?.name || '');
-                  }}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs z-10">
-                    🏁
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      Destination Drop-off
-                    </p>
-                    <p
-                      className={clsx(
-                        'text-xs sm:text-sm font-black truncate mt-0.5',
-                        destination ? 'text-slate-900' : 'text-slate-400'
-                      )}
-                    >
-                      {destination?.name || 'Where would you like to go?'}
-                    </p>
-                  </div>
-
-                  {destination && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDestination(null);
-                        setStep('LOCATION');
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/50 transition-colors"
-                      title="Clear Destination"
-                    >
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
-
-                {/* ── QUICK 1-TAP DESTINATION CHIPS (Instant 1-Click Routing) ── */}
-                <div className="pt-1 space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>⚡ Quick 1-Tap Destinations</span>
-                    </span>
-                    <span className="text-[10px] text-blue-600 font-bold">Tap to route</span>
-                  </div>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                    {visibleCorridors.slice(0, 6).map((corridor) => (
-                      <button
-                        key={corridor.id || corridor.name}
-                        onClick={() => handleSelectPresetDestination(corridor)}
-                        className={clsx(
-                          'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer border shadow-2xs',
-                          destination?.name === corridor.name
-                            ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-500/20'
-                            : 'bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200'
-                        )}
-                      >
-                        <span>{corridor.icon || '📍'}</span>
-                        <span>{corridor.name.split(',')[0]}</span>
-                        {corridor.distanceKm && (
-                          <span className={clsx('text-[10px] font-mono font-normal', destination?.name === corridor.name ? 'text-blue-100' : 'text-slate-400')}>
-                            · {corridor.distanceKm} km
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                          <span>Pickup Spot</span>
+                          <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                        </span>
+                        {pickup?.lat && (
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100/80 inline-flex items-center gap-0.5">
+                            <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                            Verified
                           </span>
                         )}
+                      </div>
+                      <p className={clsx(
+                        'text-xs sm:text-sm font-black truncate mt-0.5 leading-tight',
+                        pickup ? 'text-slate-900' : 'text-slate-400'
+                      )}>
+                        {pickup?.name || 'Enter pickup point or tap to locate...'}
+                      </p>
+                    </div>
+
+                    {/* 1-Tap Quick GPS Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        detectLiveGps();
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-bold border border-blue-200/80 transition-all shrink-0 cursor-pointer active:scale-95 shadow-2xs"
+                      title="Use exact GPS"
+                    >
+                      <Crosshair size={12} className="text-blue-600" />
+                      <span className="hidden sm:inline">Use GPS</span>
+                    </button>
+
+                    {pickup && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPickup(null);
+                          setStep('LOCATION');
+                        }}
+                        className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/60 transition-colors cursor-pointer"
+                        title="Clear Pickup"
+                      >
+                        <X size={14} />
                       </button>
-                    ))}
+                    )}
+                  </div>
+
+                  {/* Seam Hairline Divider with Floating Animated Circular Swap Button */}
+                  <div className="relative h-px bg-slate-200/70 my-0.5 ml-8 sm:ml-9 mr-2 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSwapLocations}
+                      className="absolute -top-3.5 right-4 sm:right-6 z-20 group flex items-center justify-center w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-white border border-slate-200 hover:border-indigo-500 shadow-2xs hover:shadow-md hover:shadow-indigo-500/20 active:scale-90 transition-all duration-300 cursor-pointer"
+                      title="Swap pickup and destination"
+                    >
+                      <ArrowUpDown
+                        size={12}
+                        className="text-slate-500 group-hover:text-indigo-600 group-hover:rotate-180 transition-transform duration-500 ease-out"
+                      />
+                    </button>
+                  </div>
+
+                  {/* Destination Dropoff Field */}
+                  <div
+                    className={clsx(
+                      'group relative flex items-center gap-2.5 pl-8 sm:pl-9 pr-2 py-2 sm:py-2.5 rounded-xl cursor-pointer transition-all duration-200',
+                      activeField === 'destination'
+                        ? 'bg-white shadow-xs ring-1 ring-rose-500/20'
+                        : 'hover:bg-white/70'
+                    )}
+                    onClick={() => {
+                      setActiveField('destination');
+                      setSearchQuery(destination?.name || '');
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <span>Destination Drop-off</span>
+                        <span className="w-1 h-1 rounded-full bg-rose-500" />
+                      </span>
+                      <p
+                        className={clsx(
+                          'text-xs sm:text-sm font-black truncate mt-0.5 leading-tight',
+                          destination ? 'text-slate-900' : 'text-slate-400'
+                        )}
+                      >
+                        {destination?.name || 'Where would you like to go?'}
+                      </p>
+                    </div>
+
+                    {destination && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDestination(null);
+                          setStep('LOCATION');
+                        }}
+                        className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/60 transition-colors cursor-pointer"
+                        title="Clear Destination"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
+              </div>
 
+              {/* ── QUICK 1-TAP DESTINATION CHIPS (Completely decoupled and outside route connector) ── */}
+              <div className="pt-3.5 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>⚡ Quick 1-Tap Destinations</span>
+                  </span>
+                  <span className="text-[10px] text-blue-600 font-bold">Tap to route</span>
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  {visibleCorridors.slice(0, 6).map((corridor) => (
+                    <button
+                      key={corridor.id || corridor.name}
+                      onClick={() => handleSelectPresetDestination(corridor)}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer border shadow-2xs active:scale-95',
+                        destination?.name === corridor.name
+                          ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-500/20'
+                          : 'bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200'
+                      )}
+                    >
+                      <span>{corridor.icon || '📍'}</span>
+                      <span>{corridor.name.split(',')[0]}</span>
+                      {corridor.distanceKm && (
+                        <span className={clsx('text-[10px] font-mono font-normal', destination?.name === corridor.name ? 'text-blue-100' : 'text-slate-400')}>
+                          · {corridor.distanceKm} km
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Active Search Dropdown / Autocomplete Box */}
@@ -998,7 +1063,7 @@ export default function UserHome() {
 
                         <div className="flex items-center justify-between">
                           <div className="w-10 h-10 rounded-xl bg-slate-100/80 group-hover:bg-white flex items-center justify-center p-1 transition-colors">
-                            {srv.id === 'VELOQ_AUTO' ? (
+                            {srv.id === 'toto' ? (
                               <img src="/toto-logo.svg" alt="Toto" className="w-8 h-8 object-contain" />
                             ) : (
                               <span className="text-2xl">{srv.icon}</span>

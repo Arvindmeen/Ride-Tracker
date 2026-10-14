@@ -161,7 +161,13 @@ export default function TripsPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-blue-600 transition-colors">
-                            {ride.category} Ride
+                            {String(ride.category).toUpperCase().includes('MOTO') || String(ride.category).toUpperCase().includes('BIKE')
+                              ? '🏍️ Electric Bike Ride'
+                              : String(ride.category).toUpperCase().includes('AUTO') || String(ride.category).toUpperCase().includes('TOTO')
+                              ? '🛺 Solar E-Toto Ride'
+                              : String(ride.category).toUpperCase().includes('XL')
+                              ? '🚚 Transporter Ride'
+                              : '🚗 Prime Cab Ride'}
                           </h3>
                           {ride.userRating && (
                             <span className="text-[11px] font-bold text-amber-500 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
@@ -198,10 +204,13 @@ export default function TripsPage() {
 
                   {/* Route Timeline */}
                   <div className="relative pl-6 space-y-2.5 text-xs">
-                    <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gradient-to-b from-blue-600 to-rose-600" />
+                    {/* Animated connecting spine */}
+                    <div className="absolute left-[5px] top-2.5 bottom-2.5 w-[2px] bg-gradient-to-b from-blue-600 via-indigo-500 to-rose-500 rounded-full overflow-hidden">
+                      <div className="w-full h-1/2 bg-gradient-to-b from-transparent via-white to-transparent animate-route-flow" />
+                    </div>
                     
                     <div className="relative">
-                      <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs" />
+                      <div className="absolute -left-6 top-0.5 w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs ring-2 ring-blue-500/20" />
                       <p className="text-slate-800 font-bold truncate">
                         <span className="text-[10px] font-extrabold uppercase text-blue-600 mr-1.5">Pickup:</span>
                         {ride.pickup?.name || ride.pickup?.address}
@@ -209,7 +218,7 @@ export default function TripsPage() {
                     </div>
 
                     <div className="relative">
-                      <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-rose-600 border-2 border-white shadow-xs" />
+                      <div className="absolute -left-6 top-0.5 w-3 h-3 rounded-full bg-rose-600 border-2 border-white shadow-xs ring-2 ring-rose-500/20" />
                       <p className="text-slate-800 font-bold truncate">
                         <span className="text-[10px] font-extrabold uppercase text-rose-600 mr-1.5">Drop:</span>
                         {ride.destination?.name || ride.destination?.address}

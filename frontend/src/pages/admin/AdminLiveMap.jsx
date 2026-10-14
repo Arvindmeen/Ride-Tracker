@@ -96,7 +96,7 @@ export default function AdminLiveMap() {
         <Suspense fallback={<div className="w-full h-full bg-slate-200 flex items-center justify-center"><Spinner size="xl" /></div>}>
           <LiveMap
             zoom={12}
-            tileTheme="light"
+            tileTheme="osm"
             showSurgeZones={layers.surgeZones}
             height="100%"
             onDriverClick={(d) => selectDriver(d.id)}

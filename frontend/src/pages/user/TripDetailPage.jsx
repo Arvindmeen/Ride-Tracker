@@ -134,7 +134,13 @@ export default function TripDetailPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-xl font-black text-slate-900">
-                  {trip.category} Ride
+                  {String(trip.category).toUpperCase().includes('MOTO') || String(trip.category).toUpperCase().includes('BIKE')
+                    ? '🏍️ Electric Bike Ride'
+                    : String(trip.category).toUpperCase().includes('AUTO') || String(trip.category).toUpperCase().includes('TOTO')
+                    ? '🛺 Solar E-Toto Ride'
+                    : String(trip.category).toUpperCase().includes('XL')
+                    ? '🚚 Transporter Ride'
+                    : '🚗 Prime Cab Ride'}
                 </h1>
                 <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
                   ✓ {trip.status === 'RIDE_COMPLETED' ? 'Completed' : trip.status}
@@ -170,17 +176,19 @@ export default function TripDetailPage() {
             Route Details
           </p>
           <div className="relative pl-6 space-y-4">
-            {/* Timeline connector bar */}
-            <div className="absolute left-2.5 top-3 bottom-3 w-0.5 bg-gradient-to-b from-blue-600 via-indigo-400 to-rose-500 rounded-full" />
+            {/* Animated timeline connector bar */}
+            <div className="absolute left-[6px] top-3.5 bottom-3.5 w-[2px] bg-gradient-to-b from-blue-600 via-indigo-500 to-rose-500 rounded-full overflow-hidden shadow-xs">
+              <div className="w-full h-1/2 bg-gradient-to-b from-transparent via-white to-transparent animate-route-flow" />
+            </div>
 
             {/* Pickup */}
             <div className="relative">
-              <div className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-blue-600 border-2 border-white shadow-sm" />
+              <div className="absolute -left-6 top-0.5 w-3.5 h-3.5 rounded-full bg-blue-600 border-2 border-white shadow-sm ring-4 ring-blue-500/20" />
               <div>
-                <span className="text-[10px] font-bold uppercase text-blue-600 tracking-wider">
+                <span className="text-[10px] font-extrabold uppercase text-blue-600 tracking-wider">
                   Pickup
                 </span>
-                <p className="text-sm font-bold text-slate-900">
+                <p className="text-sm font-black text-slate-900">
                   {trip.pickup?.name || trip.pickup?.address}
                 </p>
                 {trip.pickup?.address && trip.pickup?.address !== trip.pickup?.name && (
@@ -191,12 +199,12 @@ export default function TripDetailPage() {
 
             {/* Destination */}
             <div className="relative">
-              <div className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-white shadow-sm" />
+              <div className="absolute -left-6 top-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-white shadow-sm ring-4 ring-rose-500/20" />
               <div>
-                <span className="text-[10px] font-bold uppercase text-rose-600 tracking-wider">
+                <span className="text-[10px] font-extrabold uppercase text-rose-600 tracking-wider">
                   Destination Drop-off
                 </span>
-                <p className="text-sm font-bold text-slate-900">
+                <p className="text-sm font-black text-slate-900">
                   {trip.destination?.name || trip.destination?.address}
                 </p>
                 {trip.destination?.address && trip.destination?.address !== trip.destination?.name && (

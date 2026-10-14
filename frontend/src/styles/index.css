@@ -459,6 +459,11 @@ html, body {
   background-color: #0f172a !important;
 }
 
+/* ── Leaflet OpenStreetMap Clean Night Mode Filter (Zero API Key, Zero Watermarks) ── */
+.dark-tiles .leaflet-tile {
+  filter: brightness(0.65) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.75) !important;
+}
+
 /* ── Continuous Journey Bar & Telemetry Keyframe Animations ────────────────── */
 @keyframes shimmer-flow {
   0% { transform: translateX(-100%); }
@@ -495,5 +500,26 @@ html, body {
 
 .animate-beacon-ripple {
   animation: beacon-ripple 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ── Route Connector Laser & Flow Animations ───────────────────────────────── */
+@keyframes route-flow-down {
+  0% { transform: translateY(-100%); opacity: 0; }
+  25% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { transform: translateY(220%); opacity: 0; }
+}
+
+@keyframes route-glow-pulse {
+  0%, 100% { opacity: 0.5; filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.4)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8)); }
+}
+
+.animate-route-flow {
+  animation: route-flow-down 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-route-glow {
+  animation: route-glow-pulse 2s ease-in-out infinite;
 }
 

@@ -262,13 +262,30 @@ class DispatchSimulationEngine {
       ? 'EV Transporter (Tata Ace EV)'
       : 'Prime EV Cab (Tata Tigor)';
 
+    const isMatchingCategory = (chosenDriver?.category === targetCategory) || (chosenDriver?.vehicle?.category === targetCategory);
+    const assignedModel = isMatchingCategory && (chosenDriver?.vehicle?.model || chosenDriver?.vehicleModel)
+      ? (chosenDriver?.vehicle?.model || chosenDriver?.vehicleModel)
+      : defaultModel;
+
+    const assignedPlate = isMatchingCategory && (chosenDriver?.vehicle?.plate || chosenDriver?.vehicleNumber)
+      ? (chosenDriver?.vehicle?.plate || chosenDriver?.vehicleNumber)
+      : (targetCategory === 'MOTO' ? 'DL 01 AB 4921' : targetCategory === 'AUTO' ? 'WB 26 Q 4921' : targetCategory === 'XL' ? 'WB 19 TR 8011' : 'KA 03 MN 9210');
+
+    const defaultDriverName = targetCategory === 'MOTO' 
+      ? 'Subhash Mondal' 
+      : targetCategory === 'AUTO' 
+      ? 'Vikram Singh' 
+      : targetCategory === 'XL' 
+      ? 'Rohan Deshmukh' 
+      : 'Rajesh Sharma';
+
     const assignedDriver = {
       id: chosenDriver?.id || `drv-nearest-${Date.now()}`,
-      name: chosenDriver?.name || 'Subhash Mondal',
+      name: isMatchingCategory ? (chosenDriver?.name || defaultDriverName) : defaultDriverName,
       rating: chosenDriver?.rating || 4.92,
       category: targetCategory,
-      vehicleModel: chosenDriver?.vehicle?.model || chosenDriver?.vehicleModel || defaultModel,
-      vehicleNumber: chosenDriver?.vehicle?.plate || chosenDriver?.vehicleNumber || 'WB 26 Q 4921',
+      vehicleModel: assignedModel,
+      vehicleNumber: assignedPlate,
       phone: chosenDriver?.phone || '+91 94340 12891',
       tripsCompleted: chosenDriver?.totalRides || chosenDriver?.tripsCompleted || 1420,
       location: {

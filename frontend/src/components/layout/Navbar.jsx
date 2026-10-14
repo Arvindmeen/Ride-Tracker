@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Activity, ArrowRight, ChevronDown, Menu, X, Users, Car,
+  Activity, ArrowRight, ChevronDown, X, Users, Car,
   Shield, Phone, MapPin, Sparkles, LayoutDashboard, ExternalLink,
   Zap, LogOut, CheckCircle2, ChevronRight, Navigation, DollarSign,
   Terminal, ShieldCheck, UserCheck, AlertCircle, Clock, Search,
@@ -28,7 +28,6 @@ export default function Navbar() {
   const { userLocation, setUserLocation, currentRegion, setRegion } = useMapStore();
   const { todayEarnings, status: driverStatus, setStatus: setDriverStatus, pendingRequests, activeRide } = useDriverStore();
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [locationMenuOpen, setLocationMenuOpen] = useState(false);
   const [locSearchQuery, setLocSearchQuery] = useState('');
@@ -51,11 +50,14 @@ export default function Navbar() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   useEffect(() => {
-    setMobileMenuOpen(false);
     setProfileMenuOpen(false);
     setLocationMenuOpen(false);
   }, [location.pathname]);
@@ -154,37 +156,37 @@ export default function Navbar() {
   };
 
   return (
-    <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans overflow-x-clip">
-      <div className="w-full max-w-[1536px] mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18 gap-2 sm:gap-4 w-full min-w-0">
+    <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans">
+      <div className="w-full max-w-[1536px] mx-auto px-2.5 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between h-16 sm:h-18 gap-1.5 sm:gap-3 w-full min-w-0">
           
           {/* ── Left: Brand Identity & Live Location ───────── */}
-          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 shrink">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <Link
               to="/"
-              className="flex items-center gap-2.5 sm:gap-3 group shrink-0 transition-transform duration-200 active:scale-98"
+              className="flex items-center gap-2 sm:gap-2.5 group shrink-0 transition-transform duration-200 active:scale-98"
               title="Ride Tracker - Home"
             >
               <img
                 src="/toto-logo.svg"
                 alt="Ride Tracker Toto"
-                className="w-9 h-9 sm:w-11 sm:h-11 object-contain transition-all duration-300 group-hover:scale-110 drop-shadow-sm group-hover:drop-shadow-md"
+                className="w-8 h-8 sm:w-10 sm:h-10 object-contain transition-all duration-300 group-hover:scale-110 drop-shadow-sm group-hover:drop-shadow-md shrink-0"
               />
               <div className="flex flex-col min-w-0">
-                <span className="font-extrabold text-base sm:text-xl tracking-tight text-slate-900 leading-none group-hover:text-blue-600 transition-colors truncate">
+                <span className="font-extrabold text-sm sm:text-base lg:text-lg tracking-tight text-slate-900 leading-none group-hover:text-blue-600 transition-colors truncate">
                   Ride Tracker
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold tracking-tight hidden sm:inline mt-1">
+                <span className="text-[10px] text-slate-500 font-bold tracking-tight hidden 2xl:inline mt-0.5">
                   Mobility Platform
                 </span>
               </div>
             </Link>
 
-            {/* Dynamic Live Location Popover (Desktop / Tablet only to protect mobile width) */}
-            <div className="relative shrink-0 hidden md:block" ref={locationRef}>
+            {/* Dynamic Live Location Popover (Desktop only to guarantee 0 overflow) */}
+            <div className="relative shrink-0 hidden lg:block" ref={locationRef}>
               <button
                 onClick={() => setLocationMenuOpen(!locationMenuOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 text-xs font-bold text-slate-800 transition-all duration-200 whitespace-nowrap shadow-xs hover:shadow-sm active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 text-xs font-bold text-slate-800 transition-all duration-200 whitespace-nowrap shadow-xs hover:shadow-sm active:scale-95 cursor-pointer"
                 title="Change or Detect Your Location"
               >
                 <span className="relative flex h-2 w-2">
@@ -194,7 +196,7 @@ export default function Navbar() {
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${userLocation?.isGpsDetected ? 'bg-emerald-500' : 'bg-blue-600'}`}></span>
                 </span>
                 <MapPin size={13} className="text-blue-600 shrink-0" />
-                <span className="max-w-[100px] sm:max-w-[140px] truncate">
+                <span className="max-w-[85px] xl:max-w-[130px] truncate">
                   {displayLocationName}
                 </span>
                 <ChevronDown size={13} className={`text-slate-500 transition-transform duration-200 shrink-0 ${locationMenuOpen ? 'rotate-180' : ''}`} />
@@ -305,10 +307,10 @@ export default function Navbar() {
           </div>
 
           {/* ── Right: All Controls & Navigation Grouped on the Right Side ─────── */}
-          <div className="flex items-center justify-end gap-2 sm:gap-2.5 lg:gap-3 shrink-0 ml-auto">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2 lg:gap-2.5 shrink-0 ml-auto">
 
             {/* Role-Tailored Navigation Links */}
-            <nav className="hidden xl:flex items-center gap-1 text-xs font-bold whitespace-nowrap shrink-0">
+            <nav className="hidden xl:flex items-center gap-0.5 2xl:gap-1 text-xs font-bold whitespace-nowrap shrink-0">
               {/* ── DRIVER LOGGED IN ────────────────────────────────────────────── */}
               {role === 'DRIVER' ? (
                 <>
@@ -561,24 +563,24 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* National Emergency 112 SOS Pill */}
+            {/* National Emergency 112 SOS Pill (Shown on 2xl; for mobile & tablet accessible in Hamburger Drawer) */}
             <a
               href="tel:112"
-              className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100/90 border border-rose-200 hover:border-rose-300 text-rose-700 text-xs font-extrabold transition-all duration-200 shadow-xs hover:shadow-sm active:scale-95 whitespace-nowrap shrink-0"
+              className="hidden 2xl:flex group items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100/90 border border-rose-200 hover:border-rose-300 text-rose-700 text-xs font-extrabold transition-all duration-200 shadow-xs hover:shadow-sm active:scale-95 whitespace-nowrap shrink-0"
               title="National Emergency 112"
             >
               <Shield size={13} className="text-rose-600 animate-pulse group-hover:scale-110 transition-transform shrink-0" />
-              <span className="hidden sm:inline">112 SOS</span>
+              <span>112 SOS</span>
             </a>
 
-            {/* Contextual Jump Button (Hide for Admin since Admin has Dashboard link) */}
+            {/* Contextual Jump Button (Shown on 2xl only to avoid squeezing 1280px-1440px screens) */}
             {isAuthenticated && role !== 'ADMIN' && (
               <button
                 onClick={() => {
                   if (role === 'DRIVER') navigate('/driver/dashboard');
                   else navigate('/app/home');
                 }}
-                className={`hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 whitespace-nowrap shrink-0 group cursor-pointer ${
+                className={`hidden 2xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 whitespace-nowrap shrink-0 group cursor-pointer ${
                   role === 'DRIVER'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
                     : 'bg-blue-600 hover:bg-blue-700'
@@ -589,48 +591,48 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* Profile Pill */}
+            {/* ── PROFILE / NAME DROPDOWN (Clickable on Mobile & Desktop) ─────── */}
             {isAuthenticated ? (
               <div className="relative shrink-0" ref={profileRef}>
-                {/* Clicking toggles the account menu */}
+                {/* Clicking toggles the account / name menu */}
                 <button
-                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                  className="flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-2.5 pr-2 sm:pr-2.5 py-1.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer select-none max-w-[130px] sm:max-w-[175px]"
+                  onClick={() => setProfileMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-1.5 sm:gap-2 pl-2 pr-2 sm:pl-2.5 sm:pr-2.5 py-1.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer select-none max-w-[115px] sm:max-w-[165px]"
                   title="Account Menu"
                   aria-expanded={profileMenuOpen}
                 >
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs ${
+                  <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs ${
                     role === 'DRIVER' ? 'bg-emerald-600' : role === 'ADMIN' ? 'bg-indigo-600' : 'bg-blue-600'
                   }`}>
                     {role === 'DRIVER' ? '🚗' : role === 'ADMIN' ? '🖥️' : '👤'}
                   </div>
                   <span className="font-bold text-slate-900 truncate text-xs">
-                    {role === 'ADMIN' ? 'Operations Admin' : user?.name || (role === 'DRIVER' ? 'Rajesh Kumar' : 'Arvind Meena')}
+                    {role === 'ADMIN' ? 'Admin' : user?.name || (role === 'DRIVER' ? 'Rajesh Kumar' : 'Arvind Meena')}
                   </span>
                   <ChevronDown size={13} className={`text-slate-500 transition-transform duration-200 shrink-0 ${profileMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {profileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    {/* Header item: clicking driver name opens driver profile */}
+                  <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 max-w-sm sm:max-w-none bg-white border border-slate-200/95 rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    {/* Header item: clicking name opens profile */}
                     <button
                       onClick={() => {
                         setProfileMenuOpen(false);
                         navigate(role === 'DRIVER' ? '/driver/profile' : role === 'ADMIN' ? '/admin/settings' : '/app/profile');
                       }}
-                      className="w-full text-left px-3 py-2 border-b border-slate-100 mb-2 rounded-xl hover:bg-emerald-50/70 transition-colors group cursor-pointer block"
+                      className="w-full text-left p-2.5 border-b border-slate-100 mb-2 rounded-xl bg-slate-50 hover:bg-blue-50/70 transition-colors group cursor-pointer block"
                       title="Open Profile"
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-black text-slate-900 group-hover:text-blue-700 transition-colors truncate">
                             {user?.name || (role === 'DRIVER' ? 'Rajesh Kumar' : 'Arvind Meena')}
                           </p>
                           <p className="text-[11px] text-slate-500 font-medium">
                             {role === 'DRIVER' ? 'Verified Driver Partner' : role === 'ADMIN' ? 'Operations Controller' : 'Verified Passenger'}
                           </p>
                         </div>
-                        <ChevronRight size={14} className="text-slate-400 group-hover:text-emerald-600 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        <ChevronRight size={14} className="text-slate-400 group-hover:text-blue-600 transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     </button>
 
@@ -761,6 +763,18 @@ export default function Navbar() {
                         </>
                       )}
 
+                      {/* Emergency 112 SOS (convenient on mobile and all devices) */}
+                      <a
+                        href="tel:112"
+                        className="w-full text-left px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 flex items-center justify-between font-bold border border-rose-200/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Shield size={14} className="text-rose-600 shrink-0" />
+                          <span>Emergency 112 SOS</span>
+                        </div>
+                        <span className="text-[10px] bg-rose-200/80 text-rose-800 px-1.5 py-0.5 rounded font-black">24x7</span>
+                      </a>
+
                       <Link
                         to="/contact"
                         onClick={() => setProfileMenuOpen(false)}
@@ -816,357 +830,24 @@ export default function Navbar() {
               <div className="flex items-center gap-2 shrink-0">
                 <Link
                   to="/login"
-                  className="text-xs font-bold text-slate-700 hover:text-blue-600 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors whitespace-nowrap"
+                  className="text-xs font-bold text-slate-700 hover:text-blue-600 px-3 py-1.5 sm:py-2 rounded-xl hover:bg-slate-100 transition-colors whitespace-nowrap"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-xs transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap active:scale-95"
+                  className="flex bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl shadow-xs transition-all duration-200 items-center gap-1.5 whitespace-nowrap active:scale-95"
                 >
                   <span>Register</span>
-                  <ArrowRight size={12} className="shrink-0" />
+                  <ArrowRight size={12} className="shrink-0 hidden xs:inline" />
                 </Link>
               </div>
             )}
-
-            {/* Mobile Menu Toggle Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors shrink-0"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
           </div>
 
         </div>
       </div>
 
-      {/* ── Mobile / Tablet Responsive Drawer ──────────────────────────────────── */}
-      {mobileMenuOpen && (
-        <div className="xl:hidden fixed inset-x-0 top-16 sm:top-18 bg-white/98 backdrop-blur-xl border-b border-slate-200 shadow-2xl z-40 max-h-[calc(100vh-4.5rem)] overflow-y-auto animate-slide-down">
-          <div className="px-4 py-4 space-y-4">
-
-            {/* Signed-in profile shortcut */}
-            {isAuthenticated && (
-              <Link
-                to={role === 'DRIVER' ? '/driver/profile' : role === 'ADMIN' ? '/admin/settings' : '/app/profile'}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:border-blue-200 transition-colors"
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg text-white shadow-sm ${
-                  role === 'DRIVER' ? 'bg-emerald-600' : role === 'ADMIN' ? 'bg-indigo-600' : 'bg-blue-600'
-                }`}>
-                  {role === 'DRIVER' ? '🚗' : role === 'ADMIN' ? '🖥️' : '👤'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-slate-900 truncate">{user?.name || 'Ride Tracker User'}</p>
-                  <p className="text-[11px] text-slate-500">
-                    {role === 'DRIVER' ? 'Driver profile' : role === 'ADMIN' ? 'Operations settings' : 'Passenger profile'}
-                  </p>
-                </div>
-                <ChevronRight size={16} className="text-slate-400 shrink-0" />
-              </Link>
-            )}
-            
-            {/* Quick Emergency 112 SOS */}
-            <a
-              href="tel:112"
-              className="flex items-center justify-between p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 font-bold text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <Shield size={16} className="text-rose-600" />
-                <span>National Emergency: Dial 112</span>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px]">Call Now</span>
-            </a>
-
-            {/* Hub Selector on Mobile */}
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-extrabold uppercase text-slate-400">Current Hub</p>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.values(REGIONS).slice(0, 4).map((reg) => (
-                  <button
-                    key={reg.id}
-                    onClick={() => {
-                      const r = REGIONS[reg.id];
-                      if (r) setRegion(reg.id, r.center, r.zoom);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold text-left border ${
-                      reg.id === (currentRegion || 'IIT_KGP')
-                        ? 'bg-blue-50 border-blue-200 text-blue-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {reg.id === 'IIT_KGP' ? 'IIT Kharagpur' : reg.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Navigation links tailored strictly by role */}
-            <div className="space-y-1 pt-2 border-t border-slate-100 font-semibold text-sm">
-              {role === 'DRIVER' ? (
-                <>
-                  <Link
-                    to="/"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-emerald-800 bg-emerald-50 font-bold"
-                  >
-                    <span>Partner Home</span>
-                    <ChevronRight size={15} className="text-emerald-500" />
-                  </Link>
-                  <Link
-                    to="/driver/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Cockpit Dashboard</span>
-                    </div>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/driver/requests"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>Trip Requests</span>
-                      {pendingRequests?.length > 0 && (
-                        <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-bounce">
-                          {pendingRequests.length}
-                        </span>
-                      )}
-                    </div>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/driver/earnings"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <span>Shift Earnings ({todayEarnings ? `₹${todayEarnings}` : '₹0'})</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/driver/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <span>Vehicle & KYC Documents</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/contact"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-emerald-700 hover:bg-emerald-50 font-bold"
-                  >
-                    <span>Partner Helpline & Support</span>
-                    <ChevronRight size={15} className="text-emerald-500" />
-                  </Link>
-                </>
-              ) : role === 'ADMIN' ? (
-                <>
-                  {(location.pathname.startsWith('/driver') || location.pathname.startsWith('/app') || location.pathname === '/drive') && (
-                    <Link
-                      to="/admin/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-between px-3 py-3 rounded-xl text-white bg-indigo-600 font-black shadow-md mb-2 active:scale-98"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck size={16} className="text-emerald-300 animate-pulse" />
-                        <span>Return to Admin Command Hub</span>
-                      </div>
-                      <ArrowRight size={15} />
-                    </Link>
-                  )}
-                  <Link
-                    to="/admin-portal"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-indigo-800 bg-indigo-50 font-bold"
-                  >
-                    <span>Operations Gateway</span>
-                    <ChevronRight size={15} className="text-indigo-500" />
-                  </Link>
-                  <Link
-                    to="/admin/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <span>Command Hub</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/admin/live-map"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <span>Live Fleet Map</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/admin/rides"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <span>Telemetry & Trips</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/admin/drivers"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <span>Driver Audits</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <Link
-                    to="/admin/incidents"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-rose-700 hover:bg-rose-50 font-bold"
-                  >
-                    <span>Emergency SOS & Incidents</span>
-                    <ChevronRight size={15} className="text-rose-500" />
-                  </Link>
-                </>
-              ) : role === 'USER' ? (
-                <>
-                  <Link
-                    to="/app/home"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-blue-700 bg-blue-50 font-bold"
-                  >
-                    <span>Book a Ride</span>
-                    <ChevronRight size={15} className="text-blue-500" />
-                  </Link>
-                  <Link
-                    to="/app/trips"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 font-bold"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      <span>My Bookings</span>
-                    </div>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </Link>
-                  <button
-                    onClick={(e) => {
-                      setMobileMenuOpen(false);
-                      handleScrollToSection(e, 'places-to-go');
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left font-bold"
-                  >
-                    <span>Popular Corridors</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      setMobileMenuOpen(false);
-                      handleScrollToSection(e, 'safety');
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left font-bold"
-                  >
-                    <span>Safety & Standards</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </button>
-                  <Link
-                    to="/contact"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-blue-600 hover:bg-blue-50 font-bold"
-                  >
-                    <span>24/7 Helpline & Support</span>
-                    <ChevronRight size={15} className="text-blue-500" />
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={(e) => {
-                      setMobileMenuOpen(false);
-                      handleScrollToSection(e, 'booking');
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left font-bold"
-                  >
-                    <span>Book a Ride</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      setMobileMenuOpen(false);
-                      handleScrollToSection(e, 'places-to-go');
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left font-bold"
-                  >
-                    <span>Popular Corridors</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      setMobileMenuOpen(false);
-                      handleScrollToSection(e, 'safety');
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 text-left font-bold"
-                  >
-                    <span>Safety & Standards</span>
-                    <ChevronRight size={15} className="text-slate-400" />
-                  </button>
-                  <Link
-                    to="/drive"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-emerald-700 bg-emerald-50 font-bold"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Drive with Us (Driver Partner)</span>
-                    </div>
-                    <ChevronRight size={15} className="text-emerald-500" />
-                  </Link>
-                  <Link
-                    to="/admin-portal"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-indigo-700 bg-indigo-50 font-bold"
-                  >
-                    <span>Admin Operations Portal</span>
-                    <ChevronRight size={15} className="text-indigo-500" />
-                  </Link>
-                  <Link
-                    to="/contact"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-blue-600 hover:bg-blue-50 font-bold"
-                  >
-                    <span>24/7 Helpline & Support</span>
-                    <ChevronRight size={15} className="text-blue-500" />
-                  </Link>
-                </>
-              )}
-            </div>
-
-            {/* Auth Buttons on Mobile */}
-            {!isAuthenticated && (
-              <div className="pt-2 border-t border-slate-100 flex gap-2">
-                <Link
-                  to="/login"
-                  className="flex-1 py-2.5 text-center border border-slate-200 rounded-xl font-bold text-xs text-slate-800"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="flex-1 py-2.5 text-center bg-blue-600 text-white rounded-xl font-bold text-xs"
-                >
-                  Get Started
-                </Link>
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
     </header>
   );
 }

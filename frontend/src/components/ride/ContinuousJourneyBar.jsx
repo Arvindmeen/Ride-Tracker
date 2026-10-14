@@ -23,7 +23,7 @@ export default function ContinuousJourneyBar({
   const driverName = ride?.driverInfo?.name || 'Vikram Singh';
 
   // Determine vehicle emoji
-  const cat = String(ride?.driverInfo?.category || ride?.category || '').toUpperCase();
+  const cat = String(ride?.category || ride?.driverInfo?.category || '').toUpperCase();
   const vehicleEmoji = cat.includes('AUTO') || cat.includes('TOTO')
     ? '🛺'
     : cat.includes('BIKE') || cat.includes('MOTO')
@@ -176,9 +176,9 @@ export default function ContinuousJourneyBar({
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-slate-900 rotate-45 border-r border-b border-slate-700" />
             </div>
 
-            {/* Moving Vehicle Disc */}
+            {/* Moving Vehicle Disc (Front of vehicle points forward in direction of travel) */}
             <div className="w-7 h-7 rounded-full bg-white border-2 border-indigo-600 shadow-md shadow-indigo-500/25 flex items-center justify-center text-sm transform hover:scale-110 transition-transform">
-              <span>{vehicleEmoji}</span>
+              <span className="inline-block transform -scale-x-100">{vehicleEmoji}</span>
             </div>
           </div>
 

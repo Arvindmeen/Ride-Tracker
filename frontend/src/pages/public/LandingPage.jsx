@@ -174,10 +174,10 @@ function findClosestHub(lat, lng) {
 
 /* ─── Vehicle Services ───────────────────────────────────────────────────────── */
 const VEHICLE_SERVICES = [
-  { id: 'toto', name: 'Solar E-Toto', icon: '🛺', basePrice: 20, pricePerKm: 8, eta: '1 min', tag: 'Campus & Micro-Mobility' },
-  { id: 'bike', name: 'Electric Bike', icon: '🏍️', basePrice: 15, pricePerKm: 6, eta: '2 mins', tag: 'Fastest Solo Commute' },
-  { id: 'sedan', name: 'Prime EV Cab', icon: '🚗', basePrice: 60, pricePerKm: 14, eta: '4 mins', tag: 'AC Executive Comfort' },
-  { id: 'transporter', name: 'EV Transporter', icon: '🚚', basePrice: 80, pricePerKm: 14, eta: '3 mins', tag: 'Luggage, Goods & Cargo Shift' },
+  { id: 'toto', name: 'Solar E-Toto', category: 'AUTO', icon: '🛺', basePrice: 20, pricePerKm: 8, eta: '1 min', tag: 'Campus & Micro-Mobility', model: 'Solar E-Toto #08' },
+  { id: 'bike', name: 'Electric Bike', category: 'MOTO', icon: '🏍️', basePrice: 15, pricePerKm: 6, eta: '2 mins', tag: 'Fastest Solo Commute', model: 'Electric Bike (Ather EV)' },
+  { id: 'cab', name: 'Prime EV Cab', category: 'ECONOMY', icon: '🚗', basePrice: 60, pricePerKm: 14, eta: '4 mins', tag: 'AC Executive Comfort', model: 'Prime EV Cab (Tata Tigor)' },
+  { id: 'transporter', name: 'EV Transporter', category: 'XL', icon: '🚚', basePrice: 80, pricePerKm: 14, eta: '3 mins', tag: 'Luggage, Goods & Cargo Shift', model: 'EV Transporter (Tata Ace EV)' },
 ];
 
 /* ─── Live Radar Widget (Self-Contained & Symmetrical) ───────────────────────── */
@@ -234,11 +234,17 @@ function HeroRideShowcase({
             </div>
           )}
           <div className="flex items-start gap-3">
-            {/* Route Pins */}
-            <div className="flex flex-col items-center pt-1">
-              <div className="w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-500/20" />
-              <div className="w-0.5 h-10 bg-gradient-to-b from-blue-500 via-slate-400 to-emerald-500 my-1" />
-              <div className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
+            {/* Route Pins & Animated Spine */}
+            <div className="flex flex-col items-center pt-1 shrink-0">
+              <div className="relative">
+                <div className="w-3 h-3 rounded-full bg-blue-600 ring-4 ring-blue-500/20 shadow-xs" />
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              </div>
+              <div className="relative w-[3px] h-10 my-1 rounded-full overflow-hidden bg-slate-200">
+                <div className="w-full h-full bg-gradient-to-b from-blue-500 via-indigo-500 to-emerald-500 rounded-full" />
+                <div className="absolute inset-0 w-full bg-gradient-to-b from-transparent via-white/80 to-transparent animate-route-flow" />
+              </div>
+              <div className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 shadow-xs" />
             </div>
 
             {/* From & To Details */}
@@ -909,7 +915,12 @@ function PassengerLandingContent() {
       address: dAddress,
       distanceKm: distKm,
     });
-    setCategory(selectedService.id === 'bike' ? 'MOTO' : selectedService.id === 'toto' ? 'AUTO' : selectedService.id === 'transporter' ? 'XL' : 'ECONOMY');
+    const targetCat = selectedService.category || (selectedService.id === 'bike' ? 'MOTO' : selectedService.id === 'toto' ? 'AUTO' : selectedService.id === 'transporter' ? 'XL' : 'ECONOMY');
+    setCategory(targetCat);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('veloq_selected_vehicle_id', selectedService.id);
+      localStorage.setItem('veloq_selected_vehicle_category', targetCat);
+    }
     setEstimatedFare({
       base: Math.round(estFare * 0.35),
       distanceFare: Math.round(estFare * 0.58),
@@ -933,7 +944,7 @@ function PassengerLandingContent() {
   };
 
   return (
-    <div className="landing-page w-full min-h-screen flex flex-col items-center bg-white text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="landing-page w-full max-w-full overflow-x-hidden min-h-screen flex flex-col items-center bg-white text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
       {/* ── UNIFIED NAVBAR (Single clean header without stacked bars) ── */}
       <Navbar />
 

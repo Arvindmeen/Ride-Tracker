@@ -122,11 +122,13 @@ export default function LiveRidePage() {
   const [activeDriverDistance, setActiveDriverDistance] = useState(0.6);
   const [activeDriverSpeed, setActiveDriverSpeed] = useState(32);
   const [routePolyline, setRoutePolyline] = useState(null);
+  const [tripPolyline, setTripPolyline] = useState(null);
 
   // Waypoints for smooth simulation
   const approachWaypoints = useRef([]);
   const tripWaypoints = useRef([]);
   const animIndexRef = useRef(0);
+  const lastHeadingRef = useRef(45);
 
   // Initialize Ride Details
   useEffect(() => {
@@ -147,6 +149,15 @@ export default function LiveRidePage() {
         const storedTrips = JSON.parse(localStorage.getItem('veloq_user_trips') || '[]');
         dynamicTrip = storedTrips.find((r) => r.id === id) || null;
       }
+    }
+
+    // If trip was already completed, immediately redirect to its booking details page
+    if (dynamicTrip?.status === 'RIDE_COMPLETED') {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('veloq_active_booked_ride');
+      }
+      navigate(`/app/trips/${dynamicTrip.id || id}`, { replace: true });
+      return;
     }
 
     const defaultPickup = dynamicTrip?.pickup?.lat
@@ -213,46 +224,52 @@ export default function LiveRidePage() {
     const dynamicFare = dynamicTrip?.fare || storeFare || { total: 42, base: 25, distance: 12, tax: 2, currency: 'INR' };
     const dynamicDistance = dynamicTrip?.distance || storeFare?.distance || (isMoradabad ? 1.4 : 3.4);
 
-    // Safely extract and normalize driver properties (guarantees strings/primitives, NO raw nested objects in JSX)
-    const rawDriver = dynamicTrip?.driverInfo || assignedDriver || drivers?.[0] || {
-      name: 'Vikram Singh',
-      phone: '+91 98201 49210',
-      rating: 4.8,
-      category: dynamicCategory,
-      vehicle: dynamicCategory === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Bajaj RE Compact Auto',
-      plate: 'MH 02 CK 9307',
-    };
-
     const isToto = dynamicCategory === 'AUTO' || dynamicCategory === 'TOTO' || dynamicCategory === 'toto';
     const isBike = dynamicCategory === 'MOTO' || dynamicCategory === 'BIKE' || dynamicCategory === 'bike';
     const isCab = dynamicCategory === 'ECONOMY' || dynamicCategory === 'CAB' || dynamicCategory === 'cab';
     const isTransporter = dynamicCategory === 'XL' || dynamicCategory === 'TRANSPORTER' || dynamicCategory === 'transporter';
-    const defaultModel = isToto ? 'Bajaj RE Compact Auto' : isBike ? 'Electric Bike (Ather EV)' : isCab ? 'Prime EV Cab (Tata Tigor)' : isTransporter ? 'EV Transporter (Tata Ace EV)' : 'Bajaj RE Compact Auto';
+    const defaultModel = isToto ? 'Solar E-Toto #08' : isBike ? 'Electric Bike (Ather EV)' : isCab ? 'Prime EV Cab (Tata Tigor)' : isTransporter ? 'EV Transporter (Tata Ace EV)' : 'Solar E-Toto #08';
 
-    const vehicleModel = typeof rawDriver.vehicle === 'object'
-      ? (rawDriver.vehicle?.model || rawDriver.vehicleModel || defaultModel)
-      : (rawDriver.vehicleModel || rawDriver.vehicle || defaultModel);
+    // Strictly match rawDriver or find a driver in matching category
+    const matchingStoreDriver = drivers?.find((d) => {
+      const c = String(d.vehicle?.category || d.category || '').toUpperCase();
+      if (isBike) return c.includes('MOTO') || c.includes('BIKE');
+      if (isToto) return c.includes('AUTO') || c.includes('TOTO');
+      if (isTransporter) return c.includes('XL') || c.includes('TRANSPORTER');
+      return c.includes('ECONOMY') || c.includes('CAB');
+    });
 
-    const vehiclePlate = typeof rawDriver.vehicle === 'object'
-      ? (rawDriver.vehicle?.plate || rawDriver.vehicleNumber || 'MH 02 CK 9307')
-      : (rawDriver.vehicleNumber || rawDriver.plate || 'MH 02 CK 9307');
+    const rawDriver = dynamicTrip?.driverInfo || assignedDriver || matchingStoreDriver || {
+      name: isBike ? 'Subhash Mondal' : isToto ? 'Vikram Singh' : isTransporter ? 'Rohan Deshmukh' : 'Rajesh Sharma',
+      phone: '+91 98201 49210',
+      rating: 4.9,
+      category: dynamicCategory,
+      vehicle: defaultModel,
+      plate: isBike ? 'DL 01 AB 4921' : isToto ? 'WB 26 Q 4921' : isTransporter ? 'WB 19 TR 8011' : 'KA 03 MN 9210',
+    };
 
-    const vehicleCategory = typeof rawDriver.vehicle === 'object'
-      ? (rawDriver.vehicle?.category || rawDriver.category || dynamicCategory)
-      : (rawDriver.category || dynamicCategory);
+    const isDriverCatMatch = String(rawDriver.category || rawDriver.vehicle?.category || '').toUpperCase().includes(dynamicCategory);
+    const vehicleModel = isDriverCatMatch
+      ? (typeof rawDriver.vehicle === 'object' ? (rawDriver.vehicle?.model || rawDriver.vehicleModel || defaultModel) : (rawDriver.vehicleModel || rawDriver.vehicle || defaultModel))
+      : defaultModel;
+
+    const vehiclePlate = isDriverCatMatch
+      ? (typeof rawDriver.vehicle === 'object' ? (rawDriver.vehicle?.plate || rawDriver.vehicleNumber || 'WB 26 Q 4921') : (rawDriver.vehicleNumber || rawDriver.plate || 'WB 26 Q 4921'))
+      : (isBike ? 'DL 01 AB 4921' : isToto ? 'WB 26 Q 4921' : isTransporter ? 'WB 19 TR 8011' : 'KA 03 MN 9210');
 
     const matchedDriver = {
-      name: rawDriver.name || 'Vikram Singh',
+      name: rawDriver.name || (isBike ? 'Subhash Mondal' : isToto ? 'Vikram Singh' : 'Rajesh Sharma'),
       phone: rawDriver.phone || '+91 98201 49210',
-      rating: typeof rawDriver.rating === 'number' ? rawDriver.rating : 4.8,
-      category: vehicleCategory,
+      rating: typeof rawDriver.rating === 'number' ? rawDriver.rating : 4.9,
+      category: dynamicCategory,
       vehicle: vehicleModel,
       plate: vehiclePlate,
     };
 
     // Realistic driver spawn at Point C: Pick the absolute closest matching vehicle on the map!
-    const isTotoOrLocal = String(vehicleCategory).toUpperCase().includes('AUTO') ||
-                          String(vehicleCategory).toUpperCase().includes('TOTO') ||
+    const isTotoOrLocal = isToto ||
+                          String(dynamicCategory).toUpperCase().includes('AUTO') ||
+                          String(dynamicCategory).toUpperCase().includes('TOTO') ||
                           String(defaultPickup?.name || '').toLowerCase().includes('kharagpur') ||
                           String(defaultPickup?.name || '').toLowerCase().includes('tech mkt');
 
@@ -277,7 +294,12 @@ export default function LiveRidePage() {
           const distB = Math.hypot((b.location?.lat ?? b.lat) - defaultPickup.lat, (b.location?.lng ?? b.lng) - defaultPickup.lng);
           return distA - distB;
         });
-        nearestMapDriver = poolToUse[0];
+        const closestCandidate = poolToUse[0];
+        const distToPickup = Math.hypot((closestCandidate.location?.lat ?? closestCandidate.lat) - defaultPickup.lat, (closestCandidate.location?.lng ?? closestCandidate.lng) - defaultPickup.lng);
+        // Only pair candidate if within ~5km (0.05 deg) of pickup, otherwise spawn a local driver nearby
+        if (distToPickup <= 0.05) {
+          nearestMapDriver = closestCandidate;
+        }
       }
     }
 
@@ -294,6 +316,7 @@ export default function LiveRidePage() {
       id: id || dynamicTrip?.id || `RIDE-${Date.now().toString().slice(-6)}`,
       status: dynamicTrip?.status || 'DRIVER_APPROACHING',
       stage: dynamicTrip?.stage || 'HEADING_TO_PICKUP',
+      category: dynamicCategory,
       pickup: defaultPickup, // Place A
       destination: defaultDestination, // Place B
       driverStartLocation: { lat: startDriverLat, lng: startDriverLng, name: startDriverName, address: startDriverAddress }, // Place C
@@ -309,11 +332,14 @@ export default function LiveRidePage() {
     setRide(initialRide);
     rideService.recordRide(initialRide);
 
+    const initialHeading = calculateBearing(startDriverLat, startDriverLng, defaultPickup.lat, defaultPickup.lng);
+    lastHeadingRef.current = initialHeading;
+
     setDriverLocation({
       lat: startDriverLat,
       lng: startDriverLng,
-      category: matchedDriver.category || 'MOTO',
-      heading: calculateBearing(startDriverLat, startDriverLng, defaultPickup.lat, defaultPickup.lng),
+      category: matchedDriver.category || dynamicCategory || 'MOTO',
+      heading: initialHeading,
       speed: 32,
     });
 
@@ -335,6 +361,7 @@ export default function LiveRidePage() {
     approachWaypoints.current = interpolatePath(fallbackApproach, 120);
     tripWaypoints.current = interpolatePath(fallbackTrip, 150);
     setRoutePolyline(fallbackApproach);
+    setTripPolyline(fallbackTrip);
     setLoading(false);
 
     // Fetch detailed real street geometry in background
@@ -353,6 +380,7 @@ export default function LiveRidePage() {
       tripWaypoints.current = interpolatePath(tripPoints, 150);
 
       setRoutePolyline(approachPoints);
+      setTripPolyline(tripPoints);
     }).catch((err) => {
       console.warn('Background route calculation fallback active:', err);
     });
@@ -399,11 +427,21 @@ export default function LiveRidePage() {
         animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
         const idx = animIndexRef.current;
         const currentPt = waypoints[idx];
-        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
-
-        if (!currentPt) return;
-
-        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        // Sample lookahead 3-4 steps ahead for steady forward bearing
+        const lookaheadIdx = Math.min(idx + 3, waypoints.length - 1);
+        let heading = lastHeadingRef.current;
+        if (lookaheadIdx > idx) {
+          const targetPt = waypoints[lookaheadIdx];
+          const dist = Math.hypot(targetPt[0] - currentPt[0], targetPt[1] - currentPt[1]);
+          if (dist > 0.00002) {
+            heading = calculateBearing(currentPt[0], currentPt[1], targetPt[0], targetPt[1]);
+            lastHeadingRef.current = heading;
+          }
+        } else if (idx > 1) {
+          const prevPt = waypoints[idx - 2] || waypoints[idx - 1];
+          heading = calculateBearing(prevPt[0], prevPt[1], currentPt[0], currentPt[1]);
+          lastHeadingRef.current = heading;
+        }
         const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
         
         // Realistic approach metrics (~280m spawn)
@@ -412,17 +450,17 @@ export default function LiveRidePage() {
         const remainingDist = Math.max(0.02, Math.round((1 - progress) * approachTotalKm * 100) / 100);
 
         // Realistic vehicle-category specific speeds (E-Toto 18-21 km/h, Bike 26-30 km/h, Cab 34-38 km/h)
-        const cat = String(ride.driverInfo?.category || '').toUpperCase();
+        const cat = String(ride.category || ride.driverInfo?.category || '').toUpperCase();
         const isToto = cat.includes('AUTO') || cat.includes('TOTO');
         const isBike = cat.includes('BIKE') || cat.includes('MOTO');
-        const isCab = cat.includes('CAB') || cat.includes('PRIME');
+        const isCab = cat.includes('CAB') || cat.includes('PRIME') || cat.includes('ECONOMY');
         const baseSpeed = isToto ? 19 : isBike ? 28 : isCab ? 36 : 22;
         const speed = Math.max(12, Math.round(baseSpeed + Math.sin(idx * 0.4) * 2.2));
 
         setDriverLocation({
           lat: currentPt[0],
           lng: currentPt[1],
-          category: ride.driverInfo?.category || 'MOTO',
+          category: ride.category || ride.driverInfo?.category || 'MOTO',
           heading,
           speed,
         });
@@ -456,28 +494,40 @@ export default function LiveRidePage() {
         animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
         const idx = animIndexRef.current;
         const currentPt = waypoints[idx];
-        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
 
         if (!currentPt) return;
 
-        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        const lookaheadIdx = Math.min(idx + 3, waypoints.length - 1);
+        let heading = lastHeadingRef.current;
+        if (lookaheadIdx > idx) {
+          const targetPt = waypoints[lookaheadIdx];
+          const dist = Math.hypot(targetPt[0] - currentPt[0], targetPt[1] - currentPt[1]);
+          if (dist > 0.00002) {
+            heading = calculateBearing(currentPt[0], currentPt[1], targetPt[0], targetPt[1]);
+            lastHeadingRef.current = heading;
+          }
+        } else if (idx > 1) {
+          const prevPt = waypoints[idx - 2] || waypoints[idx - 1];
+          heading = calculateBearing(prevPt[0], prevPt[1], currentPt[0], currentPt[1]);
+          lastHeadingRef.current = heading;
+        }
         const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
         const totalTripKm = ride.distance || 1.4;
         const totalTripMins = Math.max(2, Math.round(totalTripKm * 2.2));
         const remainingEta = Math.max(1, Math.round((1 - progress) * totalTripMins));
         const remainingDist = Math.max(0.05, Math.round((1 - progress) * totalTripKm * 10) / 10);
         
-        const cat = String(ride.driverInfo?.category || '').toUpperCase();
+        const cat = String(ride.category || ride.driverInfo?.category || '').toUpperCase();
         const isToto = cat.includes('AUTO') || cat.includes('TOTO');
         const isBike = cat.includes('BIKE') || cat.includes('MOTO');
-        const isCab = cat.includes('CAB') || cat.includes('PRIME');
+        const isCab = cat.includes('CAB') || cat.includes('PRIME') || cat.includes('ECONOMY');
         const baseSpeed = isToto ? 20 : isBike ? 29 : isCab ? 37 : 24;
         const speed = Math.max(14, Math.round(baseSpeed + Math.sin(idx * 0.3) * 2.5));
 
         setDriverLocation({
           lat: currentPt[0],
           lng: currentPt[1],
-          category: ride.driverInfo?.category || 'MOTO',
+          category: ride.category || ride.driverInfo?.category || 'MOTO',
           heading,
           speed,
         });
@@ -508,6 +558,11 @@ export default function LiveRidePage() {
           setRide(completedRide);
           setActiveDriverSpeed(0);
           setShowRating(true);
+
+          // Clear active booked ride so it never loops back into driver approaching / asking for OTP!
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('veloq_active_booked_ride');
+          }
 
           // Update user's physical location to the destination they just arrived at!
           if (ride.destination?.lat && ride.destination?.lng) {
@@ -542,7 +597,9 @@ export default function LiveRidePage() {
   const handleVerifyOtpAndStart = (overrideOtp = null) => {
     const entered = (overrideOtp !== null ? overrideOtp : inputOtp).trim();
     const actualOtp = String(ride?.otp || '4921').trim();
-    if (entered === actualOtp || entered.length === 4 || overrideOtp !== null) {
+    
+    // Strict validation: Only start if entered OTP matches actual OTP
+    if (entered === actualOtp) {
       setOtpError('');
       setOtpSuccess(true);
       setTimeout(() => {
@@ -552,8 +609,42 @@ export default function LiveRidePage() {
         setOtpSuccess(false);
       }, 600);
     } else {
-      setOtpError(`Incorrect OTP. Please enter the 4-digit OTP: ${actualOtp}`);
+      setOtpError('Incorrect OTP. Please enter the correct 4-digit Ride OTP.');
+      setOtpSuccess(false);
+      setTimeout(() => {
+        setOtpDigits(['', '', '', '']);
+        setInputOtp('');
+        if (pinInputRefs[0]?.current) {
+          pinInputRefs[0].current.focus();
+        }
+      }, 800);
     }
+  };
+
+  // Finalize ride and redirect to its Booking Page in all cases (with or without feedback)
+  const handleCompleteAndRedirect = (rating = null, note = '', tags = null) => {
+    const finalRating = rating !== null ? rating : userRating;
+    const finalCompliments = tags !== null ? tags : selectedCompliments;
+    const finalNote = note !== undefined && note !== null ? note : feedbackNote;
+
+    const completedRide = {
+      ...ride,
+      status: 'RIDE_COMPLETED',
+      stage: 'COMPLETED',
+      userRating: finalRating || 5,
+      feedbackNote: finalNote,
+      compliments: finalCompliments,
+    };
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('veloq_active_booked_ride');
+    }
+
+    rideService.updateRide(ride.id, completedRide);
+    setShowRating(false);
+
+    // Redirect to its Booking Page and show its booking details
+    navigate(`/app/trips/${ride.id}`, { replace: true });
   };
 
   const handleDigitChange = (idx, value) => {
@@ -649,8 +740,8 @@ export default function LiveRidePage() {
   const driverPlate = typeof ride.driverInfo?.plate === 'object'
     ? 'MH 02 CK 9307'
     : (ride.driverInfo?.plate || 'MH 02 CK 9307');
-  const driverRating = ride.driverInfo?.rating || 4.8;
-  const driverCategory = ride.driverInfo?.category || 'AUTO';
+  const driverRating = ride.driverInfo?.rating || 4.9;
+  const driverCategory = ride.category || ride.driverInfo?.category || storeCategory || 'MOTO';
 
   return (
     <div className="relative w-full max-w-full overflow-x-hidden min-h-[calc(100vh-3.5rem)] flex flex-col md:flex-row bg-slate-50 font-sans">
@@ -672,26 +763,34 @@ export default function LiveRidePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Quick OTP pill on mobile */}
-          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg shadow-2xs">
-            <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-tight">OTP:</span>
-            <span className="font-mono text-xs font-black text-amber-900">{ride.otp || '4921'}</span>
-            <button
-              onClick={() => handleCopyOtp(ride.otp)}
-              className="text-amber-700 hover:text-amber-900 p-0.5 cursor-pointer"
-              title="Copy OTP"
-            >
-              {copiedOtp ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-            </button>
-          </div>
+          {/* Quick OTP pill on mobile (Only before trip completion) */}
+          {ride.status !== 'RIDE_COMPLETED' ? (
+            <>
+              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg shadow-2xs">
+                <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-tight">OTP:</span>
+                <span className="font-mono text-xs font-black text-amber-900">{ride.otp || '4921'}</span>
+                <button
+                  onClick={() => handleCopyOtp(ride.otp)}
+                  className="text-amber-700 hover:text-amber-900 p-0.5 cursor-pointer"
+                  title="Copy OTP"
+                >
+                  {copiedOtp ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                </button>
+              </div>
 
-          <button
-            onClick={() => setShowSOS(true)}
-            className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <AlertTriangle size={12} />
-            <span>SOS</span>
-          </button>
+              <button
+                onClick={() => setShowSOS(true)}
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <AlertTriangle size={12} />
+                <span>SOS</span>
+              </button>
+            </>
+          ) : (
+            <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-lg">
+              Completed ✓
+            </span>
+          )}
         </div>
       </div>
 
@@ -729,11 +828,11 @@ export default function LiveRidePage() {
               </span>
             </div>
 
-            {/* Clear Prompt & Interactive 4-Box PIN Input */}
+            {/* Boarding Verification PIN Input */}
             <div className="text-center space-y-2.5">
               <div>
                 <p className="text-xs font-bold text-slate-800">
-                  Share this 4-digit Ride OTP with <span className="text-emerald-700 font-black">{driverName}</span>
+                  Boarding with <span className="text-emerald-700 font-black">{driverName}</span>
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Vehicle: <strong className="text-slate-800">{driverVehicle}</strong> ({driverPlate})
@@ -770,25 +869,6 @@ export default function LiveRidePage() {
                 })}
               </div>
 
-              {/* Validation & Helper Row */}
-              <div className="flex items-center justify-center gap-2 pt-0.5">
-                <span className="text-[11px] font-semibold text-slate-500">
-                  Your Ride PIN: <strong className="font-mono font-bold text-slate-900">{ride.otp || '4921'}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (navigator.clipboard) navigator.clipboard.writeText(ride.otp || '4921');
-                    setCopiedOtp(true);
-                    setTimeout(() => setCopiedOtp(false), 2000);
-                  }}
-                  className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
-                  title="Copy OTP"
-                >
-                  {copiedOtp ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-                  <span>{copiedOtp ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
 
               {otpError && (
                 <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl text-center text-xs font-bold text-rose-700 animate-shake">
@@ -809,7 +889,7 @@ export default function LiveRidePage() {
                 disabled={otpSuccess}
                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-sm shadow-emerald-600/30 cursor-pointer disabled:opacity-60"
               >
-                <span>⚡ 1-Tap Fill & Start Journey</span>
+                <span>⚡ 1-Tap Verify & Start Journey</span>
               </button>
             </div>
           </div>
@@ -847,32 +927,50 @@ export default function LiveRidePage() {
             </div>
           </div>
 
-          {/* Quick Actions: Call, Chat, SOS */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
-            <button
-              onClick={() => setShowCallModal(true)}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
-            >
-              <Phone size={15} />
-              <span>Call Driver</span>
-            </button>
+          {/* Quick Actions: Call, Chat, SOS during ride, or Post-Ride Rating/Invoice actions */}
+          {ride.status !== 'RIDE_COMPLETED' ? (
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setShowCallModal(true)}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Phone size={15} />
+                <span>Call Driver</span>
+              </button>
 
-            <button
-              onClick={() => setShowChatModal(true)}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
-            >
-              <MessageSquare size={15} />
-              <span>Chat</span>
-            </button>
+              <button
+                onClick={() => setShowChatModal(true)}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <MessageSquare size={15} />
+                <span>Chat</span>
+              </button>
 
-            <button
-              onClick={() => setShowSOS(true)}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
-            >
-              <AlertTriangle size={15} />
-              <span>Emergency</span>
-            </button>
-          </div>
+              <button
+                onClick={() => setShowSOS(true)}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <AlertTriangle size={15} />
+                <span>Emergency</span>
+              </button>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+              <button
+                onClick={() => setShowRating(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-2xl text-xs font-black transition-colors cursor-pointer active:scale-98"
+              >
+                <Star size={14} className="fill-amber-400 text-amber-500" />
+                <span>Rate & Review</span>
+              </button>
+              <button
+                onClick={() => navigate(`/app/trips/${ride.id}`)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-2xl text-xs font-black transition-colors cursor-pointer active:scale-98"
+              >
+                <span>View Receipt →</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Route Overview */}
@@ -887,13 +985,16 @@ export default function LiveRidePage() {
           </div>
 
           <div className="relative pl-6 space-y-3">
-            <div className="absolute left-2.5 top-2.5 bottom-2.5 w-0.5 bg-gradient-to-b from-blue-600 to-rose-600" />
+            {/* Animated connecting spine */}
+            <div className="absolute left-[5px] top-2.5 bottom-2.5 w-[2px] bg-gradient-to-b from-blue-600 via-indigo-500 to-rose-500 rounded-full overflow-hidden shadow-xs">
+              <div className="w-full h-1/2 bg-gradient-to-b from-transparent via-white to-transparent animate-route-flow" />
+            </div>
             
             <div className="relative">
-              <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs" />
+              <div className="absolute -left-6 top-0.5 w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs ring-4 ring-blue-500/20" />
               <div>
-                <span className="text-[10px] font-bold text-blue-600 uppercase">Pickup Location</span>
-                <p className="text-xs font-bold text-slate-900 truncate">
+                <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Pickup Location</span>
+                <p className="text-xs font-black text-slate-900 truncate">
                   {ride.pickup?.name || 'Current Location'}
                 </p>
                 <p className="text-[11px] text-slate-400 truncate">
@@ -903,10 +1004,10 @@ export default function LiveRidePage() {
             </div>
 
             <div className="relative">
-              <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-rose-600 border-2 border-white shadow-xs" />
+              <div className="absolute -left-6 top-0.5 w-3 h-3 rounded-full bg-rose-600 border-2 border-white shadow-xs ring-4 ring-rose-500/20" />
               <div>
-                <span className="text-[10px] font-bold text-rose-600 uppercase">Destination Drop-off</span>
-                <p className="text-xs font-bold text-slate-900 truncate">
+                <span className="text-[10px] font-extrabold text-rose-600 uppercase tracking-wider">Destination Drop-off</span>
+                <p className="text-xs font-black text-slate-900 truncate">
                   {ride.destination?.name || 'Destination Point'}
                 </p>
                 <p className="text-[11px] text-slate-400 truncate">
@@ -954,11 +1055,13 @@ export default function LiveRidePage() {
             destination={ride.destination}
             activeDriverLocation={driverLocation}
             routeCoordinates={routePolyline}
+            tripCoordinates={tripPolyline}
             rideStage={ride.status}
             activeRide={ride}
             activeDriverEta={activeDriverEta}
             activeDriverDistance={activeDriverDistance}
             activeDriverSpeed={activeDriverSpeed}
+            tileTheme="osm"
             height="100%"
           />
         </Suspense>
@@ -1090,108 +1193,102 @@ export default function LiveRidePage() {
       )}
 
       {/* ── Rating & Receipt Modal on Ride Completion ───────────────────────── */}
+      {/* ── Compact, Animated & Modern Feedback & Rating Modal ───────────────── */}
       {showRating && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl text-center space-y-4 my-auto animate-scale-in border border-slate-100">
+        <div
+          onClick={() => handleCompleteAndRedirect()}
+          className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200 cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-white rounded-3xl p-4 sm:p-5 max-w-xs sm:max-w-sm w-full shadow-2xl border border-slate-200/90 text-center space-y-3 my-auto animate-in zoom-in-95 duration-200 cursor-default"
+          >
             
-            {/* Celebration Header */}
-            <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-teal-400 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
-                <CheckCircle2 size={36} />
-              </div>
-              <span className="absolute top-0 right-1/3 text-2xl animate-bounce">🎉</span>
-              <span className="absolute top-2 left-1/3 text-xl animate-pulse">✨</span>
-            </div>
+            {/* Quick Dismiss 'X' Button - redirects to booking page */}
+            <button
+              onClick={() => handleCompleteAndRedirect()}
+              className="absolute top-3.5 right-3.5 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Close and view booking"
+            >
+              <X size={16} />
+            </button>
 
-            <div>
-              <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-                Trip Safely Completed
-              </span>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-2">
-                You have arrived at your destination!
+            {/* Micro Celebration & Trip Arrival Header */}
+            <div className="space-y-1 pt-1">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center mx-auto shadow-sm shadow-emerald-500/25 animate-bounce-subtle">
+                <CheckCircle2 size={20} />
+              </div>
+              <h3 className="text-base font-black text-slate-900 leading-tight">
+                Arrived at Destination!
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Thank you for commuting with Ride Tracker Kharagpur
-              </p>
-            </div>
-
-            {/* Fare & Journey Receipt Pill */}
-            <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 text-left space-y-2">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Paid Fare</span>
-                  <p className="text-xl font-black text-slate-900">₹{getFareDisplay(ride.fare)}.00</p>
-                </div>
-                <div className="text-right">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-xl">
-                    <Check size={12} />
-                    <span>UPI AutoPay Success</span>
-                  </span>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">Txn #{ride.id?.slice(-6) || '894102'}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                <div>
-                  <span className="text-[10px] text-slate-400 block">Distance Covered</span>
-                  <p className="font-bold text-slate-800">{ride.distance || 1.4} km</p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block">Travel Duration</span>
-                  <p className="font-bold text-slate-800">{ride.durationMinutes || 6} mins</p>
-                </div>
+              
+              {/* Ultra-compact Fare & Journey Pill */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100/90 border border-slate-200 text-[11px] font-bold text-slate-700">
+                <span className="font-black text-slate-900">₹{getFareDisplay(ride.fare)}</span>
+                <span className="text-slate-300">•</span>
+                <span>{ride.distance || 1.4} km</span>
+                <span className="text-slate-300">•</span>
+                <span>{ride.durationMinutes || 6} min</span>
               </div>
             </div>
 
             {/* Interactive 5-Star Driver Rating */}
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">
-                  {driverName.charAt(0)}
-                </div>
-                <p className="text-xs font-black text-slate-800">
-                  How was your ride with {driverName}?
-                </p>
-              </div>
-
-              {/* Star Selection Row */}
-              <div className="flex justify-center gap-2 text-amber-400 py-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    onClick={() => setUserRating(star)}
-                    className="text-3xl transition-all hover:scale-125 focus:outline-none cursor-pointer"
-                    title={`Rate ${star} star`}
-                  >
-                    {(hoverRating || userRating) >= star ? '★' : '☆'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Dynamic Sentiment Text */}
-              <p className="text-xs font-extrabold text-amber-600 transition-all">
-                {(hoverRating || userRating) === 5 && '🌟 Exceptional! Outstanding Ride'}
-                {(hoverRating || userRating) === 4 && '👍 Very Good! Smooth & Pleasant Trip'}
-                {(hoverRating || userRating) === 3 && '🙂 Satisfactory Experience'}
-                {(hoverRating || userRating) === 2 && '😐 Needs Improvement'}
-                {(hoverRating || userRating) === 1 && '😞 Poor Service'}
+            <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/80 space-y-2">
+              <p className="text-xs font-bold text-slate-700">
+                Rate your trip with <span className="font-black text-slate-900">{driverName}</span>
               </p>
+
+              {/* Animated Gold Stars */}
+              <div className="flex justify-center items-center gap-1.5 py-0.5">
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const isActive = (hoverRating || userRating) >= star;
+                  return (
+                    <button
+                      key={star}
+                      type="button"
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      onClick={() => setUserRating(star)}
+                      className="p-1 group focus:outline-none cursor-pointer transition-transform duration-150 hover:scale-125 active:scale-95"
+                      title={`Rate ${star} star`}
+                    >
+                      <Star
+                        size={24}
+                        className={clsx(
+                          'transition-all duration-200',
+                          isActive
+                            ? 'fill-amber-400 text-amber-400 drop-shadow-[0_2px_6px_rgba(251,191,36,0.45)]'
+                            : 'fill-slate-200 text-slate-300 group-hover:text-amber-200'
+                        )}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic Sentiment Tag */}
+              <div>
+                <span className="inline-block text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/70 animate-in fade-in duration-150">
+                  {(hoverRating || userRating) === 5 && '🌟 Exceptional ride!'}
+                  {(hoverRating || userRating) === 4 && '👍 Smooth & Pleasant'}
+                  {(hoverRating || userRating) === 3 && '🙂 Good Experience'}
+                  {(hoverRating || userRating) === 2 && '😐 Needs Improvement'}
+                  {(hoverRating || userRating) === 1 && '😞 Poor Experience'}
+                </span>
+              </div>
             </div>
 
-            {/* Quick Compliment Chips (Multi-select) */}
-            <div className="space-y-1.5 pt-1 text-left">
-              <span className="text-[11px] font-black text-slate-700 block">Give compliments:</span>
+            {/* Compact Compliments Chips */}
+            <div className="space-y-1.5 text-left">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Quick Compliments
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {[
-                  '🛺 Clean EV Toto',
-                  '🕒 Punctual & On Time',
-                  '💬 Polite Driver',
-                  '🛣️ Smooth & Safe Driving',
-                  '⚡ Fast Route',
-                  '🌱 Zero Emissions',
+                  'Clean Vehicle',
+                  'Polite Driver',
+                  'On Time',
+                  'Smooth Route',
                 ].map((tag) => {
                   const isSelected = selectedCompliments.includes(tag);
                   return (
@@ -1204,10 +1301,10 @@ export default function LiveRidePage() {
                         );
                       }}
                       className={clsx(
-                        'px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border',
+                        'px-2 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold transition-all duration-200 cursor-pointer border active:scale-95',
                         isSelected
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/80'
                       )}
                     >
                       {tag}
@@ -1217,61 +1314,62 @@ export default function LiveRidePage() {
               </div>
             </div>
 
-            {/* Optional Written Feedback */}
-            <div className="text-left pt-1">
-              <label className="text-[11px] font-black text-slate-700 block mb-1">
-                Written Feedback & Suggestions (Optional):
-              </label>
-              <textarea
-                rows={2}
+            {/* Compact Note Input */}
+            <div className="text-left">
+              <input
+                type="text"
                 value={feedbackNote}
                 onChange={(e) => setFeedbackNote(e.target.value)}
-                placeholder={`Share your experience with ${driverName} or report any details...`}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none"
+                placeholder={`Note for ${driverName} (optional)...`}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
-            {/* Submit & Navigation CTAs */}
-            <div className="space-y-2 pt-2">
-              <Button
-                className="w-full py-3.5 rounded-2xl text-xs font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-600/25 cursor-pointer"
+            {/* Primary Action Button */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
                 onClick={() => {
-                  const finalRide = {
-                    ...ride,
-                    userRating,
-                    feedbackNote,
-                    compliments: selectedCompliments,
-                    status: 'RIDE_COMPLETED',
-                  };
-                  rideService.updateRide(ride.id, finalRide);
                   setRatingSubmitted(true);
                   setTimeout(() => {
-                    setShowRating(false);
-                    navigate(`/app/trips/${ride.id}`);
-                  }, 500);
+                    handleCompleteAndRedirect(userRating, feedbackNote, selectedCompliments);
+                  }, 400);
                 }}
+                className={clsx(
+                  'w-full py-2.5 rounded-xl text-xs font-black text-white shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98',
+                  ratingSubmitted
+                    ? 'bg-emerald-600 shadow-emerald-600/25'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-600/25'
+                )}
               >
-                {ratingSubmitted ? '✓ Rating Submitted!' : 'Submit Rating & View Full Invoice'}
-              </Button>
+                {ratingSubmitted ? (
+                  <>
+                    <Check size={14} />
+                    <span>Rating Saved! Redirecting...</span>
+                  </>
+                ) : (
+                  <span>Submit Rating & Done</span>
+                )}
+              </button>
 
-              <div className="flex gap-2">
+              {/* Secondary Quick Links */}
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1 pt-0.5">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowRating(false);
-                    navigate('/app');
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('veloq_active_booked_ride');
+                    }
+                    navigate('/app/home');
                   }}
-                  className="flex-1 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                  className="hover:text-slate-900 transition-colors cursor-pointer"
                 >
                   Book Another Ride
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowRating(false);
-                    navigate(`/app/trips/${ride.id}`);
-                  }}
-                  className="flex-1 py-2 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer"
+                  onClick={() => handleCompleteAndRedirect()}
+                  className="text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                 >
                   View Receipt →
                 </button>

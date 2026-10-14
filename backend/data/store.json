@@ -430,6 +430,575 @@
   ],
   "rides": [
     {
+      "id": "RIDE-410175",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-RECORD-01",
+      "status": "RIDE_COMPLETED",
+      "category": "AUTO",
+      "pickup": {
+        "lat": 22.3149,
+        "lng": 87.3105,
+        "name": "IIT Kharagpur",
+        "address": "IIT Kharagpur"
+      },
+      "destination": {
+        "lat": 22.319,
+        "lng": 87.304,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "distanceKm": 1.4
+      },
+      "fare": {
+        "total": 33,
+        "base": 20,
+        "distance": 1.4,
+        "currency": "INR"
+      },
+      "distance": 1.4,
+      "otp": "1429",
+      "payment": {
+        "method": "UPI",
+        "status": "COMPLETED",
+        "amount": 33
+      },
+      "requestedAt": "2026-10-14T10:56:50.175Z",
+      "driverInfo": {
+        "name": "Vikram Singh",
+        "phone": "+91 9858467253",
+        "rating": 4.8,
+        "category": "AUTO",
+        "vehicle": "Bajaj RE Compact Auto",
+        "plate": "MH 02 CK 2305"
+      },
+      "stage": "COMPLETED",
+      "driverStartLocation": {
+        "lat": 22.317109867961225,
+        "lng": 87.32213544944783,
+        "name": "IIT Kharagpur Approach Corridor",
+        "address": "~1310m from pickup point"
+      },
+      "startedAt": null,
+      "completedAt": "2026-10-14T11:23:31.541Z",
+      "duration": 3,
+      "durationMinutes": 3,
+      "userRating": 5,
+      "feedbackNote": "",
+      "compliments": [
+        "🛺 Clean EV Toto",
+        "🕒 On Time"
+      ]
+    },
+    {
+      "id": "RIDE-890317",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-RECORD-01",
+      "status": "RIDE_COMPLETED",
+      "category": "XL",
+      "pickup": {
+        "lat": 22.3149,
+        "lng": 87.3105,
+        "name": "IIT Kharagpur",
+        "address": "IIT Kharagpur"
+      },
+      "destination": {
+        "lat": 22.319,
+        "lng": 87.304,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "distanceKm": 1.4
+      },
+      "fare": {
+        "total": 105,
+        "base": 80,
+        "distance": 1.4,
+        "currency": "INR"
+      },
+      "distance": 1.4,
+      "otp": "9533",
+      "payment": {
+        "status": "COMPLETED",
+        "method": "UPI"
+      },
+      "requestedAt": "2026-10-14T10:48:10.317Z",
+      "driverInfo": {
+        "name": "Rohan Deshmukh",
+        "phone": "+91 9889444497",
+        "rating": 4.8,
+        "category": "XL",
+        "vehicle": "Toyota Innova Crysta",
+        "plate": "MH 12 QP 3749"
+      },
+      "stage": "ARRIVED",
+      "driverStartLocation": {
+        "lat": 22.31167610738935,
+        "lng": 87.29795494973399,
+        "name": "IIT Kharagpur Approach Corridor",
+        "address": "~1440m from pickup point"
+      },
+      "startedAt": null,
+      "completedAt": "2026-10-14T10:53:18.521Z",
+      "duration": 3,
+      "durationMinutes": 3,
+      "userRating": 5,
+      "feedbackNote": "",
+      "compliments": [
+        "🛺 Clean EV Toto",
+        "🕒 On Time"
+      ]
+    },
+    {
+      "id": "RIDE-348544",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-RECORD-01",
+      "status": "DRIVER_APPROACHING",
+      "category": "XL",
+      "pickup": {
+        "lat": 22.321172280875608,
+        "lng": 87.30200759573432,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302"
+      },
+      "destination": {
+        "lat": 22.3175,
+        "lng": 87.309,
+        "name": "Vikramshila / Nalanda Classroom Complex",
+        "address": "IIT Kharagpur Campus 721302",
+        "distanceKm": 1.3
+      },
+      "fare": {
+        "total": 91,
+        "base": 80,
+        "distance": 1.3,
+        "currency": "INR"
+      },
+      "distance": 1.3,
+      "otp": "8500",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 91
+      },
+      "requestedAt": "2026-10-14T10:22:28.544Z",
+      "driverInfo": {
+        "name": "Rohan Deshmukh",
+        "phone": "+91 9847864268",
+        "rating": 4.7,
+        "category": "XL",
+        "vehicle": "Toyota Innova Crysta",
+        "plate": "MH 12 QP 4788"
+      },
+      "stage": "COMPLETED",
+      "driverStartLocation": {
+        "lat": 22.32358127109477,
+        "lng": 87.28754720380255,
+        "name": "Technology Market (Tech Mkt) Approach Corridor",
+        "address": "~1630m from pickup point"
+      },
+      "startedAt": null,
+      "completedAt": "2026-10-14T10:24:49.660Z",
+      "duration": 3,
+      "durationMinutes": 3,
+      "userRating": 5
+    },
+    {
+      "id": "RIDE-044849",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-RECORD-01",
+      "status": "DRIVER_APPROACHING",
+      "category": "XL",
+      "pickup": {
+        "lat": 22.321175362748384,
+        "lng": 87.30201614948787,
+        "name": "South Talbagicha, Kharagpur",
+        "address": "South Talbagicha, Kharagpur, Kharagpur-I, Paschim Medinipur, West Bengal, 721301, India",
+        "city": "Kharagpur",
+        "state": "West Bengal",
+        "userImage": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+        "userName": "Rahul Mehra"
+      },
+      "destination": {
+        "lat": 22.3425,
+        "lng": 87.329,
+        "name": "Kharagpur Jn Railway Station",
+        "address": "Main platform gates & VIP exit",
+        "distanceKm": 4.6
+      },
+      "fare": {
+        "total": 151,
+        "base": 80,
+        "distance": 4.6,
+        "currency": "INR"
+      },
+      "distance": 4.6,
+      "otp": "6040",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 151
+      },
+      "requestedAt": "2026-10-14T10:17:24.849Z",
+      "driverInfo": {
+        "name": "Rohan Deshmukh",
+        "phone": "+91 9865766365",
+        "rating": 4.9,
+        "category": "XL",
+        "vehicle": "Toyota Innova Crysta",
+        "plate": "MH 12 QP 2084"
+      }
+    },
+    {
+      "id": "RIDE-491509",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-LIVE-7",
+      "status": "DRIVER_APPROACHING",
+      "category": "XL",
+      "pickup": {
+        "lat": 22.3149,
+        "lng": 87.3105,
+        "name": "IIT Kharagpur",
+        "address": "IIT Kharagpur"
+      },
+      "destination": {
+        "lat": 22.319,
+        "lng": 87.304,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "distanceKm": 1.4
+      },
+      "fare": {
+        "total": 105,
+        "base": 80,
+        "distance": 1.4,
+        "currency": "INR"
+      },
+      "distance": 1.4,
+      "otp": "1773",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 105
+      },
+      "requestedAt": "2026-10-14T10:08:11.509Z",
+      "driverInfo": {
+        "id": "DRV-LIVE-7",
+        "name": "Rohan Deshmukh",
+        "rating": 4.9,
+        "category": "XL",
+        "vehicleModel": "Toyota Innova Crysta",
+        "vehicleNumber": "MH 12 QP 3742",
+        "phone": "+91 9889204692",
+        "tripsCompleted": 290,
+        "location": {
+          "lat": 22.312944550645256,
+          "lng": 87.2998975010889,
+          "name": "IIT Kharagpur Approach Corridor",
+          "address": "~1200m from pickup point"
+        },
+        "vehicle": "EV Transporter (Tata Ace EV)",
+        "plate": "MH 12 QP 3742",
+        "currentLocation": {
+          "lat": 22.312944550645256,
+          "lng": 87.2998975010889,
+          "name": "IIT Kharagpur Approach Corridor",
+          "address": "~1200m from pickup point"
+        }
+      }
+    },
+    {
+      "id": "RIDE-344081",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-LIVE-2",
+      "status": "DRIVER_APPROACHING",
+      "category": "ECONOMY",
+      "pickup": {
+        "lat": 22.321187182001808,
+        "lng": 87.30196875790948,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "city": "Kharagpur",
+        "state": "West Bengal",
+        "userImage": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+        "userName": "Rahul Mehra"
+      },
+      "destination": {
+        "lat": 22.319,
+        "lng": 87.304,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "distanceKm": 0.6
+      },
+      "fare": {
+        "total": 71,
+        "base": 60,
+        "distance": 0.6,
+        "currency": "INR"
+      },
+      "distance": 0.6,
+      "otp": "3845",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 71
+      },
+      "requestedAt": "2026-10-14T10:05:44.081Z",
+      "driverInfo": {
+        "id": "DRV-LIVE-2",
+        "name": "Rajesh Sharma",
+        "rating": 4.8,
+        "category": "ECONOMY",
+        "vehicleModel": "Maruti Suzuki Dzire",
+        "vehicleNumber": "KA 03 MN 1783",
+        "phone": "+91 9898806334",
+        "tripsCompleted": 115,
+        "location": {
+          "lat": 22.323903259336184,
+          "lng": 87.30401146384835,
+          "name": "Technology Market (Tech Mkt) Approach Corridor",
+          "address": "~380m from pickup point"
+        },
+        "vehicle": "Prime EV Cab (Tata Tigor)",
+        "plate": "KA 03 MN 1783",
+        "currentLocation": {
+          "lat": 22.323903259336184,
+          "lng": 87.30401146384835,
+          "name": "Technology Market (Tech Mkt) Approach Corridor",
+          "address": "~380m from pickup point"
+        }
+      }
+    },
+    {
+      "id": "RIDE-767729",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-LIVE-2",
+      "status": "DRIVER_APPROACHING",
+      "category": "ECONOMY",
+      "pickup": {
+        "lat": 22.321172498632052,
+        "lng": 87.30201400140061,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "city": "Kharagpur",
+        "state": "West Bengal",
+        "userImage": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+        "userName": "Rahul Mehra"
+      },
+      "destination": {
+        "lat": 22.319,
+        "lng": 87.304,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "distanceKm": 0.6
+      },
+      "fare": {
+        "total": 71,
+        "base": 60,
+        "distance": 0.6,
+        "currency": "INR"
+      },
+      "distance": 0.6,
+      "otp": "1238",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 71
+      },
+      "requestedAt": "2026-10-14T09:56:07.729Z",
+      "driverInfo": {
+        "id": "DRV-LIVE-2",
+        "name": "Rajesh Sharma",
+        "rating": 4.8,
+        "category": "ECONOMY",
+        "vehicleModel": "Maruti Suzuki Dzire",
+        "vehicleNumber": "KA 03 MN 5383",
+        "phone": "+91 9852985314",
+        "tripsCompleted": 115,
+        "location": {
+          "lat": 22.32421072866131,
+          "lng": 87.30464158987878,
+          "name": "Technology Market (Tech Mkt) Approach Corridor",
+          "address": "~450m from pickup point"
+        },
+        "vehicle": "Prime EV Cab (Tata Tigor)",
+        "plate": "KA 03 MN 5383",
+        "currentLocation": {
+          "lat": 22.32421072866131,
+          "lng": 87.30464158987878,
+          "name": "Technology Market (Tech Mkt) Approach Corridor",
+          "address": "~450m from pickup point"
+        }
+      }
+    },
+    {
+      "id": "RIDE-730306",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-LIVE-5",
+      "status": "DRIVER_APPROACHING",
+      "category": "ECONOMY",
+      "pickup": {
+        "lat": 22.3149,
+        "lng": 87.3105,
+        "name": "IIT Kharagpur",
+        "address": "IIT Kharagpur"
+      },
+      "destination": {
+        "lat": 22.319,
+        "lng": 87.304,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "distanceKm": 0.8
+      },
+      "fare": {
+        "total": 71,
+        "base": 60,
+        "distance": 0.8,
+        "currency": "INR"
+      },
+      "distance": 0.8,
+      "otp": "4484",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 71
+      },
+      "requestedAt": "2026-10-14T09:55:30.306Z",
+      "driverInfo": {
+        "id": "DRV-LIVE-5",
+        "name": "Rajesh Sharma",
+        "rating": 4.7,
+        "category": "ECONOMY",
+        "vehicleModel": "Prime EV Cab (Tata Tigor)",
+        "vehicleNumber": "KA 03 MN 9210",
+        "phone": "+91 9830088023",
+        "tripsCompleted": 220,
+        "location": {
+          "lat": 22.308182708451433,
+          "lng": 87.30993571916818,
+          "name": "IIT Kharagpur Approach Corridor",
+          "address": "~750m from pickup point"
+        },
+        "vehicle": "Prime EV Cab (Tata Tigor)",
+        "plate": "KA 03 MN 9210",
+        "currentLocation": {
+          "lat": 22.308182708451433,
+          "lng": 87.30993571916818,
+          "name": "IIT Kharagpur Approach Corridor",
+          "address": "~750m from pickup point"
+        }
+      }
+    },
+    {
+      "id": "RIDE-657947",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-LIVE-5",
+      "status": "DRIVER_APPROACHING",
+      "category": "ECONOMY",
+      "pickup": {
+        "lat": 22.3149,
+        "lng": 87.3105,
+        "name": "IIT Kharagpur",
+        "address": "IIT Kharagpur"
+      },
+      "destination": {
+        "lat": 22.319,
+        "lng": 87.304,
+        "name": "Technology Market (Tech Mkt)",
+        "address": "Tech Market Rd, IIT Kharagpur Campus 721302",
+        "distanceKm": 1.4
+      },
+      "fare": {
+        "total": 84,
+        "base": 60,
+        "distance": 1.4,
+        "currency": "INR"
+      },
+      "distance": 1.4,
+      "otp": "8115",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 84
+      },
+      "requestedAt": "2026-10-14T09:54:17.947Z",
+      "driverInfo": {
+        "id": "DRV-LIVE-5",
+        "name": "Rajesh Sharma",
+        "rating": 5,
+        "category": "ECONOMY",
+        "vehicleModel": "Prime EV Cab (Tata Tigor)",
+        "vehicleNumber": "KA 03 MN 9210",
+        "phone": "+91 9823920078",
+        "tripsCompleted": 220,
+        "location": {
+          "lat": 22.310791448260535,
+          "lng": 87.31025219527956,
+          "name": "IIT Kharagpur Approach Corridor",
+          "address": "~460m from pickup point"
+        },
+        "vehicle": "Prime EV Cab (Tata Tigor)",
+        "plate": "KA 03 MN 9210",
+        "currentLocation": {
+          "lat": 22.310791448260535,
+          "lng": 87.31025219527956,
+          "name": "IIT Kharagpur Approach Corridor",
+          "address": "~460m from pickup point"
+        }
+      }
+    },
+    {
+      "id": "RIDE-115155",
+      "userId": "USR-PASSENGER-01",
+      "driverId": "DRV-RECORD-01",
+      "status": "DRIVER_APPROACHING",
+      "category": "ECONOMY",
+      "pickup": {
+        "lat": 22.321199068203693,
+        "lng": 87.30198601666216,
+        "name": "South Talbagicha, Kharagpur",
+        "address": "South Talbagicha, Kharagpur, Kharagpur-I, Paschim Medinipur, West Bengal, 721301, India"
+      },
+      "destination": {
+        "lat": 22.3175,
+        "lng": 87.309,
+        "name": "Vikramshila / Nalanda Classroom Complex",
+        "address": "IIT Kharagpur Campus 721302",
+        "distanceKm": 1.3
+      },
+      "fare": {
+        "total": 24,
+        "base": 15,
+        "distance": 1.3,
+        "currency": "INR"
+      },
+      "distance": 1.3,
+      "otp": "3391",
+      "payment": {
+        "method": "UPI",
+        "status": "PENDING",
+        "amount": 24
+      },
+      "requestedAt": "2026-10-14T09:11:55.155Z",
+      "driverInfo": {
+        "name": "Karthik Rao",
+        "phone": "+91 9860769335",
+        "rating": 5,
+        "category": "MOTO",
+        "vehicle": "TVS Apache RTR",
+        "plate": "WB 02 GH 5754"
+      },
+      "stage": "COMPLETED",
+      "driverStartLocation": {
+        "lat": 22.324082941353584,
+        "lng": 87.29930795785215,
+        "name": "South Talbagicha Approach Corridor",
+        "address": "~440m from pickup point"
+      },
+      "startedAt": null,
+      "completedAt": "2026-10-14T09:15:50.549Z",
+      "duration": 3,
+      "durationMinutes": 3,
+      "userRating": 5
+    },
+    {
       "id": "REQ-0177",
       "userId": "U-IND-88",
       "userName": "Rajiv Singhania (Corporate)",

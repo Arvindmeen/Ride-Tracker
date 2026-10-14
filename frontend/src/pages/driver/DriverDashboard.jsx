@@ -459,7 +459,7 @@ export default function DriverDashboard() {
             zoom={operatingScope === 'IIT_KGP' ? 15 : 13}
             height="100%"
             showSurgeZones={status === 'AVAILABLE'}
-            tileTheme="light"
+            tileTheme="osm"
             activeDriverLocation={driverGps.isLive ? { lat: driverGps.lat, lng: driverGps.lng, category: vehicleType } : null}
             onRecenterGPS={detectDriverGps}
           />
@@ -474,12 +474,24 @@ export default function DriverDashboard() {
             <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-xl">
-                  {currentRequest.category === 'BIKE' ? '🏍️' : '🚗'}
+                  {String(currentRequest.category).toUpperCase().includes('MOTO') || String(currentRequest.category).toUpperCase().includes('BIKE')
+                    ? '🏍️'
+                    : String(currentRequest.category).toUpperCase().includes('AUTO') || String(currentRequest.category).toUpperCase().includes('TOTO')
+                    ? '🛺'
+                    : String(currentRequest.category).toUpperCase().includes('XL')
+                    ? '🚚'
+                    : '🚗'}
                 </span>
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-black uppercase tracking-wider text-emerald-700">
-                      {currentRequest.category === 'BIKE' ? 'Bike Dispatch' : 'Cab Dispatch'}
+                      {String(currentRequest.category).toUpperCase().includes('MOTO') || String(currentRequest.category).toUpperCase().includes('BIKE')
+                        ? 'Bike Taxi Dispatch'
+                        : String(currentRequest.category).toUpperCase().includes('AUTO') || String(currentRequest.category).toUpperCase().includes('TOTO')
+                        ? 'Toto / Auto Dispatch'
+                        : String(currentRequest.category).toUpperCase().includes('XL')
+                        ? 'Transporter Dispatch'
+                        : 'Cab Dispatch'}
                     </span>
                     {currentRequest.is100KmOutstation && (
                       <span className="text-[10px] bg-amber-50 text-amber-800 font-black px-2 py-0.5 rounded-full border border-amber-200">

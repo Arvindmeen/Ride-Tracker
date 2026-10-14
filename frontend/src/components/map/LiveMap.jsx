@@ -16,35 +16,43 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Tile Providers for Production Grade Appearance (Clean, High-Res, Zero Watermarks)
+// Tile Providers: 100% Free, Official OpenStreetMap Stack (Full Street Names, Zero Watermarks, Zero API Keys Required)
 const TILE_PROVIDERS = {
-  voyager: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxZoom: 20,
-    maxNativeZoom: 19,
-    subdomains: 'abcd',
-  },
-  light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxZoom: 20,
-    maxNativeZoom: 19,
-    subdomains: 'abcd',
-  },
-  dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxZoom: 20,
-    maxNativeZoom: 19,
-    subdomains: 'abcd',
-  },
   osm: {
+    name: 'Standard OSM',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
     maxNativeZoom: 19,
     subdomains: 'abc',
+    className: '',
+  },
+  light: {
+    name: 'Street View',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    maxNativeZoom: 19,
+    subdomains: 'abc',
+    className: '',
+  },
+  voyager: {
+    name: 'Detailed (HOT)',
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    maxNativeZoom: 19,
+    subdomains: 'abc',
+    className: '',
+  },
+  dark: {
+    name: 'Night View',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    maxNativeZoom: 19,
+    subdomains: 'abc',
+    className: 'dark-tiles',
   },
 };
 
@@ -226,10 +234,10 @@ function createActiveRideVehicleIcon(category, heading = 0, isBoarded = false, d
   const glow = isBoarded ? 'rgba(37,99,235,0.65)' : isArrived ? 'rgba(5,150,105,0.7)' : isAuto ? 'rgba(16,185,129,0.65)' : isBike ? 'rgba(249,115,22,0.65)' : 'rgba(59,130,246,0.65)';
   
   const badgeText = isBoarded
-    ? (isAuto ? '🛺 ON TRIP' : isBike ? '🏍️ ON TRIP' : '🚗 ON TRIP')
+    ? (isAuto ? '🛺 ON TRIP' : isBike ? '🏍️ ON TRIP' : isTransporter ? '🚚 ON TRIP' : '🚗 ON TRIP')
     : isArrived || speed === 0
-    ? (isAuto ? '🛺 TOTO AT PICKUP' : isBike ? '🏍️ BIKE AT PICKUP' : '🚗 CAB AT PICKUP')
-    : (isAuto ? '🛺 TOTO ARRIVING' : isBike ? '🏍️ BIKE ARRIVING' : '🚗 CAB ARRIVING');
+    ? (isAuto ? '🛺 TOTO AT PICKUP' : isBike ? '🏍️ BIKE AT PICKUP' : isTransporter ? '🚚 TRANSPORTER AT PICKUP' : '🚗 CAB AT PICKUP')
+    : (isAuto ? '🛺 TOTO ARRIVING' : isBike ? '🏍️ BIKE ARRIVING' : isTransporter ? '🚚 TRANSPORTER ARRIVING' : '🚗 CAB ARRIVING');
 
   const vehicleHtml = isAuto
     ? TOPDOWN_TOTO_SVG
@@ -722,8 +730,9 @@ export default function LiveMap({
   activeDriverLocation,
   routeCoordinates,
   routePolyline,
+  tripCoordinates = null,
   showSurgeZones = false,
-  tileTheme = 'light', // 'light' (white clean default) | 'voyager' | 'dark' | 'osm'
+  tileTheme = 'osm', // 'osm' (Standard OpenStreetMap default) | 'voyager' | 'dark' | 'light'
   onDriverClick,
   height = '100%',
   className = '',
@@ -748,7 +757,7 @@ export default function LiveMap({
     : { lat: 22.3149, lng: 87.3105 };
   const currentZoom = zoom || storeZoom || 14;
 
-  const [activeTheme, setActiveTheme] = useState(tileTheme);
+  const [activeTheme, setActiveTheme] = useState(tileTheme || 'osm');
   const [isExploring, setIsExploring] = useState(false);
   const [recenterCount, setRecenterCount] = useState(0);
 
@@ -770,18 +779,23 @@ export default function LiveMap({
     return points.length >= 2 ? points : null;
   }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, activeDriverLocation?.lat, activeDriverLocation?.lng]);
 
-  // Route polyline points
-  const activeRoute = routeCoordinates || routePolyline;
-  const polylinePositions = useMemo(() => {
-    if (activeRoute?.length > 1 && activeRoute.every(([lat, lng]) => (
+  // 1. Trip Polyline (Pickup -> Destination)
+  const tripPositions = useMemo(() => {
+    if (tripCoordinates?.length > 1 && tripCoordinates.every(([lat, lng]) => (
+      Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+    ))) {
+      return tripCoordinates.map(([lat, lng]) => [Number(lat), Number(lng)]);
+    }
+    const isStarted = rideStage === 'RIDE_STARTED' || activeRide?.status === 'RIDE_STARTED';
+    const activeRoute = routeCoordinates || routePolyline;
+    if (isStarted && activeRoute?.length > 1 && activeRoute.every(([lat, lng]) => (
       Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
     ))) {
       return activeRoute.map(([lat, lng]) => [Number(lat), Number(lng)]);
     }
     if (isValidCoordinate(pickup) && isValidCoordinate(destination)) {
-      // Create a smooth mid-point arc line between pickup & destination
-      const midLat = (pickup.lat + destination.lat) / 2 + (pickup.lng - destination.lng) * 0.08;
-      const midLng = (pickup.lng + destination.lng) / 2 - (pickup.lat - destination.lat) * 0.08;
+      const midLat = (Number(pickup.lat) + Number(destination.lat)) / 2 + (Number(pickup.lng) - Number(destination.lng)) * 0.08;
+      const midLng = (Number(pickup.lng) + Number(destination.lng)) / 2 - (Number(pickup.lat) - Number(destination.lat)) * 0.08;
       return [
         [Number(pickup.lat), Number(pickup.lng)],
         [midLat, midLng],
@@ -789,9 +803,22 @@ export default function LiveMap({
       ];
     }
     return null;
-  }, [routeCoordinates, pickup, destination]);
+  }, [tripCoordinates, routeCoordinates, routePolyline, pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, rideStage, activeRide?.status]);
 
-  const tileConfig = TILE_PROVIDERS[activeTheme] || TILE_PROVIDERS.light || TILE_PROVIDERS.voyager;
+  // 2. Approach Polyline (Driver -> Pickup)
+  const approachPositions = useMemo(() => {
+    const isStarted = rideStage === 'RIDE_STARTED' || activeRide?.status === 'RIDE_STARTED' || rideStage === 'RIDE_COMPLETED' || activeRide?.status === 'RIDE_COMPLETED';
+    if (isStarted) return null;
+    const activeRoute = routeCoordinates || routePolyline;
+    if (activeRoute?.length > 1 && activeRoute.every(([lat, lng]) => (
+      Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+    ))) {
+      return activeRoute.map(([lat, lng]) => [Number(lat), Number(lng)]);
+    }
+    return null;
+  }, [routeCoordinates, routePolyline, rideStage, activeRide?.status]);
+
+  const tileConfig = TILE_PROVIDERS[activeTheme] || TILE_PROVIDERS.osm;
   const isPassengerOnBoard = rideStage === 'RIDE_STARTED' || activeRide?.status === 'RIDE_STARTED';
   const isTripCompleted = rideStage === 'RIDE_COMPLETED' || activeRide?.status === 'RIDE_COMPLETED';
 
@@ -801,7 +828,7 @@ export default function LiveMap({
       className={`relative w-full h-full min-h-[300px] bg-slate-900 overflow-hidden ${className}`}
     >
       {/* Floating Exploration Banner (Uber / Google Maps style) */}
-      {isExploring && (
+      {isExploring && !isTripCompleted && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[400] pointer-events-auto">
           <button
             onClick={handleRecenter}
@@ -815,7 +842,7 @@ export default function LiveMap({
       )}
 
       {/* ── REAL-TIME ON-MAP FLOATING TRIP HUD (Only during active passenger rides) ── */}
-      {activeDriverLocation && (activeRide || rideStage) && (
+      {activeDriverLocation && (activeRide || rideStage) && !isTripCompleted && (
         <div className="absolute top-3 left-3 z-[400] max-w-xs sm:max-w-sm w-full pointer-events-auto animate-in fade-in slide-in-from-top-3 duration-200">
           <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl text-white">
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
@@ -880,11 +907,13 @@ export default function LiveMap({
         maxZoom={20}
       >
         <TileLayer
+          key={activeTheme}
           attribution={tileConfig.attribution}
           url={tileConfig.url}
           maxZoom={20}
           maxNativeZoom={tileConfig.maxNativeZoom || 19}
           subdomains={tileConfig.subdomains || 'abc'}
+          className={tileConfig.className || ''}
         />
         <MapController
           center={mapCenter}
@@ -900,23 +929,38 @@ export default function LiveMap({
           onUserZoom={() => setIsExploring(true)}
         />
 
-        {/* Route Polyline (Glow & Main Path) */}
-        {polylinePositions && (
+        {/* ── Dynamic Route Polylines (Trip Route + Driver Approach) ────────── */}
+        {/* 1. Trip Leg: Pickup to Destination */}
+        {tripPositions && (
           <>
-            {/* Soft Ambient Outer Glow */}
+            {/* Outer Ambient Glow */}
             <Polyline
-              positions={polylinePositions}
-              pathOptions={{ color: '#3b82f6', weight: 8, opacity: 0.4, lineCap: 'round', lineJoin: 'round' }}
+              positions={tripPositions}
+              pathOptions={{ color: '#3b82f6', weight: 8, opacity: 0.35, lineCap: 'round', lineJoin: 'round' }}
             />
-            {/* Core Solid High-Contrast Line */}
+            {/* High-Definition Core Line */}
             <Polyline
-              positions={polylinePositions}
-              pathOptions={{ color: '#1d4ed8', weight: 4, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }}
+              positions={tripPositions}
+              pathOptions={{ color: '#2563eb', weight: 4.5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }}
             />
-            {/* Animated Directional Dash */}
+            {/* Directional Route Flow */}
             <Polyline
-              positions={polylinePositions}
+              positions={tripPositions}
               pathOptions={{ color: '#93c5fd', weight: 2, opacity: 0.9, dashArray: '6, 12', lineCap: 'round' }}
+            />
+          </>
+        )}
+
+        {/* 2. Driver Approach Leg: Driver Starting Position to Pickup Spot */}
+        {approachPositions && (
+          <>
+            <Polyline
+              positions={approachPositions}
+              pathOptions={{ color: '#06b6d4', weight: 6, opacity: 0.4, lineCap: 'round', lineJoin: 'round' }}
+            />
+            <Polyline
+              positions={approachPositions}
+              pathOptions={{ color: '#0891b2', weight: 3.5, opacity: 0.95, dashArray: '5, 9', lineCap: 'round' }}
             />
           </>
         )}
@@ -942,8 +986,8 @@ export default function LiveMap({
           <Marker
             position={[Number(activeDriverLocation.lat), Number(activeDriverLocation.lng)]}
             icon={createActiveRideVehicleIcon(
-              activeDriverLocation.category || activeRide?.driverInfo?.category || 'MOTO',
-              activeDriverLocation.heading || 45,
+              activeDriverLocation.category || activeRide?.category || activeRide?.driverInfo?.category || 'MOTO',
+              typeof activeDriverLocation.heading === 'number' ? activeDriverLocation.heading : 0,
               isPassengerOnBoard,
               activeRide?.driverInfo?.name || 'Driver',
               typeof activeDriverSpeed === 'number' ? activeDriverSpeed : (activeDriverLocation.speed || 0),
@@ -963,9 +1007,16 @@ export default function LiveMap({
                     </p>
                   </div>
                 </div>
-                <p className="text-slate-600 font-medium">
-                  {isPassengerOnBoard ? '🚗 Passenger on board · Heading to destination' : '🚖 Approaching pickup point'}
-                </p>
+                {(() => {
+                  const popCat = String(activeRide?.category || activeDriverLocation.category || activeRide?.driverInfo?.category || '').toUpperCase();
+                  const popEmoji = popCat.includes('AUTO') || popCat.includes('TOTO') ? '🛺' : popCat.includes('BIKE') || popCat.includes('MOTO') ? '🏍️' : popCat.includes('XL') ? '🚚' : '🚗';
+                  const popName = popCat.includes('AUTO') || popCat.includes('TOTO') ? 'Toto' : popCat.includes('BIKE') || popCat.includes('MOTO') ? 'Bike' : popCat.includes('XL') ? 'Transporter' : 'Cab';
+                  return (
+                    <p className="text-slate-600 font-medium">
+                      {isPassengerOnBoard ? `${popEmoji} Passenger on board · Heading to destination` : `${popEmoji} ${popName} approaching pickup point`}
+                    </p>
+                  );
+                })()}
               </div>
             </Popup>
           </Marker>
@@ -1114,15 +1165,15 @@ export default function LiveMap({
             </button>
           )}
 
-          {/* Theme switcher pill */}
+          {/* Theme switcher pill (100% Free OpenStreetMap Day / Night) */}
           <div className="bg-white/95 backdrop-blur-md px-1.5 py-1 rounded-xl border border-slate-200/90 shadow-md flex items-center gap-1">
             <button
-              onClick={() => setActiveTheme(activeTheme === 'voyager' ? 'dark' : 'voyager')}
+              onClick={() => setActiveTheme(activeTheme === 'dark' ? 'osm' : 'dark')}
               className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1"
-              title="Toggle Map Style (Voyager / Dark)"
+              title="Toggle Map Style (OpenStreetMap Day / Night)"
             >
               <Layers size={11} className="text-blue-600" />
-              <span>{activeTheme === 'voyager' ? 'Voyager' : 'Night'}</span>
+              <span>{activeTheme === 'dark' ? 'Day' : 'Night'}</span>
             </button>
           </div>
 

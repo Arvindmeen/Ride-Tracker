@@ -10,7 +10,7 @@ export default function DriverLayout() {
   const isCockpit = location.pathname === '/driver/dashboard' || location.pathname === '/driver';
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 font-sans w-full max-w-full overflow-x-hidden">
       {/* ── Single Unified Navbar across Driver Panel & Whole Platform ── */}
       <Navbar />
 

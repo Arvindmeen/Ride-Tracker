@@ -189,6 +189,7 @@ export default function DriverRideActivePage() {
   const approachWaypoints = useRef([]);
   const tripWaypoints = useRef([]);
   const animIndexRef = useRef(0);
+  const lastHeadingRef = useRef(45);
 
   // 1. Resolve Dynamic Ride Data
   useEffect(() => {
@@ -249,11 +250,14 @@ export default function DriverRideActivePage() {
       address: rawDriverStart?.address || (isMbd ? 'Civil Lines Approach Road, Moradabad 244001' : `Road corridor ~250m from ${pickupShortName}`),
     };
 
+    const initialHeading = calculateBearing(driverStart.lat, driverStart.lng, pickup.lat, pickup.lng);
+    lastHeadingRef.current = initialHeading;
+
     setDriverPos({
       lat: driverStart.lat,
       lng: driverStart.lng,
       category: safeRide.category || vehicleType || 'MOTO',
-      heading: calculateBearing(driverStart.lat, driverStart.lng, pickup.lat, pickup.lng),
+      heading: initialHeading,
     });
 
     // Instant fallback segments
@@ -358,11 +362,23 @@ export default function DriverRideActivePage() {
         animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
         const idx = animIndexRef.current;
         const currentPt = waypoints[idx];
-        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
 
         if (!currentPt || !Number.isFinite(currentPt[0]) || !Number.isFinite(currentPt[1])) return;
 
-        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        const lookaheadIdx = Math.min(idx + 3, waypoints.length - 1);
+        let heading = lastHeadingRef.current;
+        if (lookaheadIdx > idx) {
+          const targetPt = waypoints[lookaheadIdx];
+          const dist = Math.hypot(targetPt[0] - currentPt[0], targetPt[1] - currentPt[1]);
+          if (dist > 0.00002) {
+            heading = calculateBearing(currentPt[0], currentPt[1], targetPt[0], targetPt[1]);
+            lastHeadingRef.current = heading;
+          }
+        } else if (idx > 1) {
+          const prevPt = waypoints[idx - 2] || waypoints[idx - 1];
+          heading = calculateBearing(prevPt[0], prevPt[1], currentPt[0], currentPt[1]);
+          lastHeadingRef.current = heading;
+        }
         const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
         const remainingDistKm = Math.max(0.1, Math.round((1 - progress) * 0.7 * 10) / 10);
         const remainingEtaMins = Math.max(1, Math.round((1 - progress) * 2));
@@ -399,11 +415,23 @@ export default function DriverRideActivePage() {
         animIndexRef.current = Math.min(animIndexRef.current + 1, waypoints.length - 1);
         const idx = animIndexRef.current;
         const currentPt = waypoints[idx];
-        const nextPt = waypoints[Math.min(idx + 1, waypoints.length - 1)];
 
         if (!currentPt || !Number.isFinite(currentPt[0]) || !Number.isFinite(currentPt[1])) return;
 
-        const heading = nextPt ? calculateBearing(currentPt[0], currentPt[1], nextPt[0], nextPt[1]) : 45;
+        const lookaheadIdx = Math.min(idx + 3, waypoints.length - 1);
+        let heading = lastHeadingRef.current;
+        if (lookaheadIdx > idx) {
+          const targetPt = waypoints[lookaheadIdx];
+          const dist = Math.hypot(targetPt[0] - currentPt[0], targetPt[1] - currentPt[1]);
+          if (dist > 0.00002) {
+            heading = calculateBearing(currentPt[0], currentPt[1], targetPt[0], targetPt[1]);
+            lastHeadingRef.current = heading;
+          }
+        } else if (idx > 1) {
+          const prevPt = waypoints[idx - 2] || waypoints[idx - 1];
+          heading = calculateBearing(prevPt[0], prevPt[1], currentPt[0], currentPt[1]);
+          lastHeadingRef.current = heading;
+        }
         const progress = waypoints.length > 1 ? idx / (waypoints.length - 1) : 1;
         const totalTripKm = currentRide.distance || 1.4;
         const remainingDistKm = Math.max(0.1, Math.round((1 - progress) * totalTripKm * 10) / 10);
@@ -465,7 +493,7 @@ export default function DriverRideActivePage() {
   // Driver action: Verify passenger OTP
   const handleVerifyOtp = () => {
     const validOtp = currentRide?.otp ? String(currentRide.otp).trim() : '4921';
-    if (otpInput.trim() === validOtp || otpInput.trim().length === 4) {
+    if (otpInput.trim() === validOtp) {
       playTone(880, 0.4);
       setOtpError('');
       setStage('IN_TRANSIT');
@@ -475,7 +503,7 @@ export default function DriverRideActivePage() {
         rideSync.broadcast('RIDE_STARTED', { rideId: currentRide.id });
       }
     } else {
-      setOtpError(`Please enter passenger's 4-digit ride OTP (e.g. ${validOtp})`);
+      setOtpError('Incorrect OTP. Please enter the valid 4-digit passenger OTP.');
     }
   };
 
@@ -597,7 +625,13 @@ export default function DriverRideActivePage() {
                 : 'Arrived at Pickup'}
             </span>
             <p className="text-[10px] text-slate-500 font-bold mt-0.5">
-              {currentRide.category || vehicleType === 'BIKE' ? '🏍️ Rapido Mode' : '🚗 Cab Mode'}
+              {String(currentRide.category || vehicleType || '').toUpperCase().includes('MOTO') || String(currentRide.category || vehicleType || '').toUpperCase().includes('BIKE')
+                ? '🏍️ Rapido Mode'
+                : String(currentRide.category || vehicleType || '').toUpperCase().includes('AUTO') || String(currentRide.category || vehicleType || '').toUpperCase().includes('TOTO')
+                ? '🛺 Toto Mode'
+                : String(currentRide.category || vehicleType || '').toUpperCase().includes('XL')
+                ? '🚚 Transporter Mode'
+                : '🚗 Cab Mode'}
             </p>
           </div>
         </div>
@@ -639,7 +673,7 @@ export default function DriverRideActivePage() {
             routePolyline={routePolyline}
             rideStage={stage === 'IN_TRANSIT' ? 'RIDE_STARTED' : stage === 'HEADING_TO_PICKUP' ? 'DRIVER_APPROACHING' : stage}
             height="100%"
-            tileTheme="light"
+            tileTheme="osm"
             showSurgeZones={false}
           />
         </Suspense>
@@ -689,13 +723,17 @@ export default function DriverRideActivePage() {
               </div>
 
               {/* Pickup Address Card */}
-              <div className="flex items-start gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
-                  A
+              <div className="flex items-start gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-2xs hover:border-blue-200 transition-all">
+                <div className="relative w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shrink-0 mt-0.5 shadow-sm shadow-blue-500/20 ring-4 ring-blue-500/20">
+                  <span>A</span>
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-white animate-ping" />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Pickup Spot (Place A)</span>
-                  <p className="text-xs font-bold text-slate-900 truncate">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider">Pickup Spot (Place A)</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  </div>
+                  <p className="text-xs font-black text-slate-900 truncate">
                     {currentRide.pickup?.name || currentRide.pickup?.address}
                   </p>
                   <p className="text-[11px] text-slate-500 truncate">
@@ -755,11 +793,6 @@ export default function DriverRideActivePage() {
                     <KeyRound size={15} className="text-emerald-600" />
                     <span>Enter 4-Digit Passenger Start OTP:</span>
                   </div>
-                  {currentRide.otp && (
-                    <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200">
-                      OTP: {currentRide.otp}
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -771,7 +804,7 @@ export default function DriverRideActivePage() {
                       setOtpInput(e.target.value.replace(/\D/g, ''));
                       setOtpError('');
                     }}
-                    placeholder="••••"
+                    placeholder="****"
                     className="flex-1 bg-white border border-emerald-300 rounded-xl px-4 py-2.5 text-center font-mono font-black text-base tracking-widest text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <button
@@ -786,13 +819,16 @@ export default function DriverRideActivePage() {
               </div>
 
               {/* Destination Dropoff Preview */}
-              <div className="flex items-start gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
-                  B
+              <div className="flex items-start gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-2xs hover:border-rose-200 transition-all">
+                <div className="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-black shrink-0 mt-0.5 shadow-sm shadow-rose-500/20 ring-4 ring-rose-500/20">
+                  <span>B</span>
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Destination Dropoff (Place B)</span>
-                  <p className="text-xs font-bold text-slate-900 truncate">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black text-rose-600 uppercase tracking-wider">Destination Dropoff (Place B)</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  </div>
+                  <p className="text-xs font-black text-slate-900 truncate">
                     {currentRide.destination?.name}
                   </p>
                   <p className="text-[11px] text-slate-500 truncate">
