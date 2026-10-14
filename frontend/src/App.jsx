@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores';
 import LocationToast from '@/components/common/LocationToast';
 import MaintenanceBanner from '@/components/common/MaintenanceBanner';
-import AdminSimulationBanner from '@/components/common/AdminSimulationBanner';
 
 // Role-based route guard — strict: each role stays in its own section
 function ScrollToTop() {
@@ -157,7 +156,6 @@ export default function App() {
         <ScrollToTop />
         <ErrorBoundary>
           <MaintenanceBanner />
-          <AdminSimulationBanner />
           <LocationToast />
           <Routes>
             {/* Public */}

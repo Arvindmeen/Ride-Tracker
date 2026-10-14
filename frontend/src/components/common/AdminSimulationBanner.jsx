@@ -12,21 +12,19 @@ export default function AdminSimulationBanner() {
   // Check if current user is an admin
   const isSuperAdmin = user?.role === 'ADMIN' || role === 'ADMIN';
 
-  // Only display if user is an admin AND currently browsing non-admin views (driver cockpit, passenger app, etc.)
-  const isNonAdminPage = !location.pathname.startsWith('/admin');
+  // Only display if user is an admin AND currently browsing driver or passenger simulation views
+  const isDriverView = location.pathname.startsWith('/driver') || location.pathname === '/drive';
+  const isPassengerView = location.pathname.startsWith('/app');
 
-  if (!isSuperAdmin || !isNonAdminPage) {
+  const isSimulating = isDriverView || isPassengerView;
+
+  if (!isSuperAdmin || !isSimulating) {
     return null;
   }
 
-  const isDriverView = location.pathname.startsWith('/driver') || location.pathname === '/drive';
-  const isPassengerView = location.pathname.startsWith('/app') || location.pathname === '/';
-
   const viewName = isDriverView
     ? 'Driver Cockpit & Dispatch Simulator'
-    : isPassengerView
-    ? 'Passenger App & Booking Simulator'
-    : 'Public Portal';
+    : 'Passenger App & Booking Simulator';
 
   // Minimized floating pill (in case user wants maximum viewport real estate)
   if (minimized) {
@@ -63,7 +61,7 @@ export default function AdminSimulationBanner() {
   }
 
   return (
-    <div className="w-full bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border-b border-indigo-700/60 shadow-lg z-40 sticky top-16 sm:top-18 transition-all animate-in slide-in-from-top-2 duration-200 font-sans">
+    <div className="w-full bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border-b border-indigo-700/60 shadow-md z-30 transition-all animate-in slide-in-from-top-1 duration-200 font-sans">
       <div className="max-w-[1536px] mx-auto px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2.5">
         
         {/* Left: Indicator & Status */}

@@ -434,7 +434,7 @@ export default function Navbar() {
                   </Link>
 
                   {/* High-visibility Exit to Admin Hub button when inspecting Driver / Rider views */}
-                  {!location.pathname.startsWith('/admin') && (
+                  {(location.pathname.startsWith('/driver') || location.pathname.startsWith('/app') || location.pathname === '/drive') && (
                     <Link
                       to="/admin/dashboard"
                       className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs shadow-xs flex items-center gap-1.5 transition-all duration-200 active:scale-95 animate-pulse ml-1"
@@ -971,7 +971,7 @@ export default function Navbar() {
                 </>
               ) : role === 'ADMIN' ? (
                 <>
-                  {!location.pathname.startsWith('/admin') && (
+                  {(location.pathname.startsWith('/driver') || location.pathname.startsWith('/app') || location.pathname === '/drive') && (
                     <Link
                       to="/admin/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
