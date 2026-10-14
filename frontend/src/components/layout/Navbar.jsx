@@ -154,7 +154,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans">
+    <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans overflow-x-clip">
       <div className="w-full max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-18 gap-4">
           
@@ -378,25 +378,14 @@ export default function Navbar() {
                 /* ── ADMIN LOGGED IN ─────────────────────────────────────────────── */
                 <>
                   <Link
-                    to="/admin-portal"
-                    className={`px-3 py-2 rounded-xl transition-all duration-200 active:scale-95 font-bold whitespace-nowrap cursor-pointer ${
-                      location.pathname === '/admin-portal' || location.pathname === '/'
-                        ? 'text-indigo-800 bg-indigo-100 border border-indigo-300 shadow-xs'
-                        : 'text-slate-700 hover:text-indigo-700 hover:bg-slate-100/80'
-                    }`}
-                  >
-                    Ops Gateway
-                  </Link>
-
-                  <Link
                     to="/admin/dashboard"
                     className={`px-3 py-2 rounded-xl transition-all duration-200 active:scale-95 font-bold whitespace-nowrap cursor-pointer ${
-                      location.pathname === '/admin/dashboard'
+                      location.pathname === '/admin/dashboard' || location.pathname === '/admin-portal' || location.pathname === '/'
                         ? 'text-indigo-800 bg-indigo-100 border border-indigo-300 shadow-xs'
                         : 'text-slate-700 hover:text-indigo-700 hover:bg-slate-100/80'
                     }`}
                   >
-                    Command Hub
+                    Dashboard
                   </Link>
 
                   <Link
@@ -419,7 +408,7 @@ export default function Navbar() {
                         : 'text-slate-700 hover:text-indigo-700 hover:bg-slate-100/80'
                     }`}
                   >
-                    Telemetry
+                    Rides
                   </Link>
 
                   <Link
@@ -430,7 +419,7 @@ export default function Navbar() {
                         : 'text-slate-700 hover:text-indigo-700 hover:bg-slate-100/80'
                     }`}
                   >
-                    Drivers Audit
+                    Drivers
                   </Link>
 
                   <Link
@@ -569,34 +558,31 @@ export default function Navbar() {
               <span className="hidden sm:inline">112 SOS</span>
             </a>
 
-            {/* Contextual Jump Button */}
-            {isAuthenticated && (
+            {/* Contextual Jump Button (Hide for Admin since Admin has Dashboard link) */}
+            {isAuthenticated && role !== 'ADMIN' && (
               <button
                 onClick={() => {
                   if (role === 'DRIVER') navigate('/driver/dashboard');
-                  else if (role === 'ADMIN') navigate('/admin/dashboard');
                   else navigate('/app/home');
                 }}
                 className={`hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:shadow-sm transition-all duration-200 active:scale-95 whitespace-nowrap shrink-0 group cursor-pointer ${
                   role === 'DRIVER'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : role === 'ADMIN'
-                    ? 'bg-indigo-600 hover:bg-indigo-700'
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                <span>{role === 'DRIVER' ? 'Cockpit' : role === 'ADMIN' ? 'Operations' : 'Book Ride'}</span>
+                <span>{role === 'DRIVER' ? 'Cockpit' : 'Book Ride'}</span>
                 <ArrowRight size={12} className="shrink-0 group-hover:translate-x-0.5 transition-transform" />
               </button>
             )}
 
-            {/* Profile Pill (e.g. Rajesh Kumar) */}
+            {/* Profile Pill */}
             {isAuthenticated ? (
               <div className="relative shrink-0" ref={profileRef}>
-                {/* Clicking anywhere on the driver pill toggles the account menu */}
+                {/* Clicking toggles the account menu */}
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                  className="flex items-center gap-2 pl-2.5 pr-2.5 py-1.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer select-none"
+                  className="flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-2.5 pr-2 sm:pr-2.5 py-1.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer select-none max-w-[130px] sm:max-w-[175px]"
                   title="Account Menu"
                   aria-expanded={profileMenuOpen}
                 >
@@ -605,14 +591,14 @@ export default function Navbar() {
                   }`}>
                     {role === 'DRIVER' ? '🚗' : role === 'ADMIN' ? '🖥️' : '👤'}
                   </div>
-                  <span className="font-bold text-slate-900 truncate max-w-[90px] sm:max-w-[120px] hidden sm:inline">
-                    {user?.name || (role === 'DRIVER' ? 'Rajesh Kumar' : 'Arvind Meena')}
+                  <span className="font-bold text-slate-900 truncate text-xs">
+                    {role === 'ADMIN' ? 'Operations Admin' : user?.name || (role === 'DRIVER' ? 'Rajesh Kumar' : 'Arvind Meena')}
                   </span>
                   <ChevronDown size={13} className={`text-slate-500 transition-transform duration-200 shrink-0 ${profileMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {profileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                     {/* Header item: clicking driver name opens driver profile */}
                     <button
                       onClick={() => {

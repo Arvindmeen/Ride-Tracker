@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { useAuthStore } from '@/stores';
 
 const TELEMETRY_METRICS = [
   { label: 'Platform Telemetry Uptime', val: '99.98%', sub: 'SLA Guaranteed Core' },
@@ -63,6 +64,8 @@ const OPS_MODULES = [
 
 export default function AdminLandingPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, user, role: userRole } = useAuthStore();
+  const isAdmin = isAuthenticated && (userRole === 'ADMIN' || user?.role === 'ADMIN');
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
@@ -82,7 +85,11 @@ export default function AdminLandingPage() {
               <div className="lg:col-span-7 space-y-6 text-left">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-black shadow-xs">
                   <ShieldCheck size={14} className="text-indigo-600" />
-                  <span>Ride Tracker Operations Gateway · Enterprise Fleet Telemetry</span>
+                  <span>
+                    {isAdmin
+                      ? `Operations Clearance Active · Logged in as ${user?.name || 'Operations Admin'}`
+                      : 'Ride Tracker Operations Gateway · Enterprise Fleet Telemetry'}
+                  </span>
                 </div>
 
                 <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.1]">
@@ -97,19 +104,19 @@ export default function AdminLandingPage() {
                 {/* Primary CTAs */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                   <Link
-                    to="/login?role=ADMIN"
+                    to={isAdmin ? "/admin/dashboard" : "/login?role=ADMIN"}
                     className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm shadow-lg shadow-indigo-600/25 transition-all active:scale-95 cursor-pointer"
                   >
-                    <Lock size={16} />
-                    <span>Access Operations Console</span>
+                    {!isAdmin && <Lock size={16} />}
+                    <span>{isAdmin ? "Open Operations Command Hub" : "Access Operations Console"}</span>
                     <ArrowRight size={16} />
                   </Link>
 
                   <Link
-                    to="/contact"
+                    to={isAdmin ? "/admin/live-map" : "/contact"}
                     className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold text-sm transition-all active:scale-95 cursor-pointer"
                   >
-                    <span>Request City Ops Deployment</span>
+                    <span>{isAdmin ? "Live Fleet Radar" : "Request City Ops Deployment"}</span>
                   </Link>
                 </div>
 
@@ -181,10 +188,10 @@ export default function AdminLandingPage() {
                   </div>
 
                   <Link
-                    to="/login?role=ADMIN"
-                    className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20"
+                    to={isAdmin ? "/admin/dashboard" : "/login?role=ADMIN"}
+                    className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
                   >
-                    <span>Authenticate with Operations Credential</span>
+                    <span>{isAdmin ? "Launch Operations Console ⚡" : "Authenticate with Operations Credential"}</span>
                     <ArrowRight size={14} />
                   </Link>
                 </div>

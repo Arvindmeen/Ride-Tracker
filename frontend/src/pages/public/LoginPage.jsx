@@ -102,8 +102,8 @@ export default function LoginPage() {
   // If already logged in, redirect
   useEffect(() => {
     if (isAuthenticated && currentRole) {
-      const redirectMap = { ADMIN: '/admin/dashboard', DRIVER: '/' };
-      navigate(redirectTo || redirectMap[currentRole] || '/app/home', { replace: true });
+      const redirectMap = { ADMIN: '/', DRIVER: '/', USER: '/' };
+      navigate(redirectTo || redirectMap[currentRole] || '/', { replace: true });
     }
   }, [isAuthenticated, currentRole, navigate, redirectTo]);
 
@@ -142,8 +142,8 @@ export default function LoginPage() {
 
     setLoading(false);
     if (result.success) {
-      const redirectMap = { ADMIN: '/admin/dashboard', DRIVER: '/' };
-      const targetUrl = redirectTo || (result.role === 'DRIVER' ? '/' : result.redirectUrl) || redirectMap[result.role] || '/app/home';
+      const redirectMap = { ADMIN: '/', DRIVER: '/', USER: '/' };
+      const targetUrl = redirectTo || redirectMap[result.role] || '/';
       navigate(targetUrl, { replace: true });
     } else {
       setErrorMsg(result.error || 'Invalid email or password. Please try again.');
