@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Phone, MessageSquare, Share2, AlertTriangle, MapPin,
   Clock, Star, X, CheckCircle2, ShieldCheck, DollarSign,
-  Copy, Send, Lock, Check, ChevronUp, ChevronDown, Compass,
+  Copy, Send, Lock, Check, ChevronUp, ChevronDown, ChevronLeft, Compass,
   Navigation, Zap, Crosshair, ArrowRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -11,6 +11,7 @@ import { rideService, locationService, rideSync } from '@/services';
 import { useMapStore, useBookingStore } from '@/stores';
 import { Spinner, Badge, Button, VehicleIcon } from '@/components/ui';
 import { formatDuration } from '@/utils/formatters';
+import ContinuousJourneyBar from '@/components/ride/ContinuousJourneyBar';
 
 const LiveMap = lazy(() => import('@/components/map/LiveMap'));
 
@@ -214,36 +215,36 @@ export default function LiveRidePage() {
 
     // Safely extract and normalize driver properties (guarantees strings/primitives, NO raw nested objects in JSX)
     const rawDriver = dynamicTrip?.driverInfo || assignedDriver || drivers?.[0] || {
-      name: 'Subhash Mondal',
-      phone: '+91 94340 12891',
-      rating: 4.92,
+      name: 'Vikram Singh',
+      phone: '+91 98201 49210',
+      rating: 4.8,
       category: dynamicCategory,
-      vehicle: dynamicCategory === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Hero Splendor Plus (Bike)',
-      plate: 'UP 21 AB 4921',
+      vehicle: dynamicCategory === 'ECONOMY' ? 'Maruti Suzuki Dzire (Cab)' : 'Bajaj RE Compact Auto',
+      plate: 'MH 02 CK 9307',
     };
 
     const isToto = dynamicCategory === 'AUTO' || dynamicCategory === 'TOTO' || dynamicCategory === 'toto';
     const isBike = dynamicCategory === 'MOTO' || dynamicCategory === 'BIKE' || dynamicCategory === 'bike';
     const isCab = dynamicCategory === 'ECONOMY' || dynamicCategory === 'CAB' || dynamicCategory === 'cab';
     const isTransporter = dynamicCategory === 'XL' || dynamicCategory === 'TRANSPORTER' || dynamicCategory === 'transporter';
-    const defaultModel = isToto ? 'Solar E-Toto #08' : isBike ? 'Electric Bike (Ather EV)' : isCab ? 'Prime EV Cab (Tata Tigor)' : isTransporter ? 'EV Transporter (Tata Ace EV)' : 'EV Transporter (Tata Ace EV)';
+    const defaultModel = isToto ? 'Bajaj RE Compact Auto' : isBike ? 'Electric Bike (Ather EV)' : isCab ? 'Prime EV Cab (Tata Tigor)' : isTransporter ? 'EV Transporter (Tata Ace EV)' : 'Bajaj RE Compact Auto';
 
     const vehicleModel = typeof rawDriver.vehicle === 'object'
       ? (rawDriver.vehicle?.model || rawDriver.vehicleModel || defaultModel)
       : (rawDriver.vehicleModel || rawDriver.vehicle || defaultModel);
 
     const vehiclePlate = typeof rawDriver.vehicle === 'object'
-      ? (rawDriver.vehicle?.plate || rawDriver.vehicleNumber || 'UP 21 AB 4921')
-      : (rawDriver.vehicleNumber || rawDriver.plate || 'UP 21 AB 4921');
+      ? (rawDriver.vehicle?.plate || rawDriver.vehicleNumber || 'MH 02 CK 9307')
+      : (rawDriver.vehicleNumber || rawDriver.plate || 'MH 02 CK 9307');
 
     const vehicleCategory = typeof rawDriver.vehicle === 'object'
       ? (rawDriver.vehicle?.category || rawDriver.category || dynamicCategory)
       : (rawDriver.category || dynamicCategory);
 
     const matchedDriver = {
-      name: rawDriver.name || 'Subhash Mondal',
-      phone: rawDriver.phone || '+91 94340 12891',
-      rating: typeof rawDriver.rating === 'number' ? rawDriver.rating : 4.92,
+      name: rawDriver.name || 'Vikram Singh',
+      phone: rawDriver.phone || '+91 98201 49210',
+      rating: typeof rawDriver.rating === 'number' ? rawDriver.rating : 4.8,
       category: vehicleCategory,
       vehicle: vehicleModel,
       plate: vehiclePlate,
@@ -629,108 +630,85 @@ export default function LiveRidePage() {
     );
   }
 
+  const handleCopyOtp = (code) => {
+    const val = String(code || ride?.otp || '4921');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(val);
+    }
+    setCopiedOtp(true);
+    setTimeout(() => setCopiedOtp(false), 2000);
+  };
+
   const statusIdx = STATUS_STEPS.findIndex((s) => s.key === ride.status);
   const statusLabel = STATUS_STEPS[statusIdx]?.label || ride.status;
 
-  const driverName = ride.driverInfo?.name || 'Subhash Mondal';
+  const driverName = ride.driverInfo?.name || 'Vikram Singh';
   const driverVehicle = typeof ride.driverInfo?.vehicle === 'object'
-    ? (ride.driverInfo?.vehicle?.model || 'Maruti Suzuki Dzire')
-    : (ride.driverInfo?.vehicle || 'Hero Splendor Plus (Bike)');
+    ? (ride.driverInfo?.vehicle?.model || 'Bajaj RE Compact Auto')
+    : (ride.driverInfo?.vehicle || 'Bajaj RE Compact Auto');
   const driverPlate = typeof ride.driverInfo?.plate === 'object'
-    ? 'DL 01 AB 1042'
-    : (ride.driverInfo?.plate || 'DL 01 AB 1042');
-  const driverRating = ride.driverInfo?.rating || 4.9;
-  const driverCategory = ride.driverInfo?.category || 'MOTO';
+    ? 'MH 02 CK 9307'
+    : (ride.driverInfo?.plate || 'MH 02 CK 9307');
+  const driverRating = ride.driverInfo?.rating || 4.8;
+  const driverCategory = ride.driverInfo?.category || 'AUTO';
 
   return (
-    <div className="relative w-full max-w-full overflow-x-hidden min-h-[calc(100vh-3.5rem)] flex flex-col md:flex-row bg-slate-100 font-sans">
+    <div className="relative w-full max-w-full overflow-x-hidden min-h-[calc(100vh-3.5rem)] flex flex-col md:flex-row bg-slate-50 font-sans">
       
-      {/* ── TOP SAFETY & OTP BAR (Mobile Header) ─────────────────────────── */}
-      <div className="md:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs">
+      {/* ── TOP UNIFIED MOBILE APP BAR ─────────────────────────────────────── */}
+      <div className="md:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3.5 py-2.5 flex items-center justify-between shadow-2xs">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
-          <span className="text-xs font-black text-slate-900">{statusLabel}</span>
+          <button
+            onClick={() => navigate('/app/home')}
+            className="p-1 -ml-1 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Back to Booking"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+            <span className="font-mono text-xs font-black text-slate-900">{ride.id}</span>
+          </div>
         </div>
 
-        {/* Quick OTP Pill */}
-        <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl">
-          <span className="text-[10px] font-bold text-amber-800 uppercase">OTP:</span>
-          <span className="font-mono font-black text-xs text-amber-900">{ride.otp || '4921'}</span>
+        <div className="flex items-center gap-2">
+          {/* Quick OTP pill on mobile */}
+          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg shadow-2xs">
+            <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-tight">OTP:</span>
+            <span className="font-mono text-xs font-black text-amber-900">{ride.otp || '4921'}</span>
+            <button
+              onClick={() => handleCopyOtp(ride.otp)}
+              className="text-amber-700 hover:text-amber-900 p-0.5 cursor-pointer"
+              title="Copy OTP"
+            >
+              {copiedOtp ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+            </button>
+          </div>
+
           <button
-            onClick={() => {
-              if (navigator.clipboard) navigator.clipboard.writeText(ride.otp || '4921');
-              setCopiedOtp(true);
-              setTimeout(() => setCopiedOtp(false), 2000);
-            }}
-            className="text-amber-700 hover:text-amber-900 p-0.5"
-            title="Copy OTP"
+            onClick={() => setShowSOS(true)}
+            className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
           >
-            {copiedOtp ? <Check size={12} /> : <Copy size={12} />}
+            <AlertTriangle size={12} />
+            <span>SOS</span>
           </button>
         </div>
       </div>
 
       {/* ── LEFT DESKTOP PANEL / MOBILE BOTTOM DETAILS ──────────────────────── */}
-      <div className="w-full md:w-[460px] lg:w-[480px] shrink-0 bg-white border-r border-slate-200 z-20 flex flex-col md:h-[calc(100vh-3.5rem)] md:overflow-y-auto order-2 md:order-1">
+      <div className="w-full md:w-[460px] lg:w-[490px] shrink-0 bg-slate-50 md:bg-white border-r border-slate-200/90 z-20 flex flex-col md:h-[calc(100vh-3.5rem)] md:overflow-y-auto order-2 md:order-1 p-3.5 sm:p-5 space-y-4">
         
-        {/* Step Progress & Status Header */}
-        <div className="p-4 sm:p-6 pb-4 border-b border-slate-100 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-3 h-3 rounded-full bg-blue-600 animate-pulse" />
-              <div>
-                <h1 className="text-lg sm:text-xl font-black text-slate-900">
-                  {statusLabel}
-                </h1>
-                <p className="text-xs text-slate-500">
-                  {ride.status === 'RIDE_COMPLETED'
-                    ? 'Arrived safely at destination'
-                    : ride.status === 'RIDE_STARTED'
-                    ? `En route to destination · ${formatDuration(activeDriverEta)} remaining (${activeDriverDistance} km)`
-                    : ride.status === 'DRIVER_ARRIVED'
-                    ? 'Driver arrived at pickup! Board vehicle and share OTP.'
-                    : `Driver is ${formatDuration(activeDriverEta)} away · ${activeDriverDistance} km`}
-                </p>
-              </div>
-            </div>
-
-            {/* OTP Box */}
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-3 py-2 text-right">
-              <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">
-                Start OTP
-              </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="font-mono font-black text-lg text-amber-900 leading-none">
-                  {ride.otp || '4921'}
-                </span>
-                <button
-                  onClick={() => {
-                    if (navigator.clipboard) navigator.clipboard.writeText(ride.otp || '4921');
-                    setCopiedOtp(true);
-                    setTimeout(() => setCopiedOtp(false), 2000);
-                  }}
-                  className="text-amber-700 hover:text-amber-900"
-                  title="Copy OTP"
-                >
-                  {copiedOtp ? <Check size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Stepper Progress Bar */}
-          <div className="flex gap-1.5 pt-1">
-            {STATUS_STEPS.map((s, i) => (
-              <div
-                key={s.key}
-                className={clsx(
-                  'flex-1 h-1.5 rounded-full transition-all duration-500',
-                  i <= statusIdx ? 'bg-blue-600' : 'bg-slate-200'
-                )}
-              />
-            ))}
-          </div>
-        </div>
+        {/* ── CONTINUOUS ANIMATED JOURNEY TRACKER WITH OTP ASKING & POINTS ── */}
+        <ContinuousJourneyBar
+          ride={ride}
+          status={ride.status}
+          activeDriverEta={activeDriverEta}
+          activeDriverDistance={activeDriverDistance}
+          activeDriverSpeed={activeDriverSpeed}
+          onCopyOtp={handleCopyOtp}
+          copiedOtp={copiedOtp}
+          onQuickFillOtp={handleQuickFillOtp}
+        />
 
         {/* ── DRIVER ARRIVED & BOARDING OTP CARD (Responsive, Animated & Compact) ── */}
         {ride.status === 'DRIVER_ARRIVED' && (
@@ -786,7 +764,7 @@ export default function LiveRidePage() {
                           ? 'bg-emerald-50/70 border-2 border-emerald-500 text-slate-950 ring-2 ring-emerald-100 font-black'
                           : 'bg-slate-50 border border-slate-200 text-slate-900 focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100'
                       )}
-                      placeholder={(ride.otp || '4921')[idx]}
+                      placeholder="•"
                     />
                   );
                 })}
@@ -838,119 +816,132 @@ export default function LiveRidePage() {
         )}
 
         {/* Driver Partner Details Card */}
-        <div className="p-4 sm:p-6 space-y-4">
-          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-4 sm:p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {/* Real Vehicle Icon */}
-                <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-xs">
-                  {String(driverCategory).toUpperCase().includes('AUTO') || String(driverCategory).toUpperCase().includes('TOTO') || String(driverVehicle).toLowerCase().includes('toto') ? (
-                    <img src="/toto-logo.svg" alt="Toto" className="w-11 h-11 object-contain drop-shadow-sm" />
-                  ) : (
-                    <VehicleIcon category={driverCategory} size="lg" />
-                  )}
-                </div>
-                <div>
-                  <h2 className="font-black text-slate-900 text-base">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Real Vehicle Icon */}
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
+                {String(driverCategory).toUpperCase().includes('AUTO') || String(driverCategory).toUpperCase().includes('TOTO') || String(driverVehicle).toLowerCase().includes('toto') ? (
+                  <img src="/toto-logo.svg" alt="Toto" className="w-11 h-11 object-contain drop-shadow-xs" />
+                ) : (
+                  <VehicleIcon category={driverCategory} size="lg" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="font-black text-slate-900 text-base leading-tight">
                     {driverName}
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    {driverVehicle} ·{' '}
-                    <span className="text-amber-500 font-bold">★ {driverRating}</span>
-                  </p>
-                  <span className="font-mono text-xs font-bold bg-white text-slate-900 px-2.5 py-0.5 rounded-lg border border-slate-200 inline-block mt-1">
-                    {driverPlate}
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.2 rounded-full">
+                    Verified
                   </span>
                 </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {driverVehicle} ·{' '}
+                  <span className="text-amber-500 font-bold">★ {driverRating}</span>
+                </p>
+                <span className="font-mono text-xs font-bold bg-slate-100 text-slate-900 px-2.5 py-0.5 rounded-lg border border-slate-200 inline-block mt-1">
+                  {driverPlate}
+                </span>
               </div>
-
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
-                Verified
-              </span>
-            </div>
-
-            {/* Quick Actions: Call, Chat, SOS */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200/80">
-              <button
-                onClick={() => setShowCallModal(true)}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold transition-colors"
-              >
-                <Phone size={15} />
-                <span>Call Driver</span>
-              </button>
-
-              <button
-                onClick={() => setShowChatModal(true)}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-2xl text-xs font-bold transition-colors"
-              >
-                <MessageSquare size={15} />
-                <span>Chat</span>
-              </button>
-
-              <button
-                onClick={() => setShowSOS(true)}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold transition-colors"
-              >
-                <AlertTriangle size={15} />
-                <span>Emergency</span>
-              </button>
             </div>
           </div>
 
-          {/* Route Overview */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 space-y-3">
+          {/* Quick Actions: Call, Chat, SOS */}
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+            <button
+              onClick={() => setShowCallModal(true)}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              <Phone size={15} />
+              <span>Call Driver</span>
+            </button>
+
+            <button
+              onClick={() => setShowChatModal(true)}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              <MessageSquare size={15} />
+              <span>Chat</span>
+            </button>
+
+            <button
+              onClick={() => setShowSOS(true)}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              <AlertTriangle size={15} />
+              <span>Emergency</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Route Overview */}
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between">
             <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">
               Route Information
             </h3>
-            <div className="relative pl-6 space-y-3">
-              <div className="absolute left-2.5 top-2.5 bottom-2.5 w-0.5 bg-gradient-to-b from-blue-600 to-rose-600" />
-              
-              <div className="relative">
-                <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-sm" />
-                <div>
-                  <span className="text-[10px] font-bold text-blue-600 uppercase">Pickup</span>
-                  <p className="text-xs font-bold text-slate-900 truncate">
-                    {ride.pickup?.name || 'Current Location'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="relative">
-                <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-rose-600 border-2 border-white shadow-sm" />
-                <div>
-                  <span className="text-[10px] font-bold text-rose-600 uppercase">Destination</span>
-                  <p className="text-xs font-bold text-slate-900 truncate">
-                    {ride.destination?.name || 'Destination Point'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Fare Card */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase">Upfront Guaranteed Fare</span>
-              <p className="text-2xl font-black text-slate-900">
-                ₹{getFareDisplay(ride.fare)}.00
-              </p>
-            </div>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
-              Paid via UPI AutoPay
+            <span className="text-[11px] font-mono font-bold text-slate-500">
+              Total {ride.distance || 1.4} km
             </span>
           </div>
 
-          {/* Safety Notice */}
-          <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-600 text-xs">
-            <ShieldCheck size={16} className="text-blue-600 shrink-0" />
-            <span>Encrypted trip · Driver number is masked · 24/7 Safety Desk monitored</span>
+          <div className="relative pl-6 space-y-3">
+            <div className="absolute left-2.5 top-2.5 bottom-2.5 w-0.5 bg-gradient-to-b from-blue-600 to-rose-600" />
+            
+            <div className="relative">
+              <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs" />
+              <div>
+                <span className="text-[10px] font-bold text-blue-600 uppercase">Pickup Location</span>
+                <p className="text-xs font-bold text-slate-900 truncate">
+                  {ride.pickup?.name || 'Current Location'}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {ride.pickup?.address || ride.pickup?.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-rose-600 border-2 border-white shadow-xs" />
+              <div>
+                <span className="text-[10px] font-bold text-rose-600 uppercase">Destination Drop-off</span>
+                <p className="text-xs font-bold text-slate-900 truncate">
+                  {ride.destination?.name || 'Destination Point'}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {ride.destination?.address || ride.destination?.name}
+                </p>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Upfront Guaranteed Fare Card */}
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 flex items-center justify-between shadow-2xs">
+          <div>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Upfront Guaranteed Fare
+            </span>
+            <p className="text-2xl font-black text-slate-900">
+              ₹{getFareDisplay(ride.fare)}.00
+            </p>
+          </div>
+          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl shadow-2xs">
+            Paid via UPI AutoPay
+          </span>
+        </div>
+
+        {/* Safety Notice */}
+        <div className="flex items-center gap-2.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 text-slate-600 text-xs">
+          <ShieldCheck size={18} className="text-blue-600 shrink-0" />
+          <span>Encrypted trip · Driver number is masked · 24/7 Safety Desk monitored</span>
         </div>
 
       </div>
 
       {/* ── RIGHT FULL INTERACTIVE MAP (Order 1 on mobile for visual presence) ── */}
-      <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[300px] sm:min-h-[400px] md:h-[calc(100vh-3.5rem)] order-1 md:order-2">
+      <div className="w-full md:flex-1 h-[340px] sm:h-[400px] md:h-[calc(100vh-3.5rem)] min-h-[340px] sm:min-h-[400px] md:min-h-full relative bg-slate-900 overflow-hidden shrink-0 md:shrink order-1 md:order-2">
         <Suspense
           fallback={
             <div className="bg-slate-900 w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold">

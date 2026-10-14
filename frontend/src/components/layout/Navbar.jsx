@@ -155,23 +155,23 @@ export default function Navbar() {
 
   return (
     <header className="w-full sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-xs font-sans overflow-x-clip">
-      <div className="w-full max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18 gap-4">
+      <div className="w-full max-w-[1536px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-18 gap-2 sm:gap-4 w-full min-w-0">
           
           {/* ── Left: Brand Identity & Live Location ───────── */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 shrink">
             <Link
               to="/"
-              className="flex items-center gap-3 group shrink-0 transition-transform duration-200 active:scale-98"
+              className="flex items-center gap-2.5 sm:gap-3 group shrink-0 transition-transform duration-200 active:scale-98"
               title="Ride Tracker - Home"
             >
               <img
                 src="/toto-logo.svg"
                 alt="Ride Tracker Toto"
-                className="w-10 h-10 sm:w-11 sm:h-11 object-contain transition-all duration-300 group-hover:scale-110 drop-shadow-sm group-hover:drop-shadow-md"
+                className="w-9 h-9 sm:w-11 sm:h-11 object-contain transition-all duration-300 group-hover:scale-110 drop-shadow-sm group-hover:drop-shadow-md"
               />
-              <div className="flex flex-col">
-                <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 leading-none group-hover:text-blue-600 transition-colors">
+              <div className="flex flex-col min-w-0">
+                <span className="font-extrabold text-base sm:text-xl tracking-tight text-slate-900 leading-none group-hover:text-blue-600 transition-colors truncate">
                   Ride Tracker
                 </span>
                 <span className="text-[10px] text-slate-500 font-bold tracking-tight hidden sm:inline mt-1">
@@ -180,8 +180,8 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Dynamic Live Location Popover (Kharagpur) placed next to brand on the left */}
-            <div className="relative shrink-0 max-[479px]:hidden" ref={locationRef}>
+            {/* Dynamic Live Location Popover (Desktop / Tablet only to protect mobile width) */}
+            <div className="relative shrink-0 hidden md:block" ref={locationRef}>
               <button
                 onClick={() => setLocationMenuOpen(!locationMenuOpen)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 text-xs font-bold text-slate-800 transition-all duration-200 whitespace-nowrap shadow-xs hover:shadow-sm active:scale-95 cursor-pointer"

@@ -19,11 +19,18 @@ L.Icon.Default.mergeOptions({
 // Tile Providers for Production Grade Appearance (Clean, High-Res, Zero Watermarks)
 const TILE_PROVIDERS = {
   voyager: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 20,
     maxNativeZoom: 19,
-    subdomains: 'abc',
+    subdomains: 'abcd',
+  },
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 20,
+    maxNativeZoom: 19,
+    subdomains: 'abcd',
   },
   dark: {
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -31,13 +38,6 @@ const TILE_PROVIDERS = {
     maxZoom: 20,
     maxNativeZoom: 19,
     subdomains: 'abcd',
-  },
-  light: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 20,
-    maxNativeZoom: 19,
-    subdomains: 'abc',
   },
   osm: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -488,10 +488,41 @@ function MapController({ center, zoom, bounds, isExploring, setIsExploring, rece
   };
 
   useEffect(() => {
-    // Invalidate size immediately and after 150ms to ensure no grey tiles
+    // Invalidate size immediately, and at progressive frames to handle flexbox, modal/tab transition, and mobile layout changes
     map.invalidateSize();
-    const timer = setTimeout(() => map.invalidateSize(), 150);
-    return () => clearTimeout(timer);
+    const t1 = setTimeout(() => map.invalidateSize(), 80);
+    const t2 = setTimeout(() => map.invalidateSize(), 250);
+    const t3 = setTimeout(() => map.invalidateSize(), 600);
+    const t4 = setTimeout(() => map.invalidateSize(), 1200);
+
+    const container = map.getContainer();
+    let ro = null;
+    if (typeof ResizeObserver !== 'undefined' && container) {
+      ro = new ResizeObserver(() => {
+        try {
+          map.invalidateSize();
+        } catch (e) {}
+      });
+      ro.observe(container);
+    }
+
+    const onWinResize = () => {
+      try {
+        map.invalidateSize();
+      } catch (e) {}
+    };
+    window.addEventListener('resize', onWinResize);
+    window.addEventListener('orientationchange', onWinResize);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', onWinResize);
+      window.removeEventListener('orientationchange', onWinResize);
+    };
   }, [map]);
 
   // Comprehensive tracking of user zoom, scroll wheel, touch, and drag gestures
@@ -765,7 +796,10 @@ export default function LiveMap({
   const isTripCompleted = rideStage === 'RIDE_COMPLETED' || activeRide?.status === 'RIDE_COMPLETED';
 
   return (
-    <div style={{ height }} className={`relative w-full h-full bg-slate-100 overflow-hidden ${className}`}>
+    <div
+      style={{ height: height || '100%', minHeight: '100%' }}
+      className={`relative w-full h-full min-h-[300px] bg-slate-900 overflow-hidden ${className}`}
+    >
       {/* Floating Exploration Banner (Uber / Google Maps style) */}
       {isExploring && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[400] pointer-events-auto">
@@ -839,7 +873,7 @@ export default function LiveMap({
       <MapContainer
         center={[mapCenter.lat, mapCenter.lng]}
         zoom={currentZoom}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', minHeight: '100%' }}
         zoomControl={false}
         scrollWheelZoom={true}
         minZoom={4}
