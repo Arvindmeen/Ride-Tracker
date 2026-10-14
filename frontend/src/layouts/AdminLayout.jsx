@@ -53,6 +53,17 @@ export default function AdminLayout() {
   };
 
   const handleSwitchRole = (newRole) => {
+    // Preserve admin role and privileges - never downgrade the admin account
+    if (user?.role === 'ADMIN') {
+      useAuthStore.setState({ role: 'ADMIN' });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('veloq_role', 'ADMIN');
+      }
+      if (newRole === 'USER') navigate('/app/home');
+      else if (newRole === 'DRIVER') navigate('/driver/dashboard');
+      else navigate('/admin/dashboard');
+      return;
+    }
     useAuthStore.setState({ role: newRole });
     if (typeof window !== 'undefined') {
       localStorage.setItem('veloq_role', newRole);

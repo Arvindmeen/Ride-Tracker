@@ -1,5 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
-import { Layers, Car, Zap, TrendingUp, Grid, Flame, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Layers, Car, Zap, TrendingUp, Grid, Flame, X, ArrowRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useMapStore } from '@/stores';
 import { locationService } from '@/services';
@@ -191,6 +192,19 @@ export default function AdminLiveMap() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Quick Cockpit Inspection Simulator Action */}
+            <div className="pt-3 border-t border-slate-100">
+              <Link
+                to="/driver/dashboard"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer"
+                title={`Open Driver Cockpit Simulator for ${selectedDriver.name}`}
+              >
+                <Car size={14} />
+                <span>Simulate Driver Cockpit</span>
+                <ArrowRight size={12} />
+              </Link>
             </div>
           </div>
         </div>

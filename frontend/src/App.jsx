@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores';
 import LocationToast from '@/components/common/LocationToast';
 import MaintenanceBanner from '@/components/common/MaintenanceBanner';
+import AdminSimulationBanner from '@/components/common/AdminSimulationBanner';
 
 // Role-based route guard — strict: each role stays in its own section
 function ScrollToTop() {
@@ -17,7 +18,7 @@ function ScrollToTop() {
 }
 
 function RequireRole({ role, children }) {
-  const { isAuthenticated, role: userRole } = useAuthStore();
+  const { isAuthenticated, role: userRole, user } = useAuthStore();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -25,9 +26,20 @@ function RequireRole({ role, children }) {
     return <Navigate to={`/login?redirect=${target}`} replace />;
   }
 
-  // Admin can only access admin routes; user can only access user routes; driver — driver routes
+  // Superuser Clearance:
+  // If the logged-in user is an Operations Administrator (user?.role === 'ADMIN' or userRole === 'ADMIN'),
+  // they possess administrative privilege to view, test, and monitor ALL sections:
+  // - Admin Hub (/admin/*)
+  // - Driver Cockpit & Dispatches (/driver/*)
+  // - Passenger App & Bookings (/app/*)
+  // They are never blocked, trapped, or redirected away from any route!
+  const isSuperAdmin = user?.role === 'ADMIN' || userRole === 'ADMIN';
+  if (isSuperAdmin) {
+    return children;
+  }
+
+  // For non-admin roles (DRIVER, USER), enforce strict role isolation
   if (role && userRole !== role) {
-    if (userRole === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
     if (userRole === 'DRIVER') return <Navigate to="/driver/dashboard" replace />;
     return <Navigate to="/app/home" replace />;
   }
@@ -145,6 +157,7 @@ export default function App() {
         <ScrollToTop />
         <ErrorBoundary>
           <MaintenanceBanner />
+          <AdminSimulationBanner />
           <LocationToast />
           <Routes>
             {/* Public */}

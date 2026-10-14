@@ -15,10 +15,18 @@ if (savedUserStr) {
   } catch {}
 }
 
+// If the logged-in user is an ADMIN, preserve their role as 'ADMIN' so they never lose admin power
+const effectiveRole = initialUser?.role === 'ADMIN' ? 'ADMIN' : (savedRole || initialUser?.role || null);
+if (typeof window !== 'undefined' && initialUser?.role === 'ADMIN' && savedRole !== 'ADMIN') {
+  try {
+    localStorage.setItem('veloq_role', 'ADMIN');
+  } catch {}
+}
+
 export const useAuthStore = create((set, get) => ({
   isAuthenticated: !!(savedToken && initialUser),
   user: initialUser,
-  role: savedRole || initialUser?.role || null,
+  role: effectiveRole,
   token: savedToken || null,
   authLoading: false,
   authError: null,

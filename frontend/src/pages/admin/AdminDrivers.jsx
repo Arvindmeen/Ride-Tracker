@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Car } from 'lucide-react';
 import { driverService } from '@/services';
 import { Spinner, Avatar, StatusDot, ProgressBar } from '@/components/ui';
 import { clsx } from 'clsx';
@@ -115,11 +117,12 @@ export default function AdminDrivers() {
                 <th>Today Earnings</th>
                 <th>Performance</th>
                 <th>Documents</th>
+                <th className="text-right">Inspection</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="py-16 text-center text-slate-400 text-sm">No drivers match</td></tr>
+                <tr><td colSpan={9} className="py-16 text-center text-slate-400 text-sm">No drivers match</td></tr>
               ) : filtered.map(driver => {
                 const cfg = STATUS_CFG[driver.status] || STATUS_CFG.OFFLINE;
                 const hasExpiredDoc = driver.documents?.some(d => d.status === 'EXPIRED');
@@ -179,6 +182,17 @@ export default function AdminDrivers() {
                           ? <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">⏳ Pending</span>
                           : <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ OK</span>
                       }
+                    </td>
+                    <td className="text-right">
+                      <Link
+                        to="/driver/dashboard"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all active:scale-95 shadow-2xs whitespace-nowrap cursor-pointer"
+                        title={`Inspect ${driver.name}'s Driver Cockpit`}
+                      >
+                        <Car size={13} className="text-emerald-600" />
+                        <span>Inspect Cockpit</span>
+                        <ArrowRight size={11} className="text-emerald-700" />
+                      </Link>
                     </td>
                   </tr>
                 );

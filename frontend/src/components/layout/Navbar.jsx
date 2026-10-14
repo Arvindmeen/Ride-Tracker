@@ -432,6 +432,19 @@ export default function Navbar() {
                   >
                     Incidents
                   </Link>
+
+                  {/* High-visibility Exit to Admin Hub button when inspecting Driver / Rider views */}
+                  {!location.pathname.startsWith('/admin') && (
+                    <Link
+                      to="/admin/dashboard"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs shadow-xs flex items-center gap-1.5 transition-all duration-200 active:scale-95 animate-pulse ml-1"
+                      title="Return to Admin Operations Dashboard"
+                    >
+                      <ShieldCheck size={14} className="text-emerald-300" />
+                      <span>Back to Admin</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                  )}
                 </>
               ) : role === 'USER' ? (
                 /* ── PASSENGER LOGGED IN ─────────────────────────────────────────── */
@@ -670,25 +683,48 @@ export default function Navbar() {
                           <Link
                             to="/admin/dashboard"
                             onClick={() => setProfileMenuOpen(false)}
-                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-50 flex items-center gap-2 text-slate-700 hover:text-indigo-700"
+                            className="w-full text-left px-3 py-2 rounded-xl bg-indigo-50/80 hover:bg-indigo-100 flex items-center gap-2 text-indigo-900 font-extrabold border border-indigo-200"
                           >
-                            <LayoutDashboard size={14} className="text-indigo-600 shrink-0" />
-                            <span>Operations Dashboard</span>
+                            <ShieldCheck size={14} className="text-indigo-600 shrink-0" />
+                            <span>Return to Admin Dashboard</span>
                           </Link>
 
                           <Link
                             to="/admin/live-map"
                             onClick={() => setProfileMenuOpen(false)}
-                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-50 flex items-center gap-2 text-slate-700 hover:text-indigo-700"
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-50 flex items-center gap-2 text-slate-700 hover:text-indigo-700 font-semibold"
                           >
                             <Map size={14} className="text-indigo-600 shrink-0" />
                             <span>Live Fleet Radar</span>
                           </Link>
 
+                          <div className="border-t border-slate-100 my-1" />
+                          <p className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Preview & Simulation</p>
+
+                          <Link
+                            to="/driver/dashboard"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-50 flex items-center gap-2 text-slate-700 hover:text-emerald-700 font-semibold"
+                          >
+                            <Car size={14} className="text-emerald-600 shrink-0" />
+                            <span>Driver Cockpit (Preview)</span>
+                          </Link>
+
+                          <Link
+                            to="/app/home"
+                            onClick={() => setProfileMenuOpen(false)}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-blue-50 flex items-center gap-2 text-slate-700 hover:text-blue-700 font-semibold"
+                          >
+                            <Users size={14} className="text-blue-600 shrink-0" />
+                            <span>Passenger App (Preview)</span>
+                          </Link>
+
+                          <div className="border-t border-slate-100 my-1" />
+
                           <Link
                             to="/admin/settings"
                             onClick={() => setProfileMenuOpen(false)}
-                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-50 flex items-center gap-2 text-slate-700 hover:text-indigo-700"
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-50 flex items-center gap-2 text-slate-700 hover:text-indigo-700 font-semibold"
                           >
                             <Settings size={14} className="text-indigo-600 shrink-0" />
                             <span>Admin Settings & Clearance</span>
@@ -735,18 +771,32 @@ export default function Navbar() {
                       </Link>
 
                       {role === 'DRIVER' && (
-                        <button
-                          onClick={() => {
-                            setProfileMenuOpen(false);
-                            useAuthStore.setState({ role: 'USER' });
-                            localStorage.setItem('veloq_role', 'USER');
-                            navigate('/app/home');
-                          }}
-                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-blue-50 text-blue-700 flex items-center gap-2 cursor-pointer font-bold"
-                        >
-                          <Car size={14} className="text-blue-600 shrink-0" />
-                          <span>Switch to Rider View</span>
-                        </button>
+                        <>
+                          {user?.role === 'ADMIN' && (
+                            <Link
+                              to="/admin/dashboard"
+                              onClick={() => setProfileMenuOpen(false)}
+                              className="w-full text-left px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 flex items-center gap-2 cursor-pointer font-bold border border-indigo-200 mb-1"
+                            >
+                              <ShieldCheck size={14} className="text-indigo-600 shrink-0" />
+                              <span>Return to Admin Hub</span>
+                            </Link>
+                          )}
+                          <button
+                            onClick={() => {
+                              setProfileMenuOpen(false);
+                              if (user?.role !== 'ADMIN') {
+                                useAuthStore.setState({ role: 'USER' });
+                                localStorage.setItem('veloq_role', 'USER');
+                              }
+                              navigate('/app/home');
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-blue-50 text-blue-700 flex items-center gap-2 cursor-pointer font-bold"
+                          >
+                            <Car size={14} className="text-blue-600 shrink-0" />
+                            <span>Switch to Rider View</span>
+                          </button>
+                        </>
                       )}
 
                       <div className="pt-2 border-t border-slate-100">
@@ -921,6 +971,19 @@ export default function Navbar() {
                 </>
               ) : role === 'ADMIN' ? (
                 <>
+                  {!location.pathname.startsWith('/admin') && (
+                    <Link
+                      to="/admin/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between px-3 py-3 rounded-xl text-white bg-indigo-600 font-black shadow-md mb-2 active:scale-98"
+                    >
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck size={16} className="text-emerald-300 animate-pulse" />
+                        <span>Return to Admin Command Hub</span>
+                      </div>
+                      <ArrowRight size={15} />
+                    </Link>
+                  )}
                   <Link
                     to="/admin-portal"
                     onClick={() => setMobileMenuOpen(false)}
