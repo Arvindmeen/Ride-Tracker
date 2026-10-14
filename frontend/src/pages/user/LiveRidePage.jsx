@@ -160,6 +160,13 @@ export default function LiveRidePage() {
       return;
     }
 
+    // Strict Guard: Every ride must only be created when the user explicitly creates it!
+    // Never auto-generate a phantom ride when entering the Map / tracking page.
+    if (!dynamicTrip) {
+      navigate('/app/home', { replace: true });
+      return;
+    }
+
     const defaultPickup = dynamicTrip?.pickup?.lat
       ? dynamicTrip.pickup
       : storePickup?.lat
@@ -313,24 +320,24 @@ export default function LiveRidePage() {
       (nearestMapDriver?.location?.address || `Approach corridor ~200m from ${defaultPickup.name.split(',')[0]}`);
 
     const initialRide = {
-      id: id || dynamicTrip?.id || `RIDE-${Date.now().toString().slice(-6)}`,
-      status: dynamicTrip?.status || 'DRIVER_APPROACHING',
-      stage: dynamicTrip?.stage || 'HEADING_TO_PICKUP',
-      category: dynamicCategory,
-      pickup: defaultPickup, // Place A
-      destination: defaultDestination, // Place B
-      driverStartLocation: { lat: startDriverLat, lng: startDriverLng, name: startDriverName, address: startDriverAddress }, // Place C
-      distance: dynamicDistance,
-      fare: dynamicFare,
-      otp: dynamicTrip?.otp || String(Math.floor(1000 + Math.random() * 9000)),
-      driverInfo: matchedDriver,
-      requestedAt: dynamicTrip?.requestedAt || new Date().toISOString(),
-      startedAt: dynamicTrip?.startedAt || null,
-      completedAt: dynamicTrip?.completedAt || null,
+      ...dynamicTrip,
+      id: dynamicTrip.id || id,
+      status: dynamicTrip.status || 'DRIVER_APPROACHING',
+      stage: dynamicTrip.stage || 'HEADING_TO_PICKUP',
+      category: dynamicTrip.category || dynamicCategory,
+      pickup: dynamicTrip.pickup || defaultPickup,
+      destination: dynamicTrip.destination || defaultDestination,
+      driverStartLocation: dynamicTrip.driverStartLocation || { lat: startDriverLat, lng: startDriverLng, name: startDriverName, address: startDriverAddress },
+      distance: dynamicTrip.distance || dynamicDistance,
+      fare: dynamicTrip.fare || dynamicFare,
+      otp: dynamicTrip.otp,
+      driverInfo: dynamicTrip.driverInfo || matchedDriver,
+      requestedAt: dynamicTrip.requestedAt || new Date().toISOString(),
+      startedAt: dynamicTrip.startedAt || null,
+      completedAt: dynamicTrip.completedAt || null,
     };
 
     setRide(initialRide);
-    rideService.recordRide(initialRide);
 
     const initialHeading = calculateBearing(startDriverLat, startDriverLng, defaultPickup.lat, defaultPickup.lng);
     lastHeadingRef.current = initialHeading;

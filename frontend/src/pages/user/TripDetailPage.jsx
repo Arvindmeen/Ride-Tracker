@@ -273,9 +273,13 @@ export default function TripDetailPage() {
         const tax = typeof trip.fare === 'object' && trip.fare.tax
           ? Math.round(trip.fare.tax * 10) / 10
           : Math.round(totalFare * 0.05 * 10) / 10;
-        const distanceFare = typeof trip.fare === 'object' && (trip.fare.distance ?? trip.fare.distanceFare)
-          ? Math.round((trip.fare.distance ?? trip.fare.distanceFare) * 10) / 10
-          : Math.max(5, Math.round((totalFare - baseFare - tax) * 10) / 10);
+        const promoDiscount = typeof trip.fare === 'object' && trip.fare.discount
+          ? Math.round(trip.fare.discount)
+          : 0;
+        const promoCode = typeof trip.fare === 'object' ? trip.fare.promoCode : null;
+        const distanceFare = typeof trip.fare === 'object' && (trip.fare.distanceFare ?? trip.fare.distance)
+          ? Math.round((trip.fare.distanceFare ?? trip.fare.distance) * 10) / 10
+          : Math.max(5, Math.round((totalFare - baseFare - tax + promoDiscount) * 10) / 10);
 
         return (
           <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
@@ -300,6 +304,14 @@ export default function TripDetailPage() {
                 <span>Surge / Dynamic Multiplier</span>
                 <span className="font-semibold text-slate-900">1.0x (Standard Rate)</span>
               </div>
+              {promoDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
+                  <span className="flex items-center gap-1.5">
+                    <span>🎉</span> Promo Discount ({promoCode || 'COUPON'})
+                  </span>
+                  <span>- ₹{promoDiscount}.00</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Applicable GST / Taxes (5%)</span>
                 <span className="font-semibold text-slate-900">

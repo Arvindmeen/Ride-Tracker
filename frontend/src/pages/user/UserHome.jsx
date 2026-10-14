@@ -91,6 +91,58 @@ const POPULAR_DESTINATIONS = [
   },
 ];
 
+// Curated Promo Coupons: Dynamic percentage discounts with max caps proportional to ride amount
+export const PROMO_COUPONS = {
+  RIDE50: {
+    code: 'RIDE50',
+    name: '50% Off (Up to ₹50)',
+    percent: 50,
+    maxDiscount: 50,
+    minFare: 20,
+    desc: '50% off up to ₹50 on rides ₹20+',
+  },
+  VELOQ50: {
+    code: 'VELOQ50',
+    name: '50% Off (Up to ₹50)',
+    percent: 50,
+    maxDiscount: 50,
+    minFare: 20,
+    desc: '50% off up to ₹50 on rides ₹20+',
+  },
+  FIRST50: {
+    code: 'FIRST50',
+    name: '50% Off (Up to ₹50)',
+    percent: 50,
+    maxDiscount: 50,
+    minFare: 20,
+    desc: '50% off up to ₹50 on rides ₹20+',
+  },
+  TOTO20: {
+    code: 'TOTO20',
+    name: '20% Off (Up to ₹20)',
+    percent: 20,
+    maxDiscount: 20,
+    minFare: 15,
+    desc: '20% off up to ₹20 on rides ₹15+',
+  },
+  SAVE20: {
+    code: 'SAVE20',
+    name: '20% Off (Up to ₹20)',
+    percent: 20,
+    maxDiscount: 20,
+    minFare: 15,
+    desc: '20% off up to ₹20 on rides ₹15+',
+  },
+  CAMPUS25: {
+    code: 'CAMPUS25',
+    name: '25% Student Saver (Up to ₹30)',
+    percent: 25,
+    maxDiscount: 30,
+    minFare: 20,
+    desc: '25% off up to ₹30 on rides ₹20+',
+  },
+};
+
 // Unified Vehicle Services matching the clean card screenshot
 export const VEHICLE_SERVICES = [
   {
@@ -203,7 +255,7 @@ export default function UserHome() {
   const [activeField, setActiveField] = useState(null); // 'pickup' | 'destination'
   const [paymentMode, setPaymentMode] = useState('UPI'); // 'UPI' | 'CASH' | 'CARD'
   const [promoInput, setPromoInput] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [promoMessage, setPromoMessage] = useState('');
   const [gpsStatus, setGpsStatus] = useState('detecting'); // 'detecting' | 'active' | 'denied'
   const [nearbyHotspots, setNearbyHotspots] = useState([]);
@@ -487,19 +539,41 @@ export default function UserHome() {
     setStep('CONFIRM');
   };
 
-  // Promo Code Validation
-  const handleApplyPromo = (e) => {
+  // Promo Code Validation (Dynamic percentage discount based strictly on ride amount)
+  const handleApplyPromo = (e, customCode = null) => {
     e?.preventDefault();
-    const clean = promoInput.trim().toUpperCase();
-    if (clean === 'RIDE50' || clean === 'VELOQ50' || clean === 'FIRST50') {
-      setAppliedDiscount(50);
-      setPromoMessage('🎉 Promo RIDE50 applied! ₹50 OFF');
-    } else if (clean === 'TOTO20' || clean === 'SAVE20') {
-      setAppliedDiscount(20);
-      setPromoMessage('🎉 Promo applied! ₹20 OFF');
-    } else if (clean) {
-      setAppliedDiscount(0);
-      setPromoMessage('❌ Invalid code. Use RIDE50 or TOTO20');
+    const clean = (customCode || promoInput).trim().toUpperCase();
+    if (!clean) {
+      setAppliedCoupon(null);
+      setPromoMessage('');
+      return;
+    }
+
+    const coupon = PROMO_COUPONS[clean];
+    if (coupon) {
+      const baseRideFare = selectedService.basePrice;
+      const distanceCharge = Math.round(activeDistance * selectedService.pricePerKm);
+      const subtotalFare = baseRideFare + distanceCharge;
+
+      if (coupon.minFare && subtotalFare < coupon.minFare) {
+        setAppliedCoupon(null);
+        setPromoMessage(`⚠️ ${coupon.code} requires a min. ride fare of ₹${coupon.minFare} (Current: ₹${subtotalFare})`);
+        return;
+      }
+
+      setAppliedCoupon(coupon);
+      setPromoInput(coupon.code);
+      
+      // Calculate savings dynamically: Proportional to ride fare, never exceeding subtotal
+      const calculatedSavings = Math.min(
+        coupon.maxDiscount,
+        Math.round(subtotalFare * (coupon.percent / 100)),
+        Math.max(0, subtotalFare - 10)
+      );
+      setPromoMessage(`🎉 ${coupon.code} applied! ${coupon.percent}% OFF (₹${calculatedSavings} saved on this ₹${subtotalFare} ride)`);
+    } else {
+      setAppliedCoupon(null);
+      setPromoMessage('❌ Invalid coupon code. Try RIDE50 or TOTO20');
     }
   };
 
@@ -540,8 +614,21 @@ export default function UserHome() {
             address: 'Station Road, Kharagpur',
           };
           const dist = destination?.distanceKm || routeInfo?.distanceKm || 4.2;
-          const calculatedTotal = Math.round(selectedService.basePrice + dist * selectedService.pricePerKm);
-          const finalFare = estimatedFare?.total || calculatedTotal;
+          const baseFare = selectedService.basePrice;
+          const distFare = Math.round(dist * selectedService.pricePerKm);
+          const subtotal = baseFare + distFare;
+
+          // Calculate dynamic promo discount based on the ride amount
+          const promoDiscount = appliedCoupon
+            ? Math.min(
+                appliedCoupon.maxDiscount,
+                Math.round(subtotal * (appliedCoupon.percent / 100)),
+                Math.max(0, subtotal - 10)
+              )
+            : 0;
+
+          const tax = Math.max(1, Math.round((subtotal - promoDiscount) * 0.05));
+          const finalFare = Math.max(10, subtotal - promoDiscount + tax);
 
           const dynamicOtp = String(Math.floor(1000 + Math.random() * 9000));
           const isTotoOrLocal = String(selectedService?.category || '').toUpperCase().includes('AUTO') ||
@@ -574,7 +661,16 @@ export default function UserHome() {
             pickup: currentPickup,
             destination: currentDest,
             driverStartLocation: driverLocationC,
-            fare: { total: finalFare, base: selectedService.basePrice, distance: dist, currency: 'INR' },
+            fare: {
+              total: finalFare,
+              base: baseFare,
+              distance: dist,
+              distanceFare: distFare,
+              discount: promoDiscount,
+              promoCode: appliedCoupon ? appliedCoupon.code : null,
+              tax: tax,
+              currency: 'INR',
+            },
             distance: dist,
             duration: Math.max(2, Math.round(dist * 2.2)),
             durationMinutes: Math.max(2, Math.round(dist * 2.2)),
@@ -618,7 +714,21 @@ export default function UserHome() {
   });
 
   const activeDistance = destination?.distanceKm || routeInfo?.distanceKm || 4.2;
-  const currentCalculatedFare = Math.max(10, Math.round(selectedService.basePrice + activeDistance * selectedService.pricePerKm) - appliedDiscount);
+  const baseRideFare = selectedService.basePrice;
+  const distanceCharge = Math.round(activeDistance * selectedService.pricePerKm);
+  const subtotalFare = baseRideFare + distanceCharge;
+
+  // Calculate promo discount dynamically based on ride amount
+  const effectivePromoDiscount = appliedCoupon
+    ? Math.min(
+        appliedCoupon.maxDiscount,
+        Math.round(subtotalFare * (appliedCoupon.percent / 100)),
+        Math.max(0, subtotalFare - 10)
+      )
+    : 0;
+
+  const taxesAndLevies = Math.max(1, Math.round((subtotalFare - effectivePromoDiscount) * 0.05));
+  const currentCalculatedFare = Math.max(10, subtotalFare - effectivePromoDiscount + taxesAndLevies);
 
   return (
     <div className="relative w-full max-w-full overflow-x-hidden min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 via-slate-100/60 to-slate-200/50 font-sans pb-16">
@@ -1427,28 +1537,71 @@ export default function UserHome() {
 
             {/* Promo Code Box */}
             <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-2.5">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-xs flex-wrap gap-1">
                 <span className="font-black text-slate-800">Have a Promo Coupon?</span>
-                <span className="text-[11px] text-blue-600 font-bold">Use RIDE50</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400">Try:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPromo(null, 'RIDE50')}
+                    className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md border border-blue-200/80 cursor-pointer transition-colors"
+                  >
+                    RIDE50 (50% Off)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPromo(null, 'TOTO20')}
+                    className="text-[10px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200/80 cursor-pointer transition-colors"
+                  >
+                    TOTO20 (20% Off)
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter coupon code (e.g. RIDE50)"
-                  value={promoInput}
-                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyPromo}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer"
-                >
-                  Apply
-                </button>
-              </div>
-              {promoMessage && (
-                <p className={clsx('text-xs font-bold', appliedDiscount > 0 ? 'text-emerald-600' : 'text-rose-500')}>
+
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <div>
+                      <p className="font-mono font-black text-emerald-950 text-xs">
+                        {appliedCoupon.code} <span className="font-sans font-bold text-emerald-700">({appliedCoupon.percent}% OFF · ₹{effectivePromoDiscount} saved)</span>
+                      </p>
+                      <p className="text-[10px] text-emerald-600 font-medium">Calculated proportional to your ₹{subtotalFare} ride fare</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon(null);
+                      setPromoInput('');
+                      setPromoMessage('');
+                    }}
+                    className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code (e.g. RIDE50)"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+
+              {promoMessage && !appliedCoupon && (
+                <p className="text-xs font-bold text-rose-500 animate-shake">
                   {promoMessage}
                 </p>
               )}
@@ -1458,24 +1611,24 @@ export default function UserHome() {
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-md space-y-2 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Base Ride Fare:</span>
-                <span className="font-bold text-slate-900">₹{selectedService.basePrice}</span>
+                <span className="font-bold text-slate-900">₹{baseRideFare}</span>
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>Distance Charge ({activeDistance} km):</span>
                 <span className="font-bold text-slate-900">
-                  ₹{Math.round(activeDistance * selectedService.pricePerKm)}
+                  ₹{distanceCharge}
                 </span>
               </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Taxes & Regulatory Levies (5%):</span>
-                <span className="font-bold text-slate-900">₹{Math.round((selectedService.basePrice + activeDistance * selectedService.pricePerKm) * 0.05)}</span>
-              </div>
-              {appliedDiscount > 0 && (
-                <div className="flex justify-between text-emerald-600 font-bold">
-                  <span>Promo Discount:</span>
-                  <span>- ₹{appliedDiscount}</span>
+              {effectivePromoDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-bold bg-emerald-50/70 p-2 rounded-xl border border-emerald-200/80">
+                  <span>Promo Discount ({appliedCoupon?.code} · {appliedCoupon?.percent}% OFF):</span>
+                  <span>- ₹{effectivePromoDiscount}</span>
                 </div>
               )}
+              <div className="flex justify-between text-slate-600">
+                <span>Taxes & Regulatory Levies (5%):</span>
+                <span className="font-bold text-slate-900">₹{taxesAndLevies}</span>
+              </div>
               <div className="pt-3 border-t border-slate-100 flex justify-between items-baseline font-black text-slate-900">
                 <span className="text-sm">Final Payable Amount:</span>
                 <span className="text-2xl text-blue-600">

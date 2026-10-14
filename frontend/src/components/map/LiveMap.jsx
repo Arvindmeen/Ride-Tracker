@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { useMapStore } from '@/stores';
 import {
   Navigation, Crosshair, Layers, Zap, Compass, Maximize2, ShieldCheck,
-  TrendingUp, Radio
+  TrendingUp, Radio, X
 } from 'lucide-react';
 import { formatDuration } from '@/utils/formatters';
 
@@ -761,6 +761,62 @@ export default function LiveMap({
   const [isExploring, setIsExploring] = useState(false);
   const [recenterCount, setRecenterCount] = useState(0);
 
+  // Swipe / Slide-to-dismiss animated state for the on-map Trip HUD
+  const [isHudDismissed, setIsHudDismissed] = useState(false);
+  const [hudDragOffset, setHudDragOffset] = useState(0);
+  const [isHudDragging, setIsHudDragging] = useState(false);
+  const [hudExitDirection, setHudExitDirection] = useState(null); // 'left' | 'right' | null
+  const hudDragStartX = useRef(0);
+  const hudCurrentDragX = useRef(0);
+
+  // Re-display HUD when ride stage changes or new ride starts
+  useEffect(() => {
+    setIsHudDismissed(false);
+    setHudExitDirection(null);
+    setHudDragOffset(0);
+  }, [rideStage, activeRide?.id]);
+
+  const handleHudDragStart = (clientX) => {
+    setIsHudDragging(true);
+    hudDragStartX.current = clientX;
+    hudCurrentDragX.current = 0;
+  };
+
+  const handleHudDragMove = (clientX) => {
+    if (!isHudDragging) return;
+    const deltaX = clientX - hudDragStartX.current;
+    hudCurrentDragX.current = deltaX;
+    setHudDragOffset(deltaX);
+  };
+
+  const handleHudDragEnd = () => {
+    if (!isHudDragging) return;
+    setIsHudDragging(false);
+    const offset = hudCurrentDragX.current;
+    if (Math.abs(offset) > 75) {
+      // Swiped smoothly past threshold! Animate off in that direction and delete/dismiss
+      const dir = offset > 0 ? 'right' : 'left';
+      setHudExitDirection(dir);
+      setTimeout(() => {
+        setIsHudDismissed(true);
+        setHudExitDirection(null);
+        setHudDragOffset(0);
+      }, 260);
+    } else {
+      // Snap back smoothly
+      setHudDragOffset(0);
+    }
+  };
+
+  const handleDismissHud = (dir = 'right') => {
+    setHudExitDirection(dir);
+    setTimeout(() => {
+      setIsHudDismissed(true);
+      setHudExitDirection(null);
+      setHudDragOffset(0);
+    }, 260);
+  };
+
   const handleRecenter = () => {
     setIsExploring(false);
     setRecenterCount((c) => c + 1);
@@ -841,60 +897,133 @@ export default function LiveMap({
         </div>
       )}
 
-      {/* ── REAL-TIME ON-MAP FLOATING TRIP HUD (Only during active passenger rides) ── */}
+      {/* ── REAL-TIME ON-MAP FLOATING TRIP HUD (Slide-to-Dismiss / Swipeable) ── */}
       {activeDriverLocation && (activeRide || rideStage) && !isTripCompleted && (
-        <div className="absolute top-3 left-3 z-[400] max-w-xs sm:max-w-sm w-full pointer-events-auto animate-in fade-in slide-in-from-top-3 duration-200">
-          <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl text-white">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    isPassengerOnBoard ? 'bg-blue-400' : 'bg-amber-400'
-                  }`} />
-                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                    isPassengerOnBoard ? 'bg-blue-500' : 'bg-amber-500'
-                  }`} />
-                </span>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-300">
-                  {rideStage === 'DRIVER_APPROACHING' ? 'Driver En Route' :
-                   rideStage === 'DRIVER_ARRIVED' ? 'Driver at Pickup' :
-                   rideStage === 'RIDE_STARTED' ? 'Trip in Progress' :
-                   rideStage === 'RIDE_COMPLETED' ? 'Arrived at Destination' : 'Active Ride'}
-                </span>
+        !isHudDismissed ? (
+          <div
+            className="absolute top-3 left-3 z-[400] max-w-xs sm:max-w-sm w-[calc(100%-1.5rem)] sm:w-full pointer-events-auto select-none touch-none"
+            style={{
+              transform: hudExitDirection === 'right'
+                ? 'translateX(120%) scale(0.92)'
+                : hudExitDirection === 'left'
+                ? 'translateX(-120%) scale(0.92)'
+                : hudDragOffset !== 0
+                ? `translateX(${hudDragOffset}px) rotate(${hudDragOffset * 0.035}deg)`
+                : 'translateX(0px)',
+              opacity: hudExitDirection
+                ? 0
+                : hudDragOffset !== 0
+                ? Math.max(0.12, 1 - Math.abs(hudDragOffset) / 220)
+                : 1,
+              transition: isHudDragging
+                ? 'none'
+                : 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease',
+            }}
+            onTouchStart={(e) => handleHudDragStart(e.touches[0].clientX)}
+            onTouchMove={(e) => handleHudDragMove(e.touches[0].clientX)}
+            onTouchEnd={handleHudDragEnd}
+            onTouchCancel={handleHudDragEnd}
+            onPointerDown={(e) => {
+              if (e.target.closest('button')) return;
+              try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch(_) {}
+              handleHudDragStart(e.clientX);
+            }}
+            onPointerMove={(e) => handleHudDragMove(e.clientX)}
+            onPointerUp={(e) => {
+              try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch(_) {}
+              handleHudDragEnd();
+            }}
+            onPointerCancel={handleHudDragEnd}
+          >
+            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl text-white cursor-grab active:cursor-grabbing hover:border-slate-600 transition-colors">
+              {/* Top Drag Indicator / Dismiss Hint */}
+              <div className="flex items-center justify-between gap-1 mb-1.5">
+                <div className="w-10 h-1 rounded-full bg-slate-600/70 mx-auto" />
               </div>
-              <span className="text-[10px] font-mono bg-blue-900/60 text-blue-300 border border-blue-700/60 px-2 py-0.5 rounded-full font-bold">
-                {typeof activeDriverSpeed === 'number'
-                  ? (activeDriverSpeed > 0 ? `${activeDriverSpeed} km/h` : 'Parked')
-                  : typeof activeDriverLocation?.speed === 'number' && activeDriverLocation.speed > 0
-                  ? `${activeDriverLocation.speed} km/h`
-                  : 'Parked'}
-              </span>
-            </div>
 
-            <div className="flex items-center justify-between gap-3 pt-2.5">
-              <div>
-                <p className="text-lg font-black tracking-tight text-white leading-tight">
-                  {activeDriverEta ? formatDuration(activeDriverEta) : isPassengerOnBoard ? '14 mins' : '3 mins'}
-                  <span className="text-xs font-medium text-slate-400 ml-1.5">
-                    ({activeDriverDistance ? `${activeDriverDistance} km` : isPassengerOnBoard ? '4.8 km' : '1.2 km'})
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      isPassengerOnBoard ? 'bg-blue-400' : 'bg-amber-400'
+                    }`} />
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                      isPassengerOnBoard ? 'bg-blue-500' : 'bg-amber-500'
+                    }`} />
                   </span>
-                </p>
-                <p className="text-[11px] text-slate-300 mt-0.5 truncate">
-                  {isPassengerOnBoard ? `Heading to ${destination?.name || 'Destination'}` : `Meeting you at ${pickup?.name || 'Pickup'}`}
-                </p>
-              </div>
-
-              {activeRide?.otp && (
-                <div className="text-right">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Ride OTP</span>
-                  <span className="font-mono text-sm font-black bg-white/10 text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-500/30">
-                    {activeRide.otp}
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-300">
+                    {rideStage === 'DRIVER_APPROACHING' ? 'Driver En Route' :
+                     rideStage === 'DRIVER_ARRIVED' ? 'Driver at Pickup' :
+                     rideStage === 'RIDE_STARTED' ? 'Trip in Progress' :
+                     rideStage === 'RIDE_COMPLETED' ? 'Arrived at Destination' : 'Active Ride'}
                   </span>
                 </div>
-              )}
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono bg-blue-900/60 text-blue-300 border border-blue-700/60 px-2 py-0.5 rounded-full font-bold">
+                    {typeof activeDriverSpeed === 'number'
+                      ? (activeDriverSpeed > 0 ? `${activeDriverSpeed} km/h` : 'Parked')
+                      : typeof activeDriverLocation?.speed === 'number' && activeDriverLocation.speed > 0
+                      ? `${activeDriverLocation.speed} km/h`
+                      : 'Parked'}
+                  </span>
+                  {/* Quick Animated Dismiss Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDismissHud('right');
+                    }}
+                    className="w-5 h-5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    title="Slide to remove (or tap ✕)"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-2.5">
+                <div>
+                  <p className="text-lg font-black tracking-tight text-white leading-tight">
+                    {activeDriverEta ? formatDuration(activeDriverEta) : isPassengerOnBoard ? '14 mins' : '3 mins'}
+                    <span className="text-xs font-medium text-slate-400 ml-1.5">
+                      ({activeDriverDistance ? `${activeDriverDistance} km` : isPassengerOnBoard ? '4.8 km' : '1.2 km'})
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-slate-300 mt-0.5 truncate">
+                    {isPassengerOnBoard ? `Heading to ${destination?.name || 'Destination'}` : `Meeting you at ${pickup?.name || 'Pickup'}`}
+                  </p>
+                </div>
+
+                {activeRide?.otp && (
+                  <div className="text-right">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Ride OTP</span>
+                    <span className="font-mono text-sm font-black bg-white/10 text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                      {activeRide.otp}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Discreet Swipe Hint */}
+              <div className="mt-2 text-center">
+                <span className="text-[9px] font-semibold text-slate-400/80 tracking-tight">
+                  ↔ Slide smoothly left or right to dismiss
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsHudDismissed(false)}
+            className="absolute top-3 left-3 z-[400] bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 rounded-2xl px-3 py-1.5 shadow-xl text-xs font-bold flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 animate-in fade-in"
+            title="Tap to view Ride HUD"
+          >
+            <span>{isPassengerOnBoard ? '🚗' : '🛺'}</span>
+            <span>Show Ride Status</span>
+          </button>
+        )
       )}
 
       <MapContainer

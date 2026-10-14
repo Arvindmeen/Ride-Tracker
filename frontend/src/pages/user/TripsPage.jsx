@@ -191,6 +191,11 @@ export default function TripsPage() {
                       <p className="text-base sm:text-lg font-black text-slate-900">
                         ₹{typeof ride.fare === 'object' ? Math.round(ride.fare.total) : ride.fare}
                       </p>
+                      {typeof ride.fare === 'object' && ride.fare?.discount > 0 && (
+                        <p className="text-[10px] font-bold text-emerald-600">
+                          Saved ₹{Math.round(ride.fare.discount)}
+                        </p>
+                      )}
                       <span
                         className={clsx(
                           'inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full border mt-0.5',
