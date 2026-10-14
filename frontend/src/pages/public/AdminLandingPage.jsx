@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, Activity, BarChart2, Zap, Users, Car,
@@ -66,6 +66,12 @@ export default function AdminLandingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, role: userRole } = useAuthStore();
   const isAdmin = isAuthenticated && (userRole === 'ADMIN' || user?.role === 'ADMIN');
+  const [activeTab, setActiveTab] = useState('radar');
+
+  // Always start at very top of screen when landing on page
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
@@ -132,68 +138,172 @@ export default function AdminLandingPage() {
                 </div>
               </div>
 
-              {/* Right Column: Operations Command Terminal Mockup */}
+              {/* Right Column: Operations Command Terminal & Live Fleet Map Radar Image View */}
               <div className="lg:col-span-5">
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-7 space-y-5 relative">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden relative">
+                  
+                  {/* Top Bar with Tab Switcher */}
+                  <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
                         🛰️
                       </div>
                       <div>
-                        <h2 className="text-xs font-black text-slate-900">National Dispatch Node</h2>
+                        <h2 className="text-xs font-black text-slate-900 leading-tight">National Fleet Command</h2>
                         <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Live Streaming Active
+                          Live Satellite Radar
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
-                      SYS: ONLINE
-                    </span>
+
+                    <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl text-[10px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('radar')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          activeTab === 'radar' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        🗺️ Map View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('telemetry')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          activeTab === 'telemetry' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        ⚡ Telemetry
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Active Telemetry Tickers */}
-                  <div className="grid grid-cols-2 gap-3 text-left">
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">Active Dispatches</span>
-                      <p className="text-xl font-black text-slate-900">188 Trips</p>
-                      <p className="text-[10px] text-emerald-600 font-bold">● 100% On Schedule</p>
-                    </div>
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">Online Drivers</span>
-                      <p className="text-xl font-black text-slate-900">1,312 Partners</p>
-                      <p className="text-[10px] text-blue-600 font-bold">● 5 Regional Hubs</p>
-                    </div>
-                  </div>
+                  {activeTab === 'radar' ? (
+                    /* ── Interactive Fleet Map Radar Image View ── */
+                    <div className="p-4 sm:p-5 space-y-3.5">
+                      {/* Radar Screen Visualizer Canvas */}
+                      <div className="relative w-full h-56 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 overflow-hidden border border-slate-800 shadow-inner flex flex-col justify-between p-3.5">
+                        {/* Grid lines */}
+                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#33415518_1px,transparent_1px),linear-gradient(to_bottom,#33415518_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
+                        
+                        {/* Radar sweep animation */}
+                        <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,rgba(99,102,241,0.25)_0deg,transparent_60deg)] animate-[spin_4s_linear_infinite] rounded-full pointer-events-none scale-150 origin-center" />
 
-                  {/* Live Simulated Event Feed */}
-                  <div className="space-y-2 text-left">
-                    <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                      Live Dispatch Telemetry Stream
-                    </span>
-                    <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 font-mono text-[11px] space-y-2 text-slate-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-emerald-700 font-bold">[DISPATCH_MATCH]</span>
-                        <span className="text-[10px] text-slate-400">0.04s</span>
+                        {/* Top Overlay Tag */}
+                        <div className="relative z-10 flex items-center justify-between text-[10px] font-mono text-indigo-300">
+                          <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded-full border border-indigo-500/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                            <span>GPS FEED: 12.9716° N, 77.5946° E</span>
+                          </span>
+                          <span className="bg-indigo-600/30 text-indigo-200 px-2 py-0.5 rounded-full font-bold">
+                            1,312 NODES
+                          </span>
+                        </div>
+
+                        {/* Simulated Vehicle Pins on Map */}
+                        <div className="relative z-10 w-full h-full my-auto flex items-center justify-center">
+                          {/* Concentric radar range rings */}
+                          <div className="absolute w-44 h-44 rounded-full border border-indigo-500/20 pointer-events-none" />
+                          <div className="absolute w-28 h-28 rounded-full border border-indigo-500/30 pointer-events-none" />
+
+                          {/* Center Node */}
+                          <div className="absolute w-3 h-3 rounded-full bg-indigo-500 ring-4 ring-indigo-500/30 shadow-lg shadow-indigo-500" />
+
+                          {/* Moving Vehicle Blips with Labels */}
+                          <div className="absolute -top-1 left-8 flex items-center gap-1 bg-slate-900/90 border border-emerald-500/40 text-[9px] font-bold text-emerald-400 px-1.5 py-0.5 rounded-md shadow-xs animate-bounce">
+                            <span>🚗 Cab #104</span>
+                            <span className="text-white font-mono">0.3km</span>
+                          </div>
+
+                          <div className="absolute bottom-2 right-8 flex items-center gap-1 bg-slate-900/90 border border-blue-500/40 text-[9px] font-bold text-blue-400 px-1.5 py-0.5 rounded-md shadow-xs">
+                            <span>🛺 Toto #08</span>
+                            <span className="text-white font-mono">1 min</span>
+                          </div>
+
+                          <div className="absolute top-8 right-12 flex items-center gap-1 bg-slate-900/90 border border-amber-500/40 text-[9px] font-bold text-amber-300 px-1.5 py-0.5 rounded-md shadow-xs">
+                            <span>🏍️ Moto #42</span>
+                          </div>
+
+                          <div className="absolute bottom-6 left-6 flex items-center gap-1 bg-slate-900/90 border border-purple-500/40 text-[9px] font-bold text-purple-300 px-1.5 py-0.5 rounded-md shadow-xs">
+                            <span>🚗 Tigor EV</span>
+                          </div>
+                        </div>
+
+                        {/* Bottom Live Corridor Pill */}
+                        <div className="relative z-10 flex items-center justify-between text-[10px] text-slate-300 bg-black/50 backdrop-blur-xs px-2.5 py-1 rounded-xl border border-white/10">
+                          <span className="truncate">Active Corridor: Central Tech Park ➔ Metro Gate 3</span>
+                          <span className="font-bold text-emerald-400 font-mono ml-2">88 ms</span>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-slate-600 leading-snug">
-                        Trip #R-8820 matched to Driver D-104 (0.3km) via Geodesic Spatial Index.
-                      </p>
-                      <div className="pt-1.5 border-t border-slate-200 flex justify-between text-[10px] text-slate-500 font-bold">
-                        <span>Fare: ₹85.00</span>
-                        <span className="text-indigo-600">Platform Comm: ₹10.20</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <Link
-                    to={isAdmin ? "/admin/dashboard" : "/login?role=ADMIN"}
-                    className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
-                  >
-                    <span>{isAdmin ? "Launch Operations Console ⚡" : "Authenticate with Operations Credential"}</span>
-                    <ArrowRight size={14} />
-                  </Link>
+                      {/* Live Status Cards */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Dispatch Health</span>
+                          <p className="text-sm font-black text-slate-900 mt-0.5">100% Guaranteed</p>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Live Hotspots</span>
+                          <p className="text-sm font-black text-slate-900 mt-0.5">5 City Hubs</p>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <Link
+                        to="/admin/live-map"
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/25 active:scale-95 cursor-pointer"
+                      >
+                        <span>Open Full-Screen Live Fleet Map ➔</span>
+                      </Link>
+                    </div>
+                  ) : (
+                    /* ── Telemetry Event Stream ── */
+                    <div className="p-4 sm:p-5 space-y-4">
+                      {/* Active Telemetry Tickers */}
+                      <div className="grid grid-cols-2 gap-3 text-left">
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">Active Dispatches</span>
+                          <p className="text-xl font-black text-slate-900">188 Trips</p>
+                          <p className="text-[10px] text-emerald-600 font-bold">● 100% On Schedule</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">Online Drivers</span>
+                          <p className="text-xl font-black text-slate-900">1,312 Partners</p>
+                          <p className="text-[10px] text-blue-600 font-bold">● 5 Regional Hubs</p>
+                        </div>
+                      </div>
+
+                      {/* Live Simulated Event Feed */}
+                      <div className="space-y-1.5 text-left">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+                          Live Dispatch Telemetry Stream
+                        </span>
+                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 font-mono text-[11px] space-y-1.5 text-slate-700">
+                          <div className="flex items-center justify-between">
+                            <span className="text-emerald-700 font-bold">[DISPATCH_MATCH]</span>
+                            <span className="text-[10px] text-slate-400">0.04s</span>
+                          </div>
+                          <p className="text-[10px] text-slate-600 leading-snug">
+                            Trip #R-8820 matched to Driver D-104 (0.3km) via Geodesic Spatial Index.
+                          </p>
+                          <div className="pt-1 border-t border-slate-200 flex justify-between text-[10px] text-slate-500 font-bold">
+                            <span>Fare: ₹85.00</span>
+                            <span className="text-indigo-600">Platform Comm: ₹10.20</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        to={isAdmin ? "/admin/dashboard" : "/login?role=ADMIN"}
+                        className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
+                      >
+                        <span>{isAdmin ? "Launch Operations Console ⚡" : "Authenticate with Operations Credential"}</span>
+                        <ArrowRight size={14} />
+                      </Link>
+                    </div>
+                  )}
+
                 </div>
               </div>
 

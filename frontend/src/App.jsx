@@ -6,6 +6,16 @@ import LocationToast from '@/components/common/LocationToast';
 import MaintenanceBanner from '@/components/common/MaintenanceBanner';
 
 // Role-based route guard — strict: each role stays in its own section
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname]);
+
+  return null;
+}
+
 function RequireRole({ role, children }) {
   const { isAuthenticated, role: userRole } = useAuthStore();
   const location = useLocation();
@@ -132,6 +142,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ScrollToTop />
         <ErrorBoundary>
           <MaintenanceBanner />
           <LocationToast />
