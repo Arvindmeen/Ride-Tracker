@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, MapPin, Zap, ShieldCheck, Star, ArrowRight, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, MapPin, Zap, ShieldCheck, Star, ArrowRight, Loader2, Check, Copy, Sparkles, Wrench, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/stores';
 import { clsx } from 'clsx';
 
@@ -43,9 +43,36 @@ const FEATURES = [
 
 // Demo credentials for quick testing
 const DEMO_ACCOUNTS = {
-  USER:   { email: 'rahul@ridetracker.in',  password: 'password123' },
-  DRIVER: { email: 'rajesh@ridetracker.in', password: 'password123' },
-  ADMIN:  { email: 'admin@ridetracker.in',  password: 'admin123' },
+  USER: {
+    role: 'USER',
+    label: 'Passenger',
+    icon: '👤',
+    email: 'rahul@ridetracker.in',
+    password: 'password123',
+    desc: 'Book rides, track GPS & upfront fares',
+    tag: 'Rider Portal',
+    tagColor: 'bg-indigo-600 text-white',
+  },
+  DRIVER: {
+    role: 'DRIVER',
+    label: 'Driver Partner',
+    icon: '🚗',
+    email: 'driver@ridetracker.in',
+    password: 'password123',
+    desc: 'Accept requests & duty toggle',
+    tag: 'Driver Portal',
+    tagColor: 'bg-emerald-600 text-white',
+  },
+  ADMIN: {
+    role: 'ADMIN',
+    label: 'Operations Admin',
+    icon: '⚡',
+    email: 'admin@ridetracker.in',
+    password: 'admin123',
+    desc: 'Live telemetry, pricing & user db',
+    tag: 'Admin Ops',
+    tagColor: 'bg-slate-900 text-white',
+  },
 };
 
 export default function LoginPage() {
@@ -55,11 +82,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [role, setRole] = useState('USER');
-  const [showDemo, setShowDemo] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
+  const [copiedField, setCopiedField] = useState(null);
   const { loginWithCredentials, isAuthenticated, role: currentRole } = useAuthStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect');
+
+  // Pre-load demo account on initial render or when query param changes
+  useEffect(() => {
+    const targetRole = (searchParams.get('role') || 'USER').toUpperCase();
+    const validRole = DEMO_ACCOUNTS[targetRole] ? targetRole : 'USER';
+    setRole(validRole);
+    setEmail(DEMO_ACCOUNTS[validRole].email);
+    setPassword(DEMO_ACCOUNTS[validRole].password);
+    setShowDemo(true);
+  }, [searchParams]);
 
   // If already logged in, redirect
   useEffect(() => {
@@ -76,6 +114,15 @@ export default function LoginPage() {
     setEmail(demo.email);
     setPassword(demo.password);
     setShowDemo(true);
+  };
+
+  const copyToClipboard = (text, id, e) => {
+    e.stopPropagation();
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+      setCopiedField(id);
+      setTimeout(() => setCopiedField(null), 1800);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -168,48 +215,115 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right — Auth Form ─────────────────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center px-5 py-12 bg-slate-50">
-        <div className="w-full max-w-sm animate-fade-up">
+      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 bg-slate-50 min-h-screen">
+        <div className="w-full max-w-md animate-fade-up">
           {/* Mobile Logo */}
-          <Link to="/" className="lg:hidden flex items-center justify-center gap-2 mb-8 group" title="Ride Tracker - Home">
+          <Link to="/" className="lg:hidden flex items-center justify-center gap-2 mb-6 group" title="Ride Tracker - Home">
             <img src="/toto-logo.svg" alt="Ride Tracker" className="w-9 h-9 object-contain drop-shadow-sm" />
             <span className="text-xl font-black text-slate-900 group-hover:text-blue-600 transition-colors">Ride Tracker</span>
           </Link>
 
-          <div className="mb-7">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Welcome back</h1>
-            <p className="text-slate-500 text-sm mt-1">Sign in to your Ride Tracker account</p>
-          </div>
-
-          {/* Role Selector */}
-          <div className="grid grid-cols-3 gap-2 mb-5">
-            {ROLES.map(r => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => fillDemoCredentials(r.id)}
-                className={clsx(
-                  'flex flex-col items-center gap-1 p-3 rounded-2xl border text-xs font-bold transition-all duration-200',
-                  role === r.id ? r.active : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50',
-                )}
-              >
-                <span className="text-xl">{r.emoji}</span>
-                <span>{r.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Demo credentials info - only shown when user clicks a role */}
-          {showDemo && (
-            <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3 animate-fade-up">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-extrabold uppercase text-indigo-600 tracking-wider">Demo Account Loaded</span>
+          {/* Under Maintenance / Active Testing Notice */}
+          <div className="mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-300/70 flex items-center gap-3 text-xs text-amber-900 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center flex-shrink-0">
+              <Wrench size={15} className="animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="font-extrabold text-amber-900 text-xs">Under Maintenance & Beta Testing</p>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
               </div>
-              <p className="text-[11px] text-indigo-700 font-medium">
-                Email: <span className="font-mono font-bold">{DEMO_ACCOUNTS[role].email}</span>
+              <p className="text-[11px] text-amber-800/80 mt-0.5 leading-snug">
+                Features are currently undergoing live sandbox calibration. Use the test accounts below.
               </p>
             </div>
-          )}
+          </div>
+
+          <div className="mb-4">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Sign In to Ride Tracker</h1>
+            <p className="text-slate-500 text-xs mt-1">Select an account below or enter your credentials</p>
+          </div>
+
+          {/* Animated 1-Click Testing Credentials Card */}
+          <div className="mb-5 p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm relative overflow-hidden">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={14} className="text-indigo-600" />
+                <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">
+                  1-Click Test Credentials
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 flex items-center gap-1">
+                <span>⚡ Auto Fill</span>
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {Object.values(DEMO_ACCOUNTS).map(acc => {
+                const isSelected = role === acc.role;
+                return (
+                  <div
+                    key={acc.role}
+                    onClick={() => fillDemoCredentials(acc.role)}
+                    className={clsx(
+                      'p-2.5 rounded-xl border text-left cursor-pointer transition-all duration-200 flex items-center justify-between gap-2.5 group',
+                      isSelected
+                        ? 'bg-gradient-to-r from-indigo-50/90 to-violet-50/90 border-indigo-400 shadow-xs ring-1 ring-indigo-400/40'
+                        : 'bg-slate-50/70 hover:bg-white border-slate-200 hover:border-slate-300'
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-lg p-1.5 rounded-lg bg-white shadow-2xs border border-slate-100 flex-shrink-0 group-hover:scale-110 transition-transform">
+                        {acc.icon}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-900">{acc.label}</span>
+                          <span className={clsx('text-[9px] font-extrabold px-1.5 py-0.2 rounded-full', acc.tagColor)}>
+                            {acc.tag}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono mt-0.5 text-slate-600">
+                          <span className="truncate font-semibold text-slate-800">{acc.email}</span>
+                          <span className="text-slate-300">/</span>
+                          <span className="text-slate-500">{acc.password}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => copyToClipboard(`${acc.email} / ${acc.password}`, acc.role, e)}
+                        title="Copy credentials"
+                        className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 transition-colors"
+                      >
+                        {copiedField === acc.role ? (
+                          <Check size={13} className="text-emerald-600 font-bold" />
+                        ) : (
+                          <Copy size={13} />
+                        )}
+                      </button>
+
+                      <span
+                        className={clsx(
+                          'text-[10px] font-bold px-2 py-1 rounded-lg transition-all',
+                          isSelected
+                            ? 'bg-indigo-600 text-white shadow-2xs'
+                            : 'bg-white border border-slate-200 text-slate-600 group-hover:border-indigo-300 group-hover:text-indigo-600'
+                        )}
+                      >
+                        {isSelected ? '✓ Ready' : 'Fill'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {errorMsg && (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-fade-up">

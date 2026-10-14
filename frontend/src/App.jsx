@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores';
 import LocationToast from '@/components/common/LocationToast';
+import MaintenanceBanner from '@/components/common/MaintenanceBanner';
 
 // Role-based route guard — strict: each role stays in its own section
 function RequireRole({ role, children }) {
@@ -132,6 +133,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ErrorBoundary>
+          <MaintenanceBanner />
           <LocationToast />
           <Routes>
             {/* Public */}
