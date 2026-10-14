@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore, useMapStore, useBookingStore } from '@/stores';
 import { locationService } from '@/services';
+import { formatDuration } from '@/utils/formatters';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import DriverLandingPage from '@/pages/public/DriverLandingPage';
