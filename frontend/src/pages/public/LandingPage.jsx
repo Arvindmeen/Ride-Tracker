@@ -12,6 +12,7 @@ import {
 import { useAuthStore, useMapStore, useBookingStore } from '@/stores';
 import { locationService } from '@/services';
 import { formatDuration } from '@/utils/formatters';
+import AuthRequiredModal from '@/components/common/AuthRequiredModal';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import DriverLandingPage from '@/pages/public/DriverLandingPage';
@@ -189,7 +190,8 @@ function HeroRideShowcase({
   pickupText,
   isSameLocation,
   activeCityName,
-  onConfirmBooking 
+  onConfirmBooking,
+  isAuthenticated
 }) {
   return (
     <div className="relative bg-white rounded-3xl p-6 sm:p-7 text-slate-900 shadow-sm border border-slate-200 flex flex-col justify-between h-full min-h-[500px] overflow-hidden">
@@ -365,10 +367,18 @@ function HeroRideShowcase({
           className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg flex items-center gap-1.5 transition-all ${
             isSameLocation 
               ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+              : !isAuthenticated
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white shadow-blue-600/30 cursor-pointer'
               : 'bg-blue-600 hover:bg-blue-500 active:scale-95 text-white shadow-blue-600/30 cursor-pointer'
           }`}
         >
-          <span>{isSameLocation ? 'Choose Drop Location' : 'Book Ride Now'}</span>
+          <span>
+            {isSameLocation 
+              ? 'Choose Drop Location' 
+              : !isAuthenticated 
+              ? '🔒 Sign In to Book Ride' 
+              : 'Book Ride Now'}
+          </span>
           <ArrowRight size={14} />
         </button>
       </div>
@@ -391,6 +401,8 @@ function PassengerLandingContent() {
   const [selectedDriver, setSelectedDriver] = useState(REGIONAL_HUBS[0].drivers[0]);
   const [dynamicCorridors, setDynamicCorridors] = useState([]);
   const [corridorsLoading, setCorridorsLoading] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalAction, setAuthModalAction] = useState('book a ride');
 
   const [liveLocation, setLiveLocation] = useState({
     lat: REGIONAL_HUBS[0].lat,
@@ -848,6 +860,12 @@ function PassengerLandingContent() {
     : Math.round(selectedService.basePrice + (selectedHotspot?.dist || 0) * selectedService.pricePerKm);
 
   const handleConfirmBooking = () => {
+    if (!isAuthenticated) {
+      setAuthModalAction(`book and dispatch a ${selectedService.name}`);
+      setAuthModalOpen(true);
+      return;
+    }
+
     if (isSameLocation) {
       alert('Please select a different destination corridor before booking.');
       return;
@@ -1278,14 +1296,26 @@ function PassengerLandingContent() {
               </div>
 
               {/* Main CTA */}
+              {!isAuthenticated && (
+                <div className="mb-2.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center gap-2 text-[11px] text-amber-800 font-semibold">
+                  <Lock size={12} className="text-amber-600 shrink-0" />
+                  <span>Sign in required to dispatch rides & track live drivers</span>
+                </div>
+              )}
               <button onClick={handleConfirmBooking}
                 disabled={isSameLocation}
                 className={`w-full font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 text-sm transition-all ${
                   isSameLocation 
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                    : !isAuthenticated
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-indigo-600/25 hover:scale-[1.01] active:scale-98 cursor-pointer'
                     : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 hover:scale-[1.01] active:scale-98 cursor-pointer'
                 }`}>
-                {isSameLocation ? 'Select a Destination Drop Corridor' : `Confirm & Dispatch ${selectedService.name}`} <ArrowRight size={16} />
+                {isSameLocation 
+                  ? 'Select a Destination Drop Corridor' 
+                  : !isAuthenticated
+                  ? `🔒 Sign In to Book ${selectedService.name}`
+                  : `Confirm & Dispatch ${selectedService.name}`} <ArrowRight size={16} />
               </button>
 
             </div>
@@ -1301,6 +1331,7 @@ function PassengerLandingContent() {
                 isSameLocation={isSameLocation}
                 activeCityName={userLocation?.city || userLocation?.name || selectedHub.name}
                 onConfirmBooking={handleConfirmBooking} 
+                isAuthenticated={isAuthenticated}
               />
             </div>
 
@@ -1630,6 +1661,12 @@ function PassengerLandingContent() {
           </div>
         </div>
       </section>
+
+      <AuthRequiredModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionName={authModalAction}
+      />
 
       <Footer />
     </div>
