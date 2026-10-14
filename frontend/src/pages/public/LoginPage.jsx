@@ -142,6 +142,9 @@ export default function LoginPage() {
 
     setLoading(false);
     if (result.success) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('veloq_show_beta_modal', 'true');
+      }
       const redirectMap = { ADMIN: '/', DRIVER: '/', USER: '/' };
       const targetUrl = redirectTo || redirectMap[result.role] || '/';
       navigate(targetUrl, { replace: true });

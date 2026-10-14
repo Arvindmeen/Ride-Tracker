@@ -30,6 +30,15 @@ export const useAuthStore = create((set, get) => ({
   token: savedToken || null,
   authLoading: false,
   authError: null,
+  showBetaNotice: typeof window !== 'undefined' ? sessionStorage.getItem('veloq_show_beta_modal') === 'true' : false,
+  openBetaNotice: () => {
+    set({ showBetaNotice: true });
+    if (typeof window !== 'undefined') sessionStorage.setItem('veloq_show_beta_modal', 'true');
+  },
+  closeBetaNotice: () => {
+    set({ showBetaNotice: false });
+    if (typeof window !== 'undefined') sessionStorage.removeItem('veloq_show_beta_modal');
+  },
 
   loginWithCredentials: async ({ email, password, expectedRole }) => {
     set({ authLoading: true, authError: null });
@@ -48,6 +57,7 @@ export const useAuthStore = create((set, get) => ({
         localStorage.setItem('veloq_token', data.token);
         localStorage.setItem('veloq_user', JSON.stringify(data.user));
         localStorage.setItem('veloq_role', data.role);
+        sessionStorage.setItem('veloq_show_beta_modal', 'true');
       }
 
       set({
@@ -57,6 +67,7 @@ export const useAuthStore = create((set, get) => ({
         token: data.token,
         authLoading: false,
         authError: null,
+        showBetaNotice: true,
       });
 
       return { success: true, redirectUrl: data.redirectUrl, role: data.role };
@@ -84,6 +95,7 @@ export const useAuthStore = create((set, get) => ({
         localStorage.setItem('veloq_token', data.token);
         localStorage.setItem('veloq_user', JSON.stringify(data.user));
         localStorage.setItem('veloq_role', data.role);
+        sessionStorage.setItem('veloq_show_beta_modal', 'true');
       }
 
       set({
@@ -93,6 +105,7 @@ export const useAuthStore = create((set, get) => ({
         token: data.token,
         authLoading: false,
         authError: null,
+        showBetaNotice: true,
       });
 
       return { success: true, redirectUrl: data.redirectUrl, role: data.role };
